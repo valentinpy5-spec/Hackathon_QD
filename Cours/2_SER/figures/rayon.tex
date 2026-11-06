@@ -1,0 +1,9 @@
+% figure générée par tools/make_figures.py : rayon
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.6cm,xlabel={épaisseur relative $t$},ylabel={$\sigma_{2D}$ de nez (dBm)},
+  legend style={draw=none,font=\scriptsize},legend pos=south east,
+  xticklabel style={/pgf/number format/fixed,/pgf/number format/use comma}]
+\addplot[cblue,only marks,mark=*,mark size=1.8pt] coordinates {(0.06,-19.187) (0.07,-17.848) (0.08,-16.688) (0.09,-15.665) (0.1,-14.75) (0.11,-13.922) (0.12,-13.166) (0.13,-12.471) (0.14,-11.827) (0.15,-11.228) (0.16,-10.667) (0.17,-10.141) (0.18,-9.6441) (0.19,-9.1745) (0.2,-8.729)};\addlegendentry{PO, profils symétriques}
+\addplot[corange,thick,domain=0.05:0.21,samples=50] {10*log10(pi*1.1019*x^2)};\addlegendentry{$\pi\,r_{BA}=1{,}1019\,\pi t^2$}
+\end{axis}
+\end{tikzpicture}

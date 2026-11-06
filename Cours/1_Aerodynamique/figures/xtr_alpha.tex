@@ -1,0 +1,9 @@
+% figure générée par tools/make_figures.py : xtr_alpha
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.6cm,xlabel={$\alpha$ (°)},ylabel={$x_{tr}/c$},xmin=-4,xmax=10,ymin=0,ymax=1,
+  legend style={draw=none,font=\scriptsize,at={(0.02,0.02)},anchor=south west}]
+\addplot[cblue,very thick,mark=*,mark size=1.4pt] coordinates {(-4,0.66149) (-3,0.59365) (-2,0.52539) (-1,0.46) (0,0.40359) (1,0.34723) (2,0.27945) (3,0.20801) (4,0.14399) (5,0.098468) (6,0.070947) (7,0.054723) (8,0.022071) (9,0.013933) (10,0.010145)};\addlegendentry{extrados}
+\addplot[corange,very thick,mark=square*,mark size=1.4pt] coordinates {(-4,0.072542) (-3,0.096003) (-2,0.13131) (-1,0.18121) (0,0.24686) (1,0.33239) (2,0.47818) (3,0.61065) (4,0.7494) (5,0.8636) (6,0.9027) (7,0.91429) (8,0.92399) (9,0.93213) (10,0.93901)};\addlegendentry{intrados}
+\addplot[only marks,mark=o,mark size=3.5pt,cink,thick] coordinates {(6,0.9027) (7,0.91429) (8,0.92399) (9,0.93213) (10,0.93901) (8,0.022071) (9,0.013933) (10,0.010145)};\addlegendentry{décollement laminaire}
+\end{axis}
+\end{tikzpicture}

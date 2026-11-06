@@ -1,0 +1,9 @@
+% figure générée par tools/make_figures.py : qaoa_angles
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.2cm,axis lines=left,xmin=0.7,xmax=5.3,xtick={1,...,5},
+  xlabel={couche $k$},ylabel={angle (rad)},
+  legend style={draw=none,font=\small,at={(0.02,0.98)},anchor=north west}]
+\addplot[cblue,thick,mark=*] coordinates {(1,0.5558) (2,1.153) (3,1.706) (4,2.239) (5,2.563)};\addlegendentry{$\gamma_k$ (coût)}
+\addplot[corange,thick,mark=square*] coordinates {(1,0.6973) (2,0.5187) (3,0.3131) (4,0.2204) (5,0.1343)};\addlegendentry{$|\beta_k|$ (mélangeur)}
+\end{axis}
+\end{tikzpicture}

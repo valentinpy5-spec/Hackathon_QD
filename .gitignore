@@ -1,0 +1,30 @@
+# Environnements et binaires locaux (recréés par Code/installer_outils.sh)
+.venv/
+.tools/
+__pycache__/
+*.pyc
+
+# Artefacts LaTeX (les PDF sont suivis : ce sont les livrables)
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Journaux d'exécution intermédiaires
+Code/resultats/*.log
+
+# Fichiers de sauvegarde écrits par XFOIL dans le dossier courant
+:00.bl
+*.bl
+
+# Fichiers de travail de tectonic / xelatex
+*.xdv
+*.fls
+*.fdb_latexmk
+
+# Système et éditeurs
+.DS_Store
+.vscode/
+.idea/
+*~

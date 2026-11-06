@@ -1,0 +1,13 @@
+% figure générée par tools/make_figures.py : polaire
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.6cm},width=0.5\linewidth,height=5.6cm,
+  title style={font=\small},tick label style={font=\scriptsize},legend style={draw=none,font=\scriptsize}]
+\nextgroupplot[title={Polaire $C_L(C_D)$},xlabel={$C_D$ (counts)},ylabel={$C_L$},legend pos=south east]
+\addplot[cblue,very thick,mark=*,mark size=1.3pt] coordinates {(69.584,-0.2265) (68.211,-0.10581) (67.478,0.014921) (67.288,0.13565) (67.371,0.25635) (68.1,0.37698) (69.17,0.4975) (72.579,0.61788) (77.134,0.73808) (82.671,0.85806) (90.04,0.97778) (98.424,1.0972) (114.76,1.2163) (129.4,1.3351) (145.75,1.4534)};\addlegendentry{valide}
+
+\nextgroupplot[title={Décomposition de $C_D$},xlabel={$\alpha$ (°)},ylabel={counts},legend pos=north west,ymin=0]
+\addplot[cblue,very thick] coordinates {(-4,69.584) (-3,68.211) (-2,67.478) (-1,67.288) (0,67.371) (1,68.1) (2,69.17) (3,72.579) (4,77.134) (5,82.671) (6,90.04) (7,98.424) (8,114.76) (9,129.4) (10,145.75)};\addlegendentry{$C_D$ total (Squire-Young)}
+\addplot[cgreen,very thick] coordinates {(-4,54.092) (-3,55.071) (-2,56.389) (-1,57.475) (0,57.105) (1,57.167) (2,54.939) (3,55.464) (4,54.027) (5,52.844) (6,53.087) (7,54.737) (8,56.028) (9,56.418) (10,56.281)};\addlegendentry{frottement $C_{D,f}$}
+\addplot[corange,very thick] coordinates {(-4,15.492) (-3,13.141) (-2,11.089) (-1,9.8128) (0,10.266) (1,10.933) (2,14.231) (3,17.115) (4,23.107) (5,29.827) (6,36.953) (7,43.687) (8,58.727) (9,72.98) (10,89.471)};\addlegendentry{forme $C_D-C_{D,f}$}
+\end{groupplot}
+\end{tikzpicture}

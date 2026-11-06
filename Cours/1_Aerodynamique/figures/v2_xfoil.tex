@@ -1,0 +1,18 @@
+% figure générée par tools/make_figures_v2.py : v2_xfoil
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.6cm},width=0.48\linewidth,height=5.4cm,
+  xlabel={épaisseur $t$ (\%)},title style={font=\small},tick label style={font=\scriptsize},legend style={draw=none,font=\scriptsize}]
+\nextgroupplot[title={$C_D$ de croisière ($C_L=0{,}4$), médiane sur $m,p$},ylabel={counts},legend pos=north west]
+\addplot[corange,very thick,mark=*,mark size=1.2pt] coordinates {(8,48) (10,50.8) (12,54.1) (14,59.6) (16,61.6) (18,65.3) (20,70.3)};\addlegendentry{$I=2$}
+\addplot[cgreen,very thick,mark=*,mark size=1.2pt] coordinates {(8,53.5) (10,52.9) (12,56.1) (14,58) (16,60.6) (18,64.7) (20,69.3)};\addlegendentry{$I=4$}
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(8,56) (10,55.9) (12,57.7) (14,59.7) (16,62.45) (18,65.3) (20,70.15)};\addlegendentry{$I=6$}
+\addplot[cmuted,very thick,mark=*,mark size=1.2pt] coordinates {(8,55.95) (10,59.2) (12,61.25) (14,63.3) (16,67.5) (18,70.05) (20,76.35)};\addlegendentry{$I=8$}
+\nextgroupplot[title={$C_{L,\max}$ (rampe 4--14°), médiane sur $m,p$},ymin=0.6]
+\addplot[corange,very thick,mark=*,mark size=1.2pt] coordinates {(8,0.981) (10,1.0245) (12,1.0112) (14,1.1883) (16,1.328) (18,1.3478) (20,1.2788)};
+\addplot[cgreen,very thick,mark=*,mark size=1.2pt] coordinates {(8,1.2839) (10,1.5288) (12,1.5613) (14,1.5372) (16,1.5132) (18,1.4736) (20,1.5252)};
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(8,1.6178) (10,1.6147) (12,1.609) (14,1.5857) (16,1.5264) (18,1.5132) (20,1.5011)};
+\addplot[cmuted,very thick,mark=*,mark size=1.2pt] coordinates {(8,1.6741) (10,1.6447) (12,1.6326) (14,1.6006) (16,1.5582) (18,1.4953) (20,1.4599)};
+\addplot[cink,dashed] coordinates {(8,1.2) (20,1.2)};
+\node[font=\scriptsize,anchor=south east] at (axis cs:20,1.2) {exigence de manœuvre};
+\end{groupplot}
+\end{tikzpicture}

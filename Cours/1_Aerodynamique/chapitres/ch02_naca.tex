@@ -1,0 +1,133 @@
+\chapter{La géométrie : profils NACA à quatre chiffres}\label{ch:naca}
+\iterbanner{V0}
+
+\section{Trois paramètres, deux lois}
+Un profil NACA $MPXX$ superpose une \textbf{ligne moyenne} (la cambrure) et une \textbf{loi d'épaisseur} symétrique. Trois nombres le définissent, et ce sont les trois variables de conception du hackathon :
+\begin{itemize}
+\item $m=M/100$ : la cambrure maximale, en fraction de corde ;
+\item $p=P/10$ : l'abscisse de cette cambrure maximale ;
+\item $t=XX/100$ : l'épaisseur relative maximale.
+\end{itemize}
+Le NACA 2412 a donc $m=0{,}02$, $p=0{,}4$ et $t=0{,}12$.
+
+\paragraph{La ligne moyenne.} Elle est formée de deux arcs de parabole qui se raccordent en $x=p$, au sommet de la cambrure :
+\[
+y_c(x)=\begin{cases}\dfrac{m}{p^2}\big(2px-x^2\big) & 0\le x<p,\\[8pt]
+\dfrac{m}{(1-p)^2}\big((1-2p)+2px-x^2\big) & p\le x\le1,\end{cases}
+\qquad
+\frac{\dd y_c}{\dd x}=\begin{cases}\dfrac{2m}{p^2}(p-x) & x<p,\\[8pt] \dfrac{2m}{(1-p)^2}(p-x) & x\ge p.\end{cases}
+\]
+Les deux arcs valent $m$ en $x=p$, avec une pente nulle : la ligne est continue et dérivable. Elle s'annule aux deux bords ($y_c(0)=y_c(1)=0$). Sa courbure, en revanche, saute en $x=p$, de $-2m/p^2$ à $-2m/(1-p)^2$.
+
+\paragraph{La loi d'épaisseur.} C'est un polynôme calé sur des profils de bonne qualité dans les années 1930 :
+\[
+y_t(x)=5t\big(0{,}2969\sqrt x-0{,}1260\,x-0{,}3516\,x^2+0{,}2843\,x^3+a_4\,x^4\big).
+\]
+Le coefficient d'origine $a_4=-0{,}1015$ laisse un bord de fuite d'épaisseur finie ($y_t(1)=0{,}0021\cdot5t$). Le code utilise $a_4=-0{,}1036$, qui donne $y_t(1)=0$ : un \textbf{bord de fuite fermé}. C'est nécessaire pour un contour de panneaux fermé et pour un STL étanche. Le terme en $\sqrt x$ donne un bord d'attaque arrondi, de rayon
+\[
+r_{BA}=1{,}1019\,t^2 .
+\]
+L'épaisseur maximale vaut $t$ et se trouve vers $x\approx0{,}30$, \emph{quelle que soit} la cambrure.
+
+\paragraph{L'assemblage.} L'épaisseur est appliquée \emph{perpendiculairement} à la ligne moyenne (figure~\ref{fig:naca-construction}). Avec $\vartheta=\arctan(\dd y_c/\dd x)$ :
+\begin{align*}
+x_{u}&=x-y_t\sin\vartheta, & y_{u}&=y_c+y_t\cos\vartheta & &\text{(extrados)},\\
+x_{l}&=x+y_t\sin\vartheta, & y_{l}&=y_c-y_t\cos\vartheta & &\text{(intrados)}.
+\end{align*}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=10.5cm,y=10.5cm]
+\draw[cmuted,thin] (0,0) -- (1,0) node[right,font=\small] {corde};
+\draw[cblue,thick,dashed] plot[domain=0:0.4,samples=30] (\x,{0.05/0.16*(0.8*\x-\x*\x)}) -- plot[domain=0.4:1,samples=40] (\x,{0.05/0.36*(0.2+0.8*\x-\x*\x)});
+\node[cblue,font=\small] at (0.75,0.055) {ligne moyenne $y_c$};
+% point de construction
+\def\xx{0.22}
+\pgfmathsetmacro{\yc}{0.05/0.16*(0.8*\xx-\xx*\xx)}
+\pgfmathsetmacro{\sl}{2*0.05/0.16*(0.4-\xx)}
+\pgfmathsetmacro{\th}{atan(\sl)}
+\pgfmathsetmacro{\yt}{5*0.12*(0.2969*sqrt(\xx)-0.1260*\xx-0.3516*\xx*\xx+0.2843*\xx*\xx*\xx-0.1036*\xx*\xx*\xx*\xx)}
+\fill[cink] (\xx,\yc) circle (0.2pt);
+\draw[corange,very thick,-{Stealth[length=2mm]}] (\xx,\yc) -- ++(90+\th:\yt) node[above left,font=\small] {$y_t$};
+\draw[corange,very thick,-{Stealth[length=2mm]}] (\xx,\yc) -- ++(-90+\th:\yt) node[below right,font=\small] {$y_t$};
+\draw[cink,thin] (\xx,\yc) -- ++(\th:0.12);
+\draw[cink,thin] (\xx,\yc) -- ++(0:0.12);
+\draw[cink] (\xx+0.07,\yc) arc (0:\th:0.07);
+\node[font=\small] at (\xx+0.105,\yc+0.012) {$\vartheta$};
+% profil complet
+\draw[cink,thick] plot[smooth,tension=0.5] coordinates {(1,0) (0.8,0.032) (0.6,0.058) (0.4,0.077) (0.25,0.08) (0.12,0.07) (0.04,0.042) (0,0) (0.04,-0.026) (0.12,-0.036) (0.25,-0.039) (0.4,-0.034) (0.6,-0.022) (0.8,-0.011) (1,0)};
+\draw[cmuted,{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (0,-0.075) -- (0.4,-0.075) node[midway,below,font=\small] {$p$};
+\draw[cmuted,{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (0.4,0) -- (0.4,0.05) node[midway,right,font=\small] {$m$};
+\end{tikzpicture}
+\caption{Construction d'un profil NACA (cambrure exagérée) : l'épaisseur $y_t$ est reportée de part et d'autre de la ligne moyenne, perpendiculairement à celle-ci.}\label{fig:naca-construction}
+\end{figure}
+
+\section{Ce que chaque paramètre fait physiquement}
+\begin{figure}[htbp]
+\centering
+\input{figures/parametres}
+\caption{Effet de chaque paramètre (calculé par \code{naca4}). Tirets : ligne moyenne.}\label{fig:parametres}
+\end{figure}
+\begin{itemize}
+\item \textbf{L'épaisseur $t$} pilote le rayon de bord d'attaque ($r_{BA}\propto t^2$), donc la tolérance en incidence et la forme du pic d'aspiration. Elle fixe aussi la survitesse moyenne sur le profil, donc le gradient de pression adverse en aval et la traînée de forme. Elle augmente légèrement la pente de portance, $\dd C_L/\dd\alpha\approx2\pi(1+0{,}77\,t)$.
+\item \textbf{La cambrure $m$} décale la courbe de portance. En théorie des profils minces, $C_L=2\pi(\alpha-\alpha_{L0})$ avec un angle de portance nulle $\alpha_{L0}<0$ proportionnel à $m$. Elle crée un moment piqueur, $C_{M,c/4}<0$.
+\item \textbf{La position $p$} répartit la charge le long de la corde. Une cambrure arrière ($p$ grand) charge le bord de fuite, augmente $|C_{M}|$ et crée un gradient adverse plus fort en fin d'extrados. Une cambrure avant renforce le pic d'aspiration au bord d'attaque.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/profils}
+\caption{Trois profils de référence du cours, tracés à partir des points du code.}\label{fig:profils}
+\end{figure}
+
+\begin{piege}
+Pour $m=0$, la position $p$ n'a aucun effet. Sur la grille $8\times8\times8$, les 8 valeurs de $p$ à $m=0$ donnent le même profil symétrique. Ce sont des doublons dans le front de Pareto, et des minima dégénérés dans le QUBO. Le code gère ce cas en renvoyant $y_c=0$ dès que $m=0$ ou $p=0$, ce qui évite aussi une division par zéro.
+\end{piege}
+
+\section{La discrétisation : distribution en cosinus}
+Le contour est échantillonné en $2n+1$ points ($n=$\,\code{n\_half}, 100 par défaut, soit 200 panneaux). Les abscisses suivent une \textbf{distribution en cosinus} :
+\[
+x_k=\tfrac12\big(1-\cos\beta_k\big),\qquad \beta_k=\frac{k\pi}{n},\quad k=0,\dots,n .
+\]
+C'est la projection sur l'axe des $x$ de points également espacés sur un demi-cercle. Les points se resserrent aux deux bords, où $\dd x/\dd\beta=\tfrac12\sin\beta\to0$. Le premier intervalle vaut $\tfrac12(1-\cos\tfrac\pi n)\approx\pi^2/(4n^2)$, soit $2{,}5\cdot10^{-4}$ pour $n=100$, contre $10^{-2}$ en distribution uniforme : quarante fois plus fin.
+
+C'est indispensable :
+\begin{itemize}
+\item au \textbf{bord d'attaque}, la courbure est maximale, la vitesse passe de 0 (point d'arrêt) à son maximum sur quelques millièmes de corde, et la couche limite démarre là ;
+\item au \textbf{bord de fuite}, la condition de Kutta porte sur les deux derniers panneaux, et la couche limite y est la plus sensible.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/cosinus}
+\caption{Zoom sur le bord d'attaque d'un NACA 0012 avec 60 panneaux. La distribution en cosinus place 5 points avant $x=0{,}05$, la distribution uniforme seulement 2 : elle rate complètement l'arrondi du nez.}\label{fig:cosinus}
+\end{figure}
+
+\paragraph{Ordre de parcours.} Les points sont rangés comme dans XFOIL : du bord de fuite par l'extrados jusqu'au bord d'attaque, puis par l'intrados jusqu'au bord de fuite. Le contour est donc parcouru dans le sens trigonométrique, et le point de bord de fuite apparaît deux fois (premier et dernier). Avec ce sens, la \textbf{normale sortante} d'un segment de tangente unitaire $(t_x,t_y)$ est $(t_y,-t_x)$ : elle est à droite quand on avance le long du contour. Le même fichier de coordonnées sert d'entrée à XFOIL et au maillage de la SER.
+
+\begin{codebox}[ : \code{aero/naca4.py}]
+\begin{lstlisting}
+beta = np.linspace(0.0, np.pi, n_half + 1)
+x = 0.5 * (1 - np.cos(beta))                 # distribution en cosinus
+yt = thickness(x, t, closed_te)              # a4 = -0.1036 : bord de fuite ferme
+yc, dyc = camber_line(x, m, p)
+th = np.arctan(dyc)
+xu, yu = x - yt * np.sin(th), yc + yt * np.cos(th)   # extrados
+xl, yl = x + yt * np.sin(th), yc - yt * np.cos(th)   # intrados
+X = np.concatenate([xu[::-1], xl[1:]])       # BF extrados -> BA -> BF intrados
+Y = np.concatenate([yu[::-1], yl[1:]])
+\end{lstlisting}
+\code{xu[::-1]} parcourt l'extrados à l'envers (du bord de fuite vers le bord d'attaque), et \code{xl[1:]} évite de dupliquer le point de bord d'attaque. On obtient $X[0]=X[-1]=1$.
+\end{codebox}
+
+\begin{projet}
+La paramétrisation NACA est pauvre (trois degrés de liberté, des formes toujours « raisonnables ») mais interprétable et énumérable : $8^3=512$ profils. Le rayon de bord d'attaque $r_{BA}=1{,}1019\,t^2$ est exporté dans \code{AeroResult.r\_le}, car c'est probablement le lien physique le plus direct entre les deux objectifs. Il pilote le pic d'aspiration côté aérodynamique, et vraisemblablement le retour radar de face côté SER, ce que l'équipe de la phase~2 doit confirmer. Pour un cas industriel, on passerait à des paramétrisations plus riches (CST de Kulfan, B-splines), donc à plus de variables et plus de qubits.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Pour le NACA 2412 : (a) calculer $y_c(p)$ et la pente de la ligne moyenne en $x=p$ par les deux formules, et vérifier le raccord ; (b) calculer le rayon de bord d'attaque ; (c) que vaut la courbure de la ligne moyenne juste avant et juste après $x=p$ ?
+\end{exercice}
+\begin{exercice}
+Avec $n=100$, comparer l'abscisse du premier point après le bord d'attaque (ou du dernier avant le bord de fuite) en distribution cosinus et en distribution uniforme. Pourquoi le point de bord d'attaque lui-même n'est-il pas un point de collocation ?
+\end{exercice}

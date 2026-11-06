@@ -1,0 +1,108 @@
+\chapter{NSGA-II : principe et implémentation}\label{ch:nsga}
+\iterbanner{V1}
+
+\section{Pourquoi un algorithme génétique}
+La note d'intention retient NSGA-II (Deb et al., 2002) pour trois raisons : il ne demande aucun gradient, il est robuste aux discontinuités (en SER, une facette qui passe de l'ombre à la lumière fait sauter l'objectif), et il produit un \emph{ensemble} de solutions à chaque génération, donc une approximation de tout le front en une seule exécution. C'est la référence classique de l'optimisation multi-objectif, disponible dans pymoo.
+
+\section{Le principe}
+Un algorithme génétique fait évoluer une \textbf{population} de $N$ solutions. À chaque génération :
+\begin{enumerate}
+\item on \textbf{sélectionne} des parents, en favorisant les meilleurs ;
+\item on les \textbf{croise} et on les \textbf{mute} pour créer $N$ enfants ;
+\item on garde les $N$ meilleurs parmi parents et enfants : c'est la \textbf{survie élitiste}.
+\end{enumerate}
+Tout le problème, en multi-objectif, est de définir « meilleur » quand il n'y a pas d'ordre total. NSGA-II répond par deux critères, dans cet ordre : le \textbf{rang de non-dominance}, puis la \textbf{distance d'encombrement}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.45cm and 0.6cm]
+\node[flow] (p) {population $P_t$\\ ($N$ profils)};
+\node[flow,right=of p] (s) {sélection\\ par tournoi};
+\node[flow,right=of s] (v) {croisement SBX\\ mutation polynomiale\\ arrondi, doublons};
+\node[flow,right=of v] (e) {$N$ enfants\\ \textbf{simulés}};
+\node[flow,below=1.2cm of v,text width=6cm] (r) {$P_t\cup Q_t$ ($2N$) : tri non dominé contraint,\\ remplissage front par front, encombrement};
+\node[flow,left=of r] (n) {$P_{t+1}$};
+\draw[arr] (p) -- (s); \draw[arr] (s) -- (v); \draw[arr] (v) -- (e);
+\draw[arr] (e) |- (r); \draw[arr] (r) -- (n); \draw[arr] (n) -| (p);
+\end{tikzpicture}
+\caption{Une génération de NSGA-II. Seuls les enfants coûtent des simulations ; les doublons sont éliminés avant d'être simulés.}\label{fig:nsga-cycle}
+\end{figure}
+
+\section{Les deux critères de classement}
+\paragraph{Le tri non dominé.} On répartit la population en fronts successifs $\mathcal F_1,\mathcal F_2,\dots$ : $\mathcal F_1$ contient les solutions non dominées, $\mathcal F_2$ celles qui ne sont dominées que par $\mathcal F_1$, etc. Le rang d'une solution est l'indice de son front. L'algorithme de Deb compte, pour chaque solution, combien d'autres la dominent, puis « épluche » les fronts : $O(MN^2)$ comparaisons.
+
+\paragraph{La distance d'encombrement.} À rang égal, on préfère les solutions isolées, pour bien répartir la population le long du front. Pour chaque objectif, on trie le front, et on ajoute à chaque point la distance normalisée entre ses deux voisins ; les extrémités reçoivent $+\infty$ pour être toujours conservées :
+\[
+d_i=\sum_{k=1}^{M}\frac{f_k^{(i+1)}-f_k^{(i-1)}}{f_k^{\max}-f_k^{\min}}.
+\]
+
+\paragraph{Les contraintes : règle de Deb.} Pour comparer deux solutions : une faisable bat toujours une infaisable ; entre deux infaisables, la plus petite violation $\mathrm{CV}$ gagne ; entre deux faisables, on applique la dominance. Il n'y a ni pénalité ni coefficient à régler.
+
+\begin{codebox}[ : \code{optim/nsga2.py}, classement contraint]
+\begin{lstlisting}
+def constrained_ranks(F, CV):
+    feas = np.where(CV <= 0)[0]
+    r = 0
+    for front in non_dominated_sort(F[feas]):        # faisables : fronts de Pareto
+        ids = feas[front]
+        rank[ids] = r
+        crowd[ids] = crowding_distance(F[ids])
+        r += 1
+    infeas = np.where(CV > 0)[0]
+    for i in infeas[np.argsort(CV[infeas])]:         # infaisables : apres, par violation croissante
+        rank[i] = r
+        r += 1
+    return rank, crowd
+\end{lstlisting}
+\end{codebox}
+
+\section{Les opérateurs, sur des variables entières}
+Nos variables sont des indices de 0 à 7. Comme pymoo, on les relâche en réels dans $[-0{,}5;\ 7{,}5]$, on applique des opérateurs continus, puis on arrondit.
+
+\paragraph{Croisement SBX} (\emph{simulated binary crossover}). Pour chaque variable, avec probabilité $\frac12$, les deux enfants sont placés symétriquement autour de la moyenne des parents, à une distance $\beta$ fois leur écart, où $\beta$ suit une loi qui se concentre près de 1 quand $\eta_c$ est grand :
+\[
+\beta=\begin{cases}(2u)^{1/(\eta_c+1)} & u\le\frac12\\ \big(\frac{1}{2(1-u)}\big)^{1/(\eta_c+1)} & u>\frac12\end{cases},\qquad u\sim\mathcal U(0,1).
+\]
+\paragraph{Mutation polynomiale.} Avec probabilité $1/n_{var}$ par variable, un petit saut de loi en puissance, d'amplitude réglée par $\eta_m$.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/operateurs}
+\caption{Distribution des enfants pour les réglages usuels ($\eta_c=15$, $\eta_m=20$). Après arrondi, l'enfant SBX reprend la valeur d'un des parents dans 99,7~\% des cas, et la mutation laisse l'indice inchangé dans 74~\% des cas, sinon le décale de $\pm1$.}\label{fig:operateurs}
+\end{figure}
+
+\begin{piege}
+Avec des variables à 8 niveaux, l'arrondi transforme ces opérateurs continus. SBX avec $\eta_c=15$ devient un \emph{échange de gènes} (chaque enfant hérite la valeur de l'un ou l'autre parent, variable par variable), et c'est la mutation qui explore, par pas de $\pm1$. Ce n'est pas un défaut, mais il faut le savoir : régler $\eta_c$ ne change presque rien ici.
+\end{piege}
+
+\paragraph{Doublons.} Un enfant identique à un individu de la population, ou à un autre enfant, est rejeté avant d'être simulé. Sans cela, la population se remplirait de copies d'un même bon profil, et des simulations seraient gaspillées.
+
+\section{Vérification contre pymoo}
+Le script \code{optim/check\_pymoo.py} lance l'implémentation de pymoo (installée dans \code{Code/.venv}) sur le même problème compté, avec les mêmes réglages ($N=16$, SBX $\eta_c=15$, mutation $\eta_m=20$, arrondi, doublons éliminés). Sur 20 graines, le nombre médian de simulations pour retrouver tout le front est :
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & notre NSGA-II & pymoo \\
+\midrule
+S1 (7 profils) & 106,5 & 95,0 \\
+S2 (15 profils) & 106,0 & 110,5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Les deux implémentations se comportent de la même façon, aux fluctuations entre graines près.
+
+\exercices
+\begin{exercice}
+Calculer la distance d'encombrement des trois points d'un front $(0;\,1)$, $(0{,}3;\,0{,}5)$, $(1;\,0)$. Lequel serait éliminé en premier si l'on devait n'en garder que deux ? Pourquoi les extrémités reçoivent-elles $+\infty$ ?
+\end{exercice}
+\begin{exercice}
+Avec $\eta_c=15$ et des parents d'indices 2 et 5, quelle valeur de $\beta$ faudrait-il pour qu'un enfant arrondi soit égal à 3 ? Avec quelle probabilité cela arrive-t-il ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Utiliser des opérateurs \emph{entiers} natifs (croisement uniforme, mutation par décalage de $\pm1$ ou par tirage), plus lisibles que SBX arrondi.
+\item Utiliser un codage binaire (les 9 bits du QUBO) avec croisement à un point et mutation par bit : c'est la version « génétique » la plus proche de la formulation quantique.
+\item Passer à NSGA-III ou SMS-EMOA si l'on ajoute des objectifs.
+\end{itemize}
+\end{pistes}

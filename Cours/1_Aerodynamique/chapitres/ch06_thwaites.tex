@@ -1,0 +1,99 @@
+\chapter{Couche limite laminaire : la méthode de Thwaites}\label{ch:thwaites}
+\iterbanner{V0}
+
+\section{De von Kármán à une équation fermée}
+On multiplie l'équation de von Kármán par $2U_e\theta/\nu$ :
+\[
+\frac{U_e}{\nu}\frac{\dd\theta^2}{\dd s}+2\big(2+H\big)\frac{\theta^2}{\nu}\frac{\dd U_e}{\dd s}=\frac{U_e\,\theta\,c_f}{\nu}.
+\]
+Deux groupements sans dimension apparaissent. Le premier est le \textbf{paramètre de gradient de pression}
+\[
+\lambda=\frac{\theta^2}{\nu}\frac{\dd U_e}{\dd s}.
+\]
+Le second est le frottement réduit $\ell=\tfrac12c_f\,\Re_\theta=\tfrac{\tau_w\theta}{\mu U_e}$. L'équation devient
+\[
+\frac{U_e}{\nu}\frac{\dd\theta^2}{\dd s}=2\big[\ell-(2+H)\lambda\big]\equiv F .
+\]
+
+\paragraph{L'hypothèse de Thwaites.} En laminaire, la forme du profil de vitesse est gouvernée principalement par le gradient de pression local. On suppose donc que $H$ et $\ell$ sont des fonctions du seul $\lambda$ : c'est une famille de profils à un paramètre. Thwaites a tracé $F(\lambda)$ pour toutes les solutions exactes connues (Falkner-Skan, Howarth, etc.) et constaté que les points s'alignent presque sur une droite (figure~\ref{fig:thwaites-f}) :
+\[
+F(\lambda)\approx a-b\lambda,\qquad a=0{,}45,\quad b=6 .
+\]
+
+\paragraph{La quadrature.} Avec cette droite, l'équation devient linéaire en $\theta^2$ :
+\[
+U_e\frac{\dd\theta^2}{\dd s}+6\,\theta^2\frac{\dd U_e}{\dd s}=0{,}45\,\nu
+\quad\Longleftrightarrow\quad
+\frac{1}{U_e^5}\frac{\dd}{\dd s}\big(\theta^2U_e^6\big)=0{,}45\,\nu .
+\]
+On a multiplié par $U_e^5$ pour faire apparaître une dérivée exacte. C'est l'origine de la puissance 6, et donc du 5 dans l'intégrale. En partant du point d'arrêt, où $U_e=0$ :
+\[
+\boxed{\ \theta^2(s)=\frac{0{,}45\,\nu}{U_e^6(s)}\int_0^sU_e^5(s')\,\dd s'\ }
+\]
+On n'a plus d'EDO à résoudre : $\theta$ s'obtient par une simple intégrale cumulée de $U_e^5$.
+
+\section{Les corrélations de fermeture}
+Une fois $\theta$ connu, on calcule $\lambda$, puis $H$ et $c_f$ par les corrélations de Thwaites, sous la forme de Cebeci et Bradshaw :
+\[
+0\le\lambda\le0{,}1:\quad \ell=0{,}22+1{,}57\lambda-1{,}8\lambda^2,\qquad H=2{,}61-3{,}75\lambda+5{,}24\lambda^2,
+\]
+\[
+-0{,}1\le\lambda<0:\quad \ell=0{,}22+1{,}402\lambda+\frac{0{,}018\lambda}{\lambda+0{,}107},\qquad H=2{,}088+\frac{0{,}0731}{\lambda+0{,}14},
+\]
+\[
+c_f=\frac{2\,\ell(\lambda)}{\Re_\theta},\qquad \Re_\theta=\frac{U_e\theta}{\nu}.
+\]
+Le \textbf{décollement laminaire} correspond à $\ell=0$, soit $\lambda\approx-0{,}09$ (constante \code{LAMBDA\_SEP}).
+
+\begin{figure}[htbp]
+\centering
+\input{figures/thwaites_fermeture}
+\caption{À gauche, les corrélations $H(\lambda)$ et $\ell(\lambda)$ utilisées par le code. À droite, la fonction $F(\lambda)$ qu'elles impliquent, comparée à la droite $0{,}45-6\lambda$ de Thwaites. L'écart reste faible sur toute la plage utile, ce qui justifie la quadrature.}\label{fig:thwaites-f}
+\end{figure}
+
+\paragraph{Intuition physique de $\lambda$.} $\theta^2/\nu$ est le temps de diffusion visqueuse à travers la couche, et $1/U_e'$ le temps caractéristique de variation de l'écoulement extérieur. $\lambda$ compare les deux :
+\begin{itemize}
+\item $\lambda>0$ (accélération) : profil plein, $H$ petit, frottement élevé ;
+\item $\lambda<0$ (décélération) : profil creusé près de la paroi, $H$ grand ;
+\item $\lambda\approx-0{,}09$ : le frottement s'annule, la couche décolle.
+\end{itemize}
+
+\section{Deux cas exacts}
+\paragraph{Plaque plane ($U_e=1$).} L'intégrale vaut $s$, d'où $\theta^2=0{,}45\,\nu s$, soit
+\[
+\theta=0{,}671\,\frac{s}{\sqrt{\Re_s}},
+\]
+contre $0{,}664$ pour la solution exacte de Blasius : 1~\% d'écart. Avec $\lambda=0$, on obtient $H=2{,}61$ (Blasius : 2,59).
+
+\paragraph{Point d'arrêt ($U_e=ks$, Hiemenz).} L'intégrale vaut $k^5s^6/6$, d'où $\theta^2=0{,}075\,\nu/k$ : l'épaisseur est \emph{constante} près du point d'arrêt, et $\lambda=0{,}075$. C'est ce qui permet de démarrer la quadrature en $s=0$ sans singularité.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/plaque_plane}
+\caption{Validation sur plaque plane à $\Re=10^7$ (tests V2 et V3 de \code{validation.py}). À gauche, Thwaites contre Blasius : 1,0~\% d'écart, la différence entre les constantes 0,671 et 0,664. À droite, Head contre la loi turbulente en $1/7$ (ch.~\ref{ch:head}) : moins de 5~\% d'écart au-delà de $x=0{,}3$.}\label{fig:plaque}
+\end{figure}
+
+\begin{codebox}[ : bloc Thwaites de \code{march\_surface}]
+\begin{lstlisting}
+s0 = np.concatenate([[0.0], s])          # on ajoute le point d'arret, s = 0
+U0 = np.concatenate([[0.0], Ue])         # ou Ue = 0
+integ = np.concatenate([[0.0], np.cumsum(0.5 * (U0[1:]**5 + U0[:-1]**5) * np.diff(s0))])[1:]
+theta_lam = np.sqrt(0.45 / Re * integ / Ue**6)       # nu = 1/Re
+lam = theta_lam**2 * dUe * Re                         # dUe = np.gradient(Ue, s)
+H_lam, ell = thwaites_closure(lam)
+Re_th = Ue * theta_lam * Re
+\end{lstlisting}
+La quadrature est une méthode des trapèzes sur $U_e^5$. Le point $s=0$, $U_e=0$ est ajouté explicitement : sans lui, l'intégrale démarrerait à la première collocation et $\theta$ serait faux sur les premières stations. \code{thwaites\_closure} borne $\lambda$ à $[-0{,}1;\,0{,}1]$ avant d'évaluer les corrélations.
+\end{codebox}
+
+\begin{piege}
+$\theta$ dépend de tout l'historique amont (l'intégrale), alors que $\lambda$, donc $H$, est \emph{local}. Thwaites réagit donc mal aux variations brutales de $U_e$ : bulbe de décollement, choc, ou la chute de vitesse au bord de fuite fermé. De plus, au-delà de $\lambda<-0{,}09$, la méthode n'a plus de sens. On ne la prolonge pas : on bascule en turbulent (ch.~\ref{ch:transition}).
+\end{piege}
+
+\exercices
+\begin{exercice}
+Retrouver le résultat de Hiemenz : pour $U_e=ks$, calculer $\theta^2$ par la formule de Thwaites, puis $\lambda$. Que vaut $H$ au point d'arrêt d'après les corrélations ?
+\end{exercice}
+\begin{exercice}
+Pourquoi la puissance 5 ? Reprendre le calcul avec une droite quelconque $F=a-b\lambda$ et montrer qu'on obtient $\theta^2U_e^{b}=a\,\nu\int_0^sU_e^{b-1}\,\dd s'$.
+\end{exercice}

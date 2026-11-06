@@ -1,0 +1,11 @@
+{
+  "m": 0.02,
+  "p": 0.4,
+  "t": 0.12,
+  "alpha_deg": 2.0,
+  "chord_m": 1.0,
+  "span_chords": 1.0,
+  "n_triangles": 796,
+  "frame": "x: corde vers l'aval, y: extrados, z: envergure, origine au BA",
+  "radar_note": "radar de face : direction d'incidence = -x tourn\u00e9e de alpha autour de z (vent relatif)"
+}

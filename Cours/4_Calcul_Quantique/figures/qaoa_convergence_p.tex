@@ -1,0 +1,10 @@
+% figure générée par tools/make_figures.py : qaoa_convergence_p
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.4cm,axis lines=left,xmin=0.7,xmax=5.3,ymin=0,ymax=1,xtick={1,...,5},
+  xlabel={profondeur $p$},ylabel={probabilité / ratio},
+  legend style={draw=none,font=\small,at={(0.02,0.62)},anchor=west}]
+\addplot[cblue,thick,mark=*] coordinates {(1,0.01771) (2,0.06215) (3,0.09662) (4,0.1269) (5,0.142)};\addlegendentry{$P(\text{optimum})$}
+\addplot[corange,thick,mark=square*] coordinates {(1,0.08774) (2,0.2185) (3,0.3019) (4,0.3836) (5,0.4363)};\addlegendentry{$P(\text{5 meilleurs})$}
+\addplot[cgreen,thick,mark=triangle*] coordinates {(1,0.8673) (2,0.9325) (3,0.9515) (4,0.9658) (5,0.972)};\addlegendentry{ratio d'approximation $r$}
+\end{axis}
+\end{tikzpicture}

@@ -1,0 +1,76 @@
+\chapter{Implémentation et validation}\label{ch:code}
+\iterbanner{V1}
+
+\section{Organisation du code}
+\begin{center}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Fichier (\texttt{Code/ser/}) & Contenu \\
+\midrule
+\code{po2d.py} & facettes, largeur équivalente PO, directions radar, conversions dB et 2D $\to$ 3D \\
+\code{model.py} & \code{RadarCase} (scénario), \code{evaluate\_ser} $\to$ \code{SERResult} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le cœur : \code{echo\_width}}
+\begin{codebox}[ : \code{ser/po2d.py}]
+\begin{lstlisting}
+def facets(X, Y):
+    dx, dy = np.diff(X), np.diff(Y)
+    L = np.hypot(dx, dy)
+    keep = L > 1e-14                       # retire les segments degeneres
+    ...
+    return xs + dx/2, ys + dy/2, tx, ty, ty, -tx, L    # milieux, tangente, normale sortante, longueur
+
+def echo_width(X, Y, s_dirs, k):
+    xc, yc, tx, ty, nx, ny, L = facets(X, Y)
+    s = np.atleast_2d(s_dirs)
+    ns = s[:, :1] * nx + s[:, 1:] * ny     # n . s   (n_dir x n_fac)
+    ts = s[:, :1] * tx + s[:, 1:] * ty     # t . s
+    rs = s[:, :1] * xc + s[:, 1:] * yc     # s . r
+    lit = ns > 0                           # test d'eclairement
+    amp = np.where(lit, ns * L * np.sinc(k * L * ts / np.pi) * np.exp(2j * k * rs), 0.0)
+    return k * np.abs(amp.sum(axis=1)) ** 2
+\end{lstlisting}
+Tout est vectorisé sur les directions et les facettes. \code{np.sinc} de NumPy est le sinus cardinal \emph{normalisé}, $\sin(\pi x)/(\pi x)$ : d'où la division par $\pi$. La normale sortante $(t_y,-t_x)$ suppose le sens de parcours trigonométrique du contour NACA, le même que pour les panneaux.
+\end{codebox}
+
+\paragraph{Les directions.} \code{radar\_directions(alpha, eps)} renvoie $\shat=-(\cos(\alpha-\varepsilon),\sin(\alpha-\varepsilon))$ pour un tableau d'élévations. \code{evaluate\_ser} construit le contour NACA (avec \code{n\_half}=200), le met à l'échelle de la corde physique, calcule $\sigma_{2D}$ sur les 81 élévations du secteur et renvoie la moyenne en dBm, la valeur dans l'axe et le maximum. Un appel coûte quelques millisecondes.
+
+\section{Validation}
+\begin{figure}[htbp]
+\centering
+\input{figures/validation}
+\caption{Validation du code. À gauche, bande plane : le code reproduit la formule exacte de la PO à moins de 0,01~dB. À droite, cylindre discrétisé en facettes : le rapport $\sigma_{2D}/(\pi a)$ converge vers 1 (0,997 et 0,9996 avec 1\,024 facettes).}\label{fig:validation}
+\end{figure}
+
+Deux tests de référence (figure~\ref{fig:validation}) :
+\begin{itemize}
+\item \textbf{la bande} vérifie la formule par facette, y compris le sinc et le test d'éclairement ;
+\item \textbf{le cylindre} vérifie la limite de phase stationnaire $\pi a$ sur une surface courbe discrétisée. Il faut assez de facettes pour que chacune soit petite devant la zone de Fresnel $\sqrt{\lambda\rho}$ : avec trop peu de facettes, chacune se comporte comme un petit miroir plan, et la SER fluctue.
+\end{itemize}
+
+\section{Convergence en facettage, et fréquence}
+\begin{figure}[htbp]
+\centering
+\input{figures/convergence}
+\caption{À gauche, SER moyenne du secteur S1 selon le nombre de points du contour : elle est stable à 0,01~dB dès \code{n\_half}=100. À droite, SER du NACA 2412 de 1 à 40~GHz : elle varie de moins de 0,1~dB, comme le prévoit la loi $\pi\rho$, indépendante de la fréquence.}\label{fig:conv-ser}
+\end{figure}
+
+\begin{piege}
+Le facettage est un paramètre \emph{numérique}. Avec trop peu de facettes, des reflets spéculaires de facettes apparaissent, qui n'existent pas sur la forme lisse. Ici, la distribution en cosinus place des facettes très fines au bord d'attaque, là où se forme l'écho de face, et la SER converge vite. Ce ne sera pas forcément vrai pour un solveur 3D sur un STL : le groupe SER doit refaire cette étude avec son propre code.
+\end{piege}
+
+\exercices
+\begin{exercice}
+Estimer le nombre d'opérations d'un appel à \code{evaluate\_ser} (400 facettes, 81 directions). Le comparer au coût d'une méthode des moments 2D avec 400 inconnues (résolution d'un système dense).
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter un test de non-régression automatique (bande, cylindre, valeur de référence sur le NACA 2412) dans \code{validation.py}.
+\item Tester un cylindre elliptique, dont le rayon de courbure varie, pour valider la loi $\pi\rho(\varepsilon)$ hors de l'axe.
+\item Écrire une version 3D de la PO sur les triangles du STL (formule de Gordon pour l'intégrale sur un triangle), pour se rapprocher du solveur prévu par la note d'intention.
+\end{itemize}
+\end{pistes}

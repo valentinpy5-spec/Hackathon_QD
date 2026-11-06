@@ -1,0 +1,83 @@
+\chapter{Intégration dans la chaîne d'optimisation}\label{ch:integration}
+\iterbanner{V1}
+
+\section{Ce qui circule entre les phases}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.9cm]
+\node[flow] (x) {profil $(i_m,i_p,i_t)$\\ 9 bits};
+\node[flow,right=of x] (aero) {\textbf{Aéro} (phase 1)\\ \code{evaluate}};
+\node[flow,right=of aero,fill=cblue!6] (ser) {\textbf{SER} (phase 2)\\ \code{evaluate\_ser}};
+\node[flow,right=of ser] (obj) {objectifs\\ $(C_D,\ \mathrm{SER})$\\ + contraintes};
+\draw[arr] (x) -- (aero);
+\draw[arr] (aero) -- node[above,font=\scriptsize] {$\alpha$} (ser);
+\draw[arr] (ser) -- (obj);
+\draw[arr] (aero.south) |- ++(0,-0.8) -| node[pos=0.25,below,font=\scriptsize] {$C_D$, $C_L$, validité} (obj.south);
+\node[flow,above=1.1cm of ser,xshift=1.6cm,fill=corange!8] (geo) {géométrie : mêmes points NACA\\ (ou STL de \code{geometry\_export})};
+\draw[arr,corange] (geo) -- (ser);
+\node[flow,above=1.1cm of aero,xshift=-1.6cm,fill=cgreen!8] (sc) {scénario : $\Re$, $\alpha$ ou $C_L$,\\ $f$, corde, secteur};
+\draw[arr,cgreen!60!black] (sc) -- (aero);
+\draw[arr,cgreen!60!black] (sc.east) -- (geo.west);
+\end{tikzpicture}
+\caption{La SER dans la chaîne. Elle reçoit la géométrie et l'attitude $\alpha$ de l'aérodynamique, et un scénario radar partagé. Les optimiseurs ne voient que les deux objectifs et les contraintes.}\label{fig:flux}
+\end{figure}
+
+\paragraph{Le couplage par l'attitude.} À incidence imposée (scénario de la note d'intention), tous les profils volent à $2^\circ$ et la SER ne dépend que de la forme. À portance imposée, chaque profil a sa propre incidence (de $-5{,}5^\circ$ à $+3{,}5^\circ$ sur la grille) : l'attitude vue par le radar dépend alors de l'aérodynamique, et c'est un vrai couplage multiphysique. Le code gère les deux, car la SER reçoit toujours l'$\alpha$ calculé par l'aéro.
+
+\section{Le code d'intégration}
+\begin{codebox}[ : \code{optim/problem.py}]
+\begin{lstlisting}
+def simulate(idx, space, sc):
+    m, p, t = space.values(idx)
+    a = evaluate(m, p, t, alpha=fc.alpha, Re=fc.Re)      # ou evaluate_at_cl en mode portance
+    s = evaluate_ser(m, p, t, alpha=a.alpha - offset, case=rc)   # attitude venue de l'aero
+    g = [fc.t_min - t, fc.CL_min - a.CL, 0.0 if a.valid else 1.0]  # contraintes g <= 0
+    return dict(..., CD_counts=a.CD * 1e4, SER_db=s.ser_db, feasible=all(gi <= 0 for gi in g))
+\end{lstlisting}
+\code{offset} recentre le secteur d'élévations pour un secteur asymétrique comme S2 : décaler toutes les élévations de $\varepsilon_0$ revient à remplacer $\alpha$ par $\alpha-\varepsilon_0$ dans $\shat$. \code{build\_table} évalue une fois les 512 profils et les enregistre dans \code{resultats/base\_complete\_<scénario>.csv}.
+\end{codebox}
+
+\section{Le contrat avec le groupe SER}
+Pour que le vrai solveur remplace ce modèle sans rien changer ailleurs, il doit respecter l'interface suivante :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Élément & Convention \\
+\midrule
+Entrée géométrique & STL de \code{geometry\_export} (mêmes points que l'aéro), repère corps : $x$ corde vers l'aval, $y$ extrados, $z$ envergure, origine au bord d'attaque \\
+Entrée d'attitude & $\alpha$ (degrés), lu dans le JSON ; la direction radar est tournée, pas la géométrie \\
+Scénario & fréquence, corde physique, polarisation, secteur d'élévations, à figer ensemble \\
+Sortie & une valeur scalaire par profil : moyenne linéaire sur le secteur, en dB (dBsm en 3D, dBm en 2D) \\
+Signature Python & \code{evaluate\_ser(m, p, t, alpha, case) -> objet avec .ser\_db} \\
+Coût & compté par le même compteur que l'aéro : une « simulation » = aéro + SER \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Procédure de remplacement.}
+\begin{enumerate}
+\item Écrire un adaptateur \code{evaluate\_ser} qui exporte le STL, appelle le solveur et renvoie \code{ser\_db}.
+\item Comparer au modèle PO sur une dizaine de profils : on attend un accord de tendance (rôle de $t$), pas forcément de niveau.
+\item Relancer \code{build\_table} pour les deux scénarios : tous les optimiseurs et toutes les figures suivent automatiquement.
+\end{enumerate}
+
+\begin{piege}
+En 3D, la SER d'un tronçon d'aile extrudé contient l'écho des \emph{flancs} (les deux extrémités du tronçon), qui n'a rien à voir avec le profil. Il faut soit les retirer (\code{extrude(..., caps=False)}), soit les ignorer en ne regardant que les directions perpendiculaires à l'envergure, où ils sont vus en incidence rasante.
+\end{piege}
+
+\section{Ce que la SER impose à l'optimisation}
+La SER moyenne sur le secteur est une fonction lisse de $(m,p,t)$ dans notre modèle : un modèle quadratique la représente bien, mieux que la traînée. Avec un vrai solveur, deux sources d'irrégularité apparaîtront : le passage d'une facette de l'ombre à la lumière, et les interférences entre contributions, sensibles à la fréquence. C'est l'argument de la note d'intention pour NSGA-II, qui n'utilise pas de gradient. Pour la boucle QUBO, une SER irrégulière dégraderait le modèle quadratique : il faudra le vérifier dès que les vraies valeurs seront disponibles.
+
+\exercices
+\begin{exercice}
+En mode portance imposée, un profil très cambré vole à $\alpha=-4^\circ$. Dans le scénario S1, le radar le voit-il plutôt par l'extrados ou par l'intrados, par rapport à un profil qui vole à $+2^\circ$ ? Quel effet peut-on attendre sur la SER ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Écrire dès maintenant l'adaptateur pour le format d'entrée du solveur choisi par le groupe SER, et le tester avec le modèle PO en guise de solveur factice.
+\item Mettre en cache les résultats SER par profil et par scénario (comme \code{AeroSimulator}), pour que les appels au vrai solveur, plus coûteux, ne soient jamais répétés.
+\item Prévoir un mode « multi-fidélité » : PO pour explorer, solveur complet pour confirmer les profils du front.
+\end{itemize}
+\end{pistes}

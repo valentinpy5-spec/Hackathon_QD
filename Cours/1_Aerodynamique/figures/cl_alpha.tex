@@ -1,0 +1,12 @@
+% figure générée par tools/make_figures.py : cl_alpha
+\begin{tikzpicture}
+\begin{axis}[width=0.75\linewidth,height=6.4cm,xlabel={$\alpha$ (°)},ylabel={$C_L$ (non visqueux)},
+  xmin=-4,xmax=10,legend columns=2,legend style={draw=none,font=\scriptsize,at={(0.5,-0.22)},anchor=north},legend cell align=left]
+\addplot[cmuted,very thick,mark=*,mark size=1.3pt] coordinates {(-4,-0.4823) (-3,-0.36185) (-2,-0.2413) (-1,-0.12067) (0,5.5511e-17) (1,0.12067) (2,0.2413) (3,0.36185) (4,0.4823) (5,0.6026) (6,0.72271) (7,0.84261) (8,0.96224) (9,1.0816) (10,1.2006)};\addlegendentry{NACA 0012 (panneaux)}
+\addplot[cmuted,dashed,domain=-4:10] {2*pi*(x-(-0.0000))*pi/180};\addlegendentry{profil mince, $\alpha_{L0}=-0.00^\circ$}
+\addplot[cblue,very thick,mark=*,mark size=1.3pt] coordinates {(-4,-0.2265) (-3,-0.10581) (-2,0.014921) (-1,0.13565) (0,0.25635) (1,0.37698) (2,0.4975) (3,0.61788) (4,0.73808) (5,0.85806) (6,0.97778) (7,1.0972) (8,1.2163) (9,1.3351) (10,1.4534)};\addlegendentry{NACA 2412 (panneaux)}
+\addplot[cblue,dashed,domain=-4:10] {2*pi*(x-(-2.0772))*pi/180};\addlegendentry{profil mince, $\alpha_{L0}=-2.08^\circ$}
+\addplot[corange,very thick,mark=*,mark size=1.3pt] coordinates {(-4,0.028327) (-3,0.14925) (-2,0.27014) (-1,0.39097) (0,0.51169) (1,0.63227) (2,0.75268) (3,0.87287) (4,0.99282) (5,1.1125) (6,1.2318) (7,1.3508) (8,1.4694) (9,1.5875) (10,1.7052)};\addlegendentry{NACA 4412 (panneaux)}
+\addplot[corange,dashed,domain=-4:10] {2*pi*(x-(-4.1545))*pi/180};\addlegendentry{profil mince, $\alpha_{L0}=-4.15^\circ$}
+\end{axis}
+\end{tikzpicture}

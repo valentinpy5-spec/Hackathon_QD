@@ -1,0 +1,75 @@
+\chapter{Recuit simulé et recuit quantique}\label{ch:recuit}
+\iterbanner{V0}
+
+Deux façons de chercher l'état fondamental en « refroidissant » progressivement : avec du hasard thermique (recuit \emph{simulé}, classique) ou avec des fluctuations quantiques (recuit \emph{quantique}).
+
+\section{Le paysage d'énergie}
+On imagine les $2^n$ chaînes comme les points d'un paysage, où deux chaînes sont voisines si elles diffèrent d'un bit, et l'altitude est l'énergie. Une descente « gloutonne », qui retourne un bit dès que l'énergie baisse, s'arrête dans le premier \textbf{minimum local} venu.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1.3cm,y=1.1cm]
+\draw[->,cmuted] (0,-0.2) -- (0,3.1) node[above,cink,font=\small] {énergie};
+\draw[->,cmuted] (0,-0.2) -- (9.3,-0.2) node[below left,cink,font=\small] {configurations (chaînes de bits)};
+\draw[cink,very thick] plot[smooth,tension=0.7] coordinates {(0.2,2.3) (1.2,1.6) (2.2,1.2) (3.2,1.7) (4.3,2.7) (5.3,1.8) (6.4,0.25) (7.4,1.0) (8.4,2.4) (9.0,2.6)};
+\fill[cblue] (2.2,1.2) circle (2.2pt);
+\node[font=\small,anchor=north east] at (2.1,1.1) {minimum local};
+\node[font=\small,anchor=west] at (6.6,0.2) {minimum global};
+\draw[-{Stealth},corange,thick] (2.3,1.35) .. controls (3.4,3.6) and (4.9,3.6) .. (5.7,1.6);
+\node[corange,font=\small,above] at (4.0,3.15) {saut thermique (recuit simulé)};
+\draw[-{Stealth},cblue,thick,dashed] (2.4,1.25) -- (5.75,1.25);
+\node[cblue,font=\small,align=center] at (4.0,0.75) {effet tunnel\\ (recuit quantique)};
+\end{tikzpicture}
+\caption{Deux façons de quitter un minimum local : passer \emph{par-dessus} la barrière grâce à l'agitation thermique, ou \emph{à travers} grâce aux fluctuations quantiques.}\label{fig:paysage}
+\end{figure}
+
+\section{Recuit simulé (classique)}
+Inspiré de la métallurgie : un métal refroidi lentement cristallise dans un état de basse énergie. On introduit une \textbf{température} $T$ et on fait une marche aléatoire (algorithme de Metropolis) :
+\begin{enumerate}
+\item proposer de retourner un bit, ce qui change l'énergie de $\Delta E$ ;
+\item accepter si $\Delta E\le0$, sinon accepter avec probabilité $e^{-\Delta E/T}$ ;
+\item diminuer lentement $T$ (programme de température, par exemple géométrique).
+\end{enumerate}
+À $T$ fixée, la marche échantillonne la distribution de Boltzmann $\propto e^{-E(x)/T}$, qui se concentre sur le minimum global quand $T\to0$. Si $T$ baisse trop vite, on reste piégé ; la théorie garantit la convergence pour un refroidissement logarithmique, beaucoup trop lent en pratique.
+
+Retourner le bit $i$ coûte $\Delta E_i=(1-2b_i)\big(Q_{ii}+\sum_{j\neq i}Q_{\min,\max}b_j\big)$. C'est un calcul en $O(n)$, ce qui rend le recuit simulé très rapide (\texttt{quantique/recuit.py}).
+
+\begin{figure}[htbp]
+\centering
+\input{figures/recuit_succes}
+\caption{Recuit simulé sur notre QUBO aéro à 9 bits, 200 lectures indépendantes par point. La réussite « exacte » plafonne vers 50~\% : le fondamental et le premier niveau excité sont deux profils physiquement identiques ($m=0$, $p=0{,}25$ ou $0{,}30$), séparés de $0{,}06$ count. Le recuit tombe au hasard dans l'un des deux. À $0{,}1$ count près, la réussite dépasse 95~\% dès 50 balayages.}\label{fig:recuit}
+\end{figure}
+
+\section{Le calcul quantique adiabatique}
+\paragraph{Idée.} On prépare un système dans l'état fondamental, \emph{facile}, d'un hamiltonien simple $H_B$, puis on le transforme \emph{lentement} en notre $H_C$ :
+\[H(s)=(1-s)\,H_B+s\,H_C,\qquad s=t/T\in[0,1],\qquad H_B=-\sum_kX_k .\]
+L'état fondamental de $H_B$ est $\ket+^{\otimes n}$, la superposition uniforme de toutes les chaînes (exercice~\ref{ch:hamiltoniens}.2).
+
+\paragraph{Théorème adiabatique.} Si l'évolution est assez lente, le système reste dans l'état fondamental instantané de $H(s)$, et arrive donc dans celui de $H_C$ : la solution. « Assez lent » dépend du plus petit \textbf{écart spectral} (\emph{gap}) $g_{\min}$ entre les deux niveaux les plus bas le long du chemin : il faut typiquement $T\gg1/g_{\min}^2$.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/spectre_adiabatique}
+\caption{Les 8 niveaux d'énergie de $H(s)$ pour le QUBO jouet à 3 qubits (diagonalisation exacte). Le fondamental (bleu) relie $\ket{+++}$ à $\ket{101}$. L'écart minimal avec le premier excité (orange) fixe la durée nécessaire du recuit.}\label{fig:spectre}
+\end{figure}
+
+\paragraph{Pourquoi $H_B$ doit-il ne pas commuter avec $H_C$ ?} Si $[H_B,H_C]=0$, les deux auraient les mêmes vecteurs propres, et le système resterait dans $\ket+^{\otimes n}$ sans jamais « choisir » de chaîne. Le terme $X_k$, appelé \emph{champ transverse}, permet aux amplitudes de passer d'une chaîne à ses voisines. C'est l'effet tunnel de la figure~\ref{fig:paysage}.
+
+\paragraph{La limite fondamentale.} Pour les problèmes difficiles, $g_{\min}$ peut décroître \emph{exponentiellement} avec $n$, ce qui impose un temps exponentiel : l'adiabatique ne fait pas de miracle sur les problèmes NP-difficiles.
+
+\section{Le recuit quantique en pratique (D-Wave)}
+Les machines D-Wave réalisent physiquement ce programme avec des milliers de qubits supraconducteurs, mais :
+\begin{itemize}
+\item le système n'est pas isolé (température non nulle, bruit). Ce n'est pas un calcul adiabatique idéal, et le résultat est un \emph{échantillon} de chaînes de basse énergie. On lance de nombreuses lectures (\emph{reads}) ;
+\item les qubits ne sont couplés qu'à quelques voisins sur une grille fixe. Un graphe complet comme le nôtre (36 arêtes) exige un \textbf{plongement} (\emph{embedding}) : chaque qubit logique est représenté par une \emph{chaîne} de qubits physiques, maintenus égaux par de forts couplages ferromagnétiques. Les chaînes peuvent se « casser » ;
+\item les coefficients $h_i$, $J_{ij}$ ont une plage et une précision limitées. Un QUBO dont les écarts d'énergie utiles sont minuscules devant le plus grand coefficient (pénalités trop fortes, quasi-dégénérescences comme la nôtre) est difficile à résoudre.
+\end{itemize}
+Le SDK \emph{Ocean} de D-Wave fournit aussi un recuit simulé classique (\texttt{SimulatedAnnealingSampler}), avec la même interface que le matériel : c'est ce que la note d'intention prévoit d'utiliser.
+
+\exercices
+\begin{exercice}
+Au cours d'un recuit simulé, on propose un mouvement qui augmente l'énergie de $\Delta E=1$. Quelle est la probabilité de l'accepter à $T=2$ ? À $T=0{,}5$ ? À $T=0{,}1$ ? Expliquer le rôle de la température.
+\end{exercice}
+\begin{exercice}
+Pour une famille de problèmes, on mesure $g_{\min}\approx2^{-n/2}$. Comment croît le temps de recuit adiabatique nécessaire avec $n$ ? Comparer au coût de l'énumération exhaustive ($2^n$ évaluations). Qu'en conclure ?
+\end{exercice}

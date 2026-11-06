@@ -1,0 +1,40 @@
+\chapter{Pistes d'amélioration, chapitre par chapitre}\label{annexe:pistes}
+\iterbanner{V1}
+
+Le chapitre~\ref{ch:validation} donne les pistes globales. Cette annexe les détaille partie par partie, de la plus utile à la moins utile pour le hackathon.
+
+\section*{Géométrie (ch.~\ref{ch:naca})}
+\begin{itemize}
+\item Ajouter une paramétrisation qui découple le rayon de bord d'attaque de l'épaisseur (NACA 4 chiffres modifiée, CST de Kulfan) : c'est la condition pour que traînée et SER entrent vraiment en conflit (cours d'optimisation, chapitre sur le front exact).
+\item Prévoir un bord de fuite d'épaisseur finie en option, plus réaliste pour la fabrication.
+\end{itemize}
+
+\section*{Panneaux (ch.~\ref{ch:potentiel} et \ref{ch:panneaux})}
+\begin{itemize}
+\item Passer à des tourbillons linéaires par panneau (formulation d'XFOIL) : erreur en $1/N^2$ au lieu de $1/N$.
+\item Ajouter une correction de compressibilité de Kármán-Tsien sur $C_p$, pour un drone à Mach 0,5 à 0,6.
+\end{itemize}
+
+\section*{Couche limite (ch.~\ref{ch:cl} à \ref{ch:head})}
+\begin{itemize}
+\item Remplacer Michel par un critère qui tient compte du gradient de pression, ou par une méthode $e^N$ simplifiée (enveloppe de Drela et Giles), et caler sur XFOIL.
+\item Remplacer Head par la méthode à décalage de Green (\emph{lag-entrainment}), plus juste en gradient adverse.
+\item Option « transition forcée à 5~\% » : cas tout turbulent, plus régulier, donc plus favorable au modèle quadratique de la phase~4.
+\end{itemize}
+
+\section*{Traînée (ch.~\ref{ch:trainee})}
+\begin{itemize}
+\item Remplacer la coupure \code{x\_stop} par une itération de couplage avec vitesse de transpiration, qui efface physiquement le point d'arrêt du bord de fuite.
+\end{itemize}
+
+\section*{Assemblage, espace de conception (ch.~\ref{ch:modele} et \ref{ch:espace})}
+\begin{itemize}
+\item \iterbadge{V1}~\textbf{Fait} : intégration avec un modèle SER simplifié et une chaîne d'optimisation complète (\code{Code/optim/}).
+\item Paralléliser l'énumération (512 profils indépendants) pour un passage à des grilles plus fines.
+\end{itemize}
+
+\section*{Validation (ch.~\ref{ch:validation})}
+\begin{itemize}
+\item \iterbadge{V1}~\textbf{Fait} : XFOIL installé localement (\code{Code/.tools/}), test V5 étendu à toute la grille (§\ref{sec:v5}). Reste à caler la transition sur XFOIL.
+\item Corriger aussi la portance (décambrage visqueux) : notre $C_L$ est surestimé de 25~\% en moyenne à $2^\circ$, ce qui rend la contrainte $C_L\ge0{,}3$ trop permissive (392 profils faisables contre 359 avec XFOIL).
+\end{itemize}

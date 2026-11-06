@@ -1,0 +1,149 @@
+\chapter{L'espace de conception et les interfaces}\label{ch:espace}
+\iterbanner{V0}
+
+\section{Pourquoi une grille discrète}
+La formulation QUBO travaille sur des bits. On fixe donc dès la phase~1 une grille de niveaux pour $(m,p,t)$, et c'est \emph{cette} grille que partagent les trois méthodes : NSGA-II (variables entières), la boucle QUBO (bits) et l'énumération exhaustive (front exact). Si elles ne travaillaient pas sur la même grille, la comparaison n'aurait pas de sens.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Variable & niveaux & valeurs & bits \\
+\midrule
+cambrure $m$ & 8 & $0,\ 1,\ \dots,\ 7$~\% & 3 \\
+position $p$ & 8 & $0{,}20,\ 0{,}25,\ \dots,\ 0{,}55$ & 3 \\
+épaisseur $t$ & 8 & $6,\ 8,\ \dots,\ 20$~\% & 3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Cela fait $8^3=512$ profils et 9 bits, donc \textbf{9 qubits}.
+
+\paragraph{L'encodage binaire.} Chaque variable prend $2^k$ niveaux d'indice $i=\sum_{j=0}^{k-1}2^j\,b_j$, bit de poids faible en premier. Les 9 bits sont concaténés dans l'ordre $(m,p,t)$ :
+\begin{lstlisting}
+def encode(self, idx):                 # (im, ip, it) -> 9 bits
+    bits = []
+    for i, nb in zip(idx, self.bits_per_var):
+        bits += [(i >> j) & 1 for j in range(nb)]
+    return np.array(bits, dtype=int)
+\end{lstlisting}
+Un polynôme quadratique en $(m,p,t)$ reste quadratique en bits : chaque variable est affine en bits, et $b^2=b$. C'est ce qui permet de passer du modèle de substitution au QUBO (cours compagnon, chapitre QUBO).
+
+\section{Le simulateur compté : \code{AeroSimulator}}
+La métrique de comparaison entre NSGA-II et la boucle QUBO est le \textbf{nombre de simulations distinctes} nécessaires pour retrouver le front exact. Il faut donc le compter au même endroit pour les deux méthodes :
+\begin{lstlisting}
+class AeroSimulator:
+    def __call__(self, idx):
+        idx = tuple(int(i) for i in idx)
+        if idx not in self.cache:                 # seule une NOUVELLE simulation compte
+            m, p, t = self.space.values(idx)
+            r = evaluate_at_cl(...) if self.case.mode == "cl" else evaluate(...)
+            self.cache[idx] = r
+            self.history.append(idx)
+        return self.cache[idx]
+
+    @property
+    def n_sims(self):
+        return len(self.cache)
+\end{lstlisting}
+NSGA-II réévalue souvent les mêmes individus d'une génération à l'autre ; sans cache, il serait pénalisé à tort. La méthode \code{constraints(r)} renvoie les contraintes au format de pymoo ($g\le0$) : épaisseur minimale, portance minimale en mode incidence, et validité.
+
+\paragraph{Le point de vol : \code{FlightCase}.} Il regroupe $\Re=3\cdot10^6$, le mode (\code{'alpha'} ou \code{'cl'}), $\alpha=2^\circ$ ou $C_L^\star=0{,}4$, $C_{L,min}=0{,}3$ et $t_{min}=8$~\%. Ces valeurs sont à figer en équipe avant toute comparaison.
+
+\section{La base exhaustive}
+\code{generer\_base.py} évalue les 512 profils dans chaque mode, en quelques secondes, et écrit un CSV par mode. C'est à la fois la vérité de référence pour le front exact, une table de consultation pour développer les phases suivantes, et un outil de diagnostic.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/base_cartes}
+\caption{$C_D$ (counts) sur la tranche $p=0{,}40$ de la grille, dans les deux modes ($\Re=3\cdot10^6$). À incidence imposée, la traînée croît à la fois avec l'épaisseur et la cambrure. À portance imposée, la cambrure ne coûte presque plus rien : elle remplace l'incidence. Les croix marquent les profils invalides.}\label{fig:base}
+\end{figure}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{Xcc}
+\toprule
+ & $\alpha=2^\circ$ imposé & $C_L=0{,}4$ imposé \\
+\midrule
+profils valides & 512 / 512 & 507 / 512 \\
+profils faisables (valides, $t\ge8$~\%, et $C_L\ge0{,}3$ en mode $\alpha$) & 392 & 446 \\
+plage de $C_D$ (valides) & 51 à 124 counts & 51 à 88 counts \\
+corrélation de $C_D$ avec $t$ / avec $m$ & 0,60 / 0,62 & 0,74 / 0,04 \\
+meilleur profil faisable $(m,p,t)$ & (4~\%, 0,35, 8~\%) & (4~\%, 0,55, 8~\%) \\
+\quad son $C_D$ & 55 counts & 54 counts \\
+incidence & $2^\circ$ pour tous & $-5{,}5^\circ$ à $+3{,}5^\circ$ \\
+drapeau \code{te\_separation} & 145 profils & 64 profils \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Lecture.} Le choix du mode change la forme du problème :
+\begin{itemize}
+\item à incidence imposée, on compare des profils qui ne portent pas le même poids. Un profil très cambré « gagne » de la portance qu'il paie en traînée, d'où la corrélation de 0,62 avec $m$. Il faut une contrainte $C_L\ge C_{L,min}$ ;
+\item à portance imposée, on compare à mission égale, comme un avionneur. La corrélation avec $m$ disparaît, l'épaisseur domine, et la contrainte de portance disparaît du QUBO. En contrepartie, l'incidence devient une \emph{sortie} de l'aéro et une \emph{entrée} de la SER : l'attitude vue par le radar dépend du profil. C'est un vrai couplage multiphysique.
+\end{itemize}
+La recommandation de la note d'interfaces est le mode portance imposée, avec le mode incidence comme repli.
+
+\section{Vers la phase 2 : la géométrie pour la SER}
+La SER a besoin d'une surface. \code{geometry\_export.extrude} transforme le profil en un tronçon d'aile extrudé selon l'envergure, facetté en triangles, avec les \emph{mêmes points} que le calcul de panneaux (figure~\ref{fig:extrusion}). Chaque panneau 2D devient un rectangle de deux triangles, et les deux flancs sont triangulés en bandes entre points d'extrados et d'intrados de même indice.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x={(1cm,0cm)},y={(0cm,1cm)},z={(0.55cm,0.35cm)},scale=1.25]
+\def\prof{(4,0,0) .. controls (3,0.25,0) and (1.5,0.45,0) .. (0.6,0.4,0) .. controls (0.1,0.32,0) and (0,0.1,0) .. (0,0,0) .. controls (0,-0.08,0) and (0.3,-0.2,0) .. (1,-0.22,0) .. controls (2,-0.2,0) and (3,-0.08,0) .. (4,0,0)}
+\fill[cblue!8] (4,0,0) -- (4,0,4) -- (0,0,4) -- (0,0,0) -- cycle;
+\foreach \z in {0,4}{
+  \draw[cink,thick] plot[smooth,tension=0.6] coordinates {(4,0,\z) (3,0.2,\z) (2,0.34,\z) (1,0.38,\z) (0.4,0.3,\z) (0.08,0.15,\z) (0,0,\z) (0.1,-0.1,\z) (0.5,-0.18,\z) (1.5,-0.2,\z) (2.5,-0.14,\z) (3.3,-0.06,\z) (4,0,\z)};}
+\foreach \x/\y in {4/0,3/0.2,2/0.34,1/0.38,0.4/0.3,0.08/0.15,0/0}{\draw[cmuted,thin] (\x,\y,0) -- (\x,\y,4);}
+\foreach \x/\y/\xx/\yy in {3/0.2/4/0,2/0.34/3/0.2,1/0.38/2/0.34}{\draw[cmuted,thin] (\x,\y,0) -- (\xx,\yy,4);}
+\draw[arr,cmuted] (0,0,0) -- (1.2,0,0) node[below,font=\small] {$x$ (corde)};
+\draw[arr,cmuted] (4,0,0) -- (4,0,5) node[right,font=\small] {$z$ (envergure)};
+\node[font=\small,align=center] at (2.6,-0.9,0) {chaque panneau 2D $\to$ un rectangle\\ de deux triangles};
+\draw[corange,very thick,-{Stealth[length=2.5mm]}] (-2.2,-0.4,2) -- (-0.2,-0.02,2) node[pos=0,left,font=\small,corange,align=right] {radar de face,\\ tourné de $\alpha$};
+\end{tikzpicture}
+\caption{L'extrusion 2,5D exportée en STL. L'incidence n'est pas appliquée à la géométrie : elle est écrite dans les métadonnées JSON, et c'est la direction radar qui doit être tournée.}\label{fig:extrusion}
+\end{figure}
+
+Conventions du fichier : repère corps ($x$ le long de la corde vers l'aval, $y$ vers l'extrados, $z$ selon l'envergure, origine au bord d'attaque), normales sortantes, triangles dégénérés retirés au bord d'attaque et au bord de fuite fermé. Deux contrôles garantissent une surface fermée et bien orientée : $\sum_k\vect n_kA_k=0$, et le volume calculé par le théorème de la divergence égal à l'aire du profil fois l'envergure. Pour le NACA 2412 avec 200 panneaux, le STL compte 796 triangles.
+
+\begin{piege}
+Le facettage est un \emph{paramètre numérique} pour la SER, pas une variable de conception. À haute fréquence, chaque facette plane produit des reflets spéculaires qui n'existent pas sur la forme lisse. Il faut figer \code{n\_half} pour tout le hackathon et vérifier la convergence de la SER avec lui, comme on l'a fait pour $C_D$.
+\end{piege}
+
+\section{Vers la phase 4 : la sortie est-elle « QUBO-compatible » ?}
+La boucle quantique remplace le simulateur par un modèle quadratique ajusté par moindres carrés, en variables normalisées $z_i=2x_i/7-1\in[-1,1]$ :
+\[
+\widehat{C_D}(z)=c_0+\sum_ic_iz_i+\sum_{i\le l}c_{il}\,z_iz_l\qquad(10\ \text{coefficients}).
+\]
+\code{analyse\_quadratique.py} mesure, sur la base exhaustive, la qualité de ce modèle.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/quadratique}
+\caption{Modèle quadratique à 10 coefficients ajusté sur les 512 profils (mode $\alpha=2^\circ$), contre la vraie valeur. Les couleurs distinguent le mode de transition sur l'extrados. Le $R^2$ de 0,91 est limité par la bascule entre transition de Michel et transition par décollement laminaire.}\label{fig:quad}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Sortie & quadratique en $(m,p,t)$ (10 coef.) & QUBO libre sur 9 bits (46 coef.) \\
+\midrule
+$C_L$ & $R^2=0{,}9998$ & $0{,}9998$ \\
+$C_D$ & $R^2=0{,}908$ & $0{,}920$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+\item $C_L$ est quasi affine en $(m,\alpha)$ par construction (panneaux linéaires en $\alpha$, théorie des profils minces linéaire en $m$) : un quadratique le représente parfaitement.
+\item Les 9~\% de variance de $C_D$ non expliqués sont structurels : c'est la bascule de mode de transition du chapitre~\ref{ch:transition}. Interpoler $x_{tr}$ entre stations n'a fait passer le $R^2$ que de 0,899 à 0,908.
+\item Avec 20 profils tirés au hasard, le quadratique classe bien les profils (corrélation de rang de Spearman d'environ 0,89), mais son minimum n'est dans le vrai top 5~\% qu'une fois sur trois environ.
+\end{itemize}
+
+\begin{projet}
+Conséquence pour la phase~4 : un QUBO global ajusté une seule fois ne suffit pas. Il faut la \textbf{boucle itérative} de la note d'intention, qui réajuste le modèle autour des meilleurs candidats. C'est ce que montre le cours compagnon : la boucle retrouve le vrai minimum de $C_D$ en 25 simulations (médiane sur 50 essais), contre environ 256 en tirant les profils au hasard.
+\end{projet}
+
+\exercices
+\begin{exercice}
+(a) Donner la chaîne des 9 bits du profil d'indices $(i_m,i_p,i_t)=(4,3,1)$, et les valeurs physiques correspondantes. (b) Combien de chaînes de bits distinctes représentent un profil symétrique ($m=0$) ?
+\end{exercice}
+\begin{exercice}
+Un collègue propose de comparer NSGA-II et la boucle QUBO en temps de calcul plutôt qu'en nombre de simulations distinctes. Donner deux raisons pour lesquelles ce serait une mauvaise métrique dans ce hackathon.
+\end{exercice}

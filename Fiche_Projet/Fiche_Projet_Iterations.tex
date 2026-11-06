@@ -1,0 +1,243 @@
+\documentclass[11pt,a4paper]{report}
+% Fiche projet tenue à jour à chaque itération.
+% Compilation : python3 tools/chiffres.py && tectonic Fiche_Projet_Iterations.tex
+\input{preambule}
+\input{iterations}
+\InputIfFileExists{chiffres_auto}{}{}
+\providecommand{\VunSunFront}{?}\providecommand{\VunSunNsga}{?}\providecommand{\VunSunExact}{?}\providecommand{\VunSunRecuit}{?}\providecommand{\VunSunQaoa}{?}\providecommand{\VunSunHasard}{?}\providecommand{\VunXfConv}{?}\providecommand{\VunXfBiaisCD}{?}\providecommand{\VunXfRangCD}{?}
+\providecommand{\VunSdeuxFront}{?}\providecommand{\VunSdeuxNsga}{?}\providecommand{\VunSdeuxExact}{?}
+\providecommand{\VunSdeuxRecuit}{?}\providecommand{\VunSdeuxQaoa}{?}\providecommand{\VunSdeuxHasard}{?}
+\titleformat{\chapter}[hang]{\Large\bfseries}{\thechapter.}{0.6em}{}
+\titlespacing*{\chapter}{0pt}{-10pt}{12pt}
+
+\newcommand{\iterchapter}[2]{\chapter{\texorpdfstring{\protect\iterbadge{#1}\ }{#1 : }#2}\iterbanner{#1}}
+\newtcolorbox{decision}[1][]{coursbox,colback=cink!4,colframe=cink,title={Décision#1.}}
+
+\title{\textbf{Fiche projet : hackathon quantique}\\[0.4em]\large Compromis traînée / SER d'un profil de drone :\\ journal des itérations, raisons des changements, résultats}
+\author{Projet \emph{HackathonQuantique}}
+\date{Mise à jour du 6 novembre 2026 (V2 close, visée de la V3)}
+
+\begin{document}
+\maketitle
+
+\section*{Comment lire cette fiche}
+Le projet avance par \textbf{itérations}. Chacune a une couleur, utilisée ici et dans les quatre cours du projet (aérodynamique, quantique, SER, optimisation) : un chapitre de cours porte le bandeau de l'itération qui l'a écrit, et un ajout ultérieur apparaît dans un encadré « Évolution » de la couleur de l'itération qui l'a fait.
+\legendeiterations
+Pour chaque itération, la fiche donne : l'\textbf{objectif}, ce qui a été \textbf{fait}, les \textbf{résultats}, ce qu'on en a \textbf{appris}, et la \textbf{décision} qui a déclenché l'itération suivante. Le code de chaque itération close est figé dans \texttt{Code/archives/} (index : \texttt{Code/archives/README.md}).
+
+\section*{Le projet en une page}
+\begin{center}
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[fill=itV0!12,draw=itV0,very thick,rounded corners=3pt,text width=3.1cm,minimum height=2.1cm,align=center,font=\small] at (0,0) {{\color{itV0}\large\sffamily\bfseries V0}\\[2pt] \textbf{Modèle de la note d'intention}\\[2pt] {\color{itV0}close}};
+\node[fill=itV1!12,draw=itV1,very thick,rounded corners=3pt,text width=3.1cm,minimum height=2.1cm,align=center,font=\small] at (4.0,0) {{\color{itV1}\large\sffamily\bfseries V1}\\[2pt] \textbf{Chaîne complète conforme à la note}\\[2pt] {\color{itV1}close}};
+\node[fill=itV2!12,draw=itV2,very thick,rounded corners=3pt,text width=3.1cm,minimum height=2.1cm,align=center,font=\small] at (8.0,0) {{\color{itV2}\large\sffamily\bfseries V2}\\[2pt] \textbf{Problème reformulé}\\[2pt] {\color{itV2}close}};
+\node[fill=itV3!12,draw=itV3,very thick,rounded corners=3pt,text width=3.1cm,minimum height=2.1cm,align=center,font=\small] at (12.0,0) {{\color{itV3}\large\sffamily\bfseries V3}\\[2pt] \textbf{Concurrent équitable, problème plus grand}\\[2pt] {\color{itV3}ouverte}};
+\draw[arr] (1.75,0) -- (2.25,0);
+\draw[arr] (5.75,0) -- (6.25,0);
+\draw[arr] (9.75,0) -- (10.25,0);
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+ & Question posée & Réponse principale \\
+\midrule
+\iterbadge{V0} & Peut-on construire un modèle aéro rapide et un QUBO à partir de lui ? & Oui : 10~ms par profil, QUBO à 9 qubits, la boucle trouve le minimum de $C_D$ en 25 simulations contre 256 au hasard. \\
+\iterbadge{V1} & La chaîne complète de la note d'intention donne-t-elle un compromis traînée/SER exploitable, et la boucle quantique bat-elle NSGA-II ? & La chaîne fonctionne et la boucle bat NSGA-II (de 1,2 à 3 fois moins de simulations), mais le compromis est dégénéré (tout le front à $t_{\min}$), le gain vient du modèle de substitution et non du solveur, et le modèle aéro déplace l'optimum par rapport à XFOIL. \\
+\iterbadge{V2} & Un problème reformulé (rayon de bord d'attaque libre, manœuvre, XFOIL, SER exacte) donne-t-il un vrai compromis, et que vaut alors la boucle ? & Oui : un front qui mêle épaisseur et rayon de bord d'attaque ; la boucle retrouve le front quand NSGA-II n'y parvient presque jamais dans le budget, mais le gain vient toujours du modèle de substitution. \\
+\iterbadge{V3} & Face à l'optimisation bayésienne et sur une grille de 16\,384 profils, que reste-t-il de l'avantage de la boucle QUBO, et le front est-il robuste aux hypothèses physiques ? & À venir : itération ouverte le 6 novembre 2026, menée en équipe (chapitre~\ref{ch:v3}). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\tableofcontents
+
+% =====================================================================
+\iterchapter{V0}{Le modèle de la note d'intention}
+\paragraph{Objectif.} Construire la phase~1 (modèle aérodynamique) et comprendre la partie quantique, en suivant la note d'intention qui a servi à la sélection : profils NACA à 4 chiffres, panneaux et couche limite intégrale, QUBO, QAOA et recuit.
+
+\paragraph{Ce qui a été fait.}
+\begin{itemize}
+\item \textbf{Modèle aéro} (\texttt{Code/aero/}) : géométrie NACA, panneaux de Hess-Smith, Thwaites, transition de Michel, Head, Squire-Young, corrections \texttt{x\_stop} et \texttt{x\_sep\_crit}, grille $8\times8\times8$ codée sur 9 bits, simulateur compté.
+\item \textbf{Formulation quantique} (\texttt{Code/quantique/}) : modèle quadratique de $C_D$ $\to$ QUBO $\to$ Ising, QAOA par vecteur d'état, recuit simulé, boucle itérative sur la seule traînée.
+\item \textbf{Cours} : modèle aéro (12 chapitres), calcul quantique du qubit au QAOA (12 chapitres).
+\end{itemize}
+
+\paragraph{Résultats.}
+\begin{center}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+coût du modèle aéro & environ 8~ms par profil, 512 profils en quelques secondes \\
+modèle quadratique de $C_D$ & $R^2=0{,}91$ (limité par la bascule du mode de transition) \\
+QAOA sur le QUBO aéro (9 qubits) & $P(\text{optimum})$ de 0,018 ($p=1$) à 0,142 ($p=5$), contre 1/512 au hasard \\
+boucle sur $C_D$ seule & vrai minimum trouvé en 25 simulations (médiane), contre 256 au hasard \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Ce qu'on a appris.} Le modèle est assez rapide pour une énumération exhaustive, donc pour un front exact. Le modèle quadratique classe bien les profils mais son minimum n'est pas toujours le vrai : la boucle itérative est indispensable. Deux manques : pas de SER, pas d'optimisation classique de référence, et pas de validation XFOIL.
+
+\begin{decision}
+Construire toute la chaîne de la note (SER, NSGA-II, boucle bi-objectif) pour pouvoir juger le problème complet : itération V1.
+\end{decision}
+
+\paragraph{Où trouver.} Code figé : \path{Code/archives/V0_note_intention/}. Cours : \path{Cours/1_Aerodynamique/} et \path{Cours/4_Calcul_Quantique/} (bandeaux \iterbadge{V0}).
+
+% =====================================================================
+\iterchapter{V1}{La chaîne complète, conforme à la note}
+\paragraph{Objectif.} Assembler la chaîne entière décrite par la note d'intention, avec un modèle SER provisoire (le modèle définitif est confié à un autre groupe), et mesurer ce que vaut chaque méthode.
+
+\paragraph{Ce qui a été fait.}
+\begin{itemize}
+\item \textbf{SER} (\texttt{Code/ser/}) : optique physique 2D monostatique sur le contour NACA, validée sur la bande (0,01~dB) et le cylindre ($\pi a$), secteur d'approche de face à 10~GHz.
+\item \textbf{Problème} (\texttt{Code/optim/problem.py}) : bi-objectif $(C_D,\mathrm{SER})$, contraintes $t\ge8$~\% et $C_L\ge0{,}3$ à $\alpha=2^\circ$, deux scénarios radar : S1 (face, $\pm20^\circ$, conforme à la note) et S2 (radar en contrebas, ajouté parce que S1 donne un front trop court).
+\item \textbf{NSGA-II} écrit à la main, vérifié contre pymoo (installé dans \texttt{Code/.venv}).
+\item \textbf{Boucle QUBO bi-objectif} : somme pondérée, contraintes dans le QUBO (réduction de Rosenberg, variables d'écart), 13 qubits ; solveurs exact, recuit et QAOA.
+\item \textbf{XFOIL} installé sans droits administrateur (paquet extrait, écran virtuel Xvfb), validation V5 sur les 512 profils.
+\item \textbf{Cours} : SER par optique physique (7 chapitres), optimisation bi-objectif (8 chapitres) ; annexes « pistes d'amélioration » ajoutées aux cours V0.
+\end{itemize}
+
+\paragraph{Résultats.} Nombre médian de simulations, sur 20 graines (10 pour QAOA), pour retrouver tout le front exact :
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & S1 (front de \VunSunFront\ profils) & S2 (front de \VunSdeuxFront\ profils) \\
+\midrule
+tirage aléatoire & \VunSunHasard & \VunSdeuxHasard \\
+NSGA-II, $N=16$ & \VunSunNsga & \VunSdeuxNsga \\
+NSGA-II, $N=8$ (réglé) & 65 & 81 \\
+boucle QUBO, solveur exact & \VunSunExact & \VunSdeuxExact \\
+boucle QUBO, recuit simulé & \VunSunRecuit & \VunSdeuxRecuit \\
+boucle QUBO, QAOA $p=2$ & \VunSunQaoa & \VunSdeuxQaoa \\
+\bottomrule
+\end{tabular}
+\end{center}
+Validation XFOIL ($\alpha=2^\circ$, $\Re=3\cdot10^6$) : convergence sur \VunXfConv/512 profils ; notre $C_D$ est biaisé de $+\VunXfBiaisCD$~\% en moyenne, avec une corrélation de rang de \VunXfRangCD.
+
+\paragraph{Ce qu'on a appris.}
+\begin{enumerate}
+\item \textbf{Le compromis est dégénéré.} La traînée et la SER de face croissent toutes deux avec l'épaisseur (la SER par le rayon de bord d'attaque, $\propto t^2$). Tout le front est à $t=8$~\%, et dans S1 la SER n'y varie que de 0,13~dB. XFOIL confirme ce point.
+\item \textbf{Le gain vient du modèle de substitution, pas du solveur quantique.} Exact, recuit et QAOA donnent presque le même nombre de simulations (identique dans S1, quelques simulations de plus avec QAOA et le recuit dans S2) : à 13 qubits, le QUBO se résout trivialement.
+\item \textbf{Le modèle aéro déplace l'optimum.} Transition de Michel trop précoce : $C_D$ surestimé, et XFOIL préfère des cambrures plus en arrière. Dans S1, un seul profil sur 5 est commun aux deux fronts.
+\item \textbf{Le gain sur NSGA-II dépend du front et du réglage.} Face à NSGA-II réglé ($N=8$), la boucle (solveur exact) est 1,9 fois plus économe dans S1, mais seulement 1,2 fois dans S2, dont 10 des 15 profils ne sont pas atteignables par une somme pondérée. En revanche, elle atteint 99~\% de l'hypervolume deux fois plus vite dans les deux scénarios.
+\end{enumerate}
+
+\begin{decision}
+S'écarter de la note d'intention, qui n'était utile qu'à la sélection : reformuler le problème pour qu'il contienne un vrai compromis, utiliser XFOIL comme référence, et recentrer la partie quantique sur ce qui est mesurable (ablation des solveurs, montée en taille). Itération V2.
+\end{decision}
+
+\paragraph{Où trouver.} Code : \path{Code/ser/}, \path{Code/optim/}, \path{Code/validation_xfoil_grille.py} ; figé dans \path{Code/archives/V1_chaine_complete/}. Cours : SER (\path{Cours/2_SER/}) et optimisation (\path{Cours/3_Optimisation_BiObjectif/}), bandeaux \iterbadge{V1}.
+
+% =====================================================================
+\iterchapter{V2}{Le problème reformulé}
+\paragraph{Objectif.} Obtenir un problème dont la réponse est un vrai compromis traînée/SER, des modèles crédibles, et un message quantique défendable devant un jury. On s'écarte pour cela de la note d'intention.
+
+\paragraph{Changements, par priorité.}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{c>{\raggedright\arraybackslash}p{4.6cm}X>{\raggedright\arraybackslash}p{1.3cm}}
+\toprule
+\# & Changement & Pourquoi & Statut \\
+\midrule
+1 & Paramétrisation NACA 4 chiffres modifiée : indice $I$ de rayon de bord d'attaque & séparer épaisseur et rayon de bord d'attaque, donc découpler traînée et SER & fait \\
+2 & Contrainte de manœuvre $C_{L,\max}\ge1{,}2$ (rampe XFOIL 4--14°) & un nez trop aigu décroche : c'est ce qui crée le conflit avec la SER & fait \\
+3 & XFOIL simulateur de référence (1\,024 profils en 6~min) & biais de +27~\% et déplacement de l'optimum en V1 & fait \\
+4 & Croisière à portance imposée ($C_L=0{,}4$) & comparaison à mission égale, attitude radar fournie par l'aéro & fait \\
+5 & SER exacte 2D par méthode des moments (TM) & l'optique physique n'est plus valable sur les nez aigus ($kr=0{,}16$) & fait \\
+6 & Comparaison équitable : NSGA-II réglé, arrêt réaliste & conclusions défendables sans connaître le front exact & fait \\
+7 & Montée en taille de QAOA (6 à 18 qubits), initialisation INTERP & seule mesure quantique pertinente à cette échelle & fait \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Résultats.} Nombre médian de simulations pour retrouver tout le front exact (SER par méthode des moments, budget 250 ; 150 pour QAOA), et taux de réussite dans le budget :
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{S1 (front de \VdeuxSunFront\ profils)} & \multicolumn{2}{c}{S2 (front de \VdeuxSdeuxFront\ profils)} \\
+\midrule
+tirage aléatoire & \VdeuxSunHasard & \VdeuxSunHasardSucces~\% & \VdeuxSdeuxHasard & \VdeuxSdeuxHasardSucces~\% \\
+NSGA-II, $N=8$ & \VdeuxSunNsgaHuit & \VdeuxSunNsgaHuitSucces~\% & \VdeuxSdeuxNsgaHuit & \VdeuxSdeuxNsgaHuitSucces~\% \\
+NSGA-II, $N=16$ & \VdeuxSunNsga & \VdeuxSunNsgaSucces~\% & \VdeuxSdeuxNsga & \VdeuxSdeuxNsgaSucces~\% \\
+boucle, solveur exact & \VdeuxSunExact & \VdeuxSunExactSucces~\% & \VdeuxSdeuxExact & \VdeuxSdeuxExactSucces~\% \\
+boucle, recuit simulé & \VdeuxSunRecuit & \VdeuxSunRecuitSucces~\% & \VdeuxSdeuxRecuit & \VdeuxSdeuxRecuitSucces~\% \\
+boucle, QAOA $p=2$ & \VdeuxSunQaoa & \VdeuxSunQaoaSucces~\% & \VdeuxSdeuxQaoa & \VdeuxSdeuxQaoaSucces~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+Montée en taille : à \VdeuxMonteeN\ qubits, la part des mesures QAOA dans le 1~\% meilleur passe de \VdeuxMonteeTopDeux\ ($p=2$) à \VdeuxMonteeTopQuatre\ ($p=4$) ; la probabilité de l'optimum exact décroît en $2^{-0{,}7n}$ environ.
+
+\paragraph{Ce qu'on a appris.}
+\begin{enumerate}
+\item \textbf{Le compromis existe désormais.} Le front de S1 mêle épaisseurs (8 à 12~\%) et rayons de bord d'attaque ($I=2$ et 4) : un nez aigu réduit la SER et même un peu la traînée de croisière, mais décroche tôt, et la manœuvre l'oblige à plus d'épaisseur ou de cambrure.
+\item \textbf{L'optique physique surestimait le gain des nez aigus} : 5,1~dB au lieu de 7,3~dB (méthode des moments). Le classement et les fronts sont toutefois presque inchangés (rang 0,999).
+\item \textbf{Sur ce problème plus réaliste, la boucle domine nettement NSGA-II}, qui ne retrouve presque jamais le front en 250 simulations. Mais le solveur exact du QUBO reste le meilleur : le gain vient du modèle de substitution.
+\item \textbf{Avec un arrêt réaliste}, toutes les méthodes s'arrêtent avec environ la moitié du front et 94 à 100~\% de l'hypervolume.
+\item \textbf{QAOA fournit de bons candidats à toute taille testée}, d'autant mieux que la profondeur augmente, à condition d'initialiser les angles par interpolation ; trouver l'optimum exact reste exponentiellement coûteux.
+\end{enumerate}
+
+\begin{decision}
+Clore la V2 (6 novembre 2026, code et résultats figés dans \path{Code/archives/V2_probleme_reformule/}). Ouvrir une V3 qui répond à la question laissée ouverte : la boucle bat NSGA-II, mais NSGA-II n'est pas son vrai concurrent, et à 10 bits le QUBO s'énumère en une fraction de seconde. Itération V3, travail d'équipe.
+\end{decision}
+
+\paragraph{Où trouver.} Code : \path{Code/optim/problem_v2.py}, \path{Code/optim/experiences_v2.py}, \path{Code/ser/mom2d.py}, \path{Code/quantique/montee_en_taille.py} ; figé dans \path{Code/archives/V2_probleme_reformule/}. Cours : chapitres V2 des quatre cours (bandeaux \iterbadge{V2}).
+
+% =====================================================================
+\iterchapter{V3}{Visée : un concurrent équitable, un problème plus grand}\label{ch:v3}
+\paragraph{Statut.} Ouverte le 6 novembre 2026, rien n'est encore fait. Ce chapitre fixe la visée ; il sera complété au fil de l'itération (tableau des lots, puis résultats, enseignements et décision, comme pour les itérations précédentes).
+
+\paragraph{Pourquoi une V3.} La V2 laisse trois limites :
+\begin{enumerate}
+\item \textbf{Le concurrent n'est pas le bon.} NSGA-II n'utilise aucun modèle ; la boucle QUBO est une méthode \emph{à modèle de substitution}, comme l'optimisation bayésienne. Tant qu'on ne compare pas les deux, on ne sait pas si l'avantage vient de la formulation QUBO ou du simple fait d'avoir un modèle.
+\item \textbf{Le problème est trop petit.} À 10 bits (1\,024 profils), le QUBO s'énumère instantanément : le solveur quantique ne peut rien apporter, et le front exact se trouve en 6~minutes de calcul XFOIL.
+\item \textbf{Deux points physiques fragiles.} La portance maximale est estimée par la non-convergence d'XFOIL (un profil du front S2 a une traînée aberrante de 319~counts), et la SER exacte ne couvre que la polarisation TM.
+\end{enumerate}
+
+\paragraph{Question posée.} \emph{Face à un concurrent classique de même nature, et sur un problème assez grand pour que l'énumération ne soit plus gratuite, que reste-t-il de l'avantage de la boucle QUBO, et le front est-il robuste aux hypothèses physiques ?}
+
+\paragraph{Hypothèses à tester.}
+\begin{itemize}
+\item[H1.] Sur le problème V2, l'optimisation bayésienne égale ou bat la boucle : son modèle (processus gaussien) est plus souple qu'un modèle quadratique.
+\item[H2.] L'intérêt propre de la formulation QUBO est sa sélection d'un \emph{lot} de candidats par un seul problème d'optimisation binaire ; il n'apparaît que si la grille est assez grande pour que l'acquisition bayésienne (évaluée sur tous les candidats) devienne coûteuse.
+\item[H3.] Le front dépend surtout de l'exigence de manœuvre $C_{L,\max}$, beaucoup moins de la polarisation radar.
+\end{itemize}
+
+\paragraph{Lots de travail.} Chaque lot a une branche git (\texttt{v3/l1-bayes}, …), un responsable et un livrable vérifiable.
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{c>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.4cm}}
+\toprule
+Lot & Objet & Contenu & Livrable \\
+\midrule
+L1 & Concurrent bayésien \newline(priorité 1) & Optimisation bayésienne multi-objectif sur la grille discrète : un processus gaussien par objectif et par contrainte, acquisition par amélioration espérée de l'hypervolume (ou ParEGO), évaluée sur tous les profils non simulés. Même protocole que la V2 (\texttt{CountedProblem}, budget, 20 graines, arrêt réaliste). Ablation : modèle (quadratique ou gaussien) $\times$ sélection (QUBO ou acquisition). & \path{optim/bayes.py}, colonne ajoutée à la comparaison, réponse à H1 \\
+L2 & Problème agrandi & Grille de 14 bits : $m$ (8) $\times$ $p$ (8) $\times$ $t$ (16) $\times$ $I$ (8) $=16\,384$ profils, environ 1,6~h de XFOIL sur 10 cœurs ; front exact toujours calculable. QUBO d'environ 18 à 20 qubits, encore simulable par vecteur d'état. Comparaison L1 refaite dessus. & \path{optim/problem_v3.py}, \path{resultats/base_V3.csv}, réponse à H2 \\
+L3 & Robustesse physique & (a) $C_{L,\max}$ comme maximum de $C_L(\alpha)$ sur une rampe fine, avec détection du décrochage, au lieu de la non-convergence ; vérifier le profil à 319~counts. (b) SER en polarisation TE (méthode des moments, validée sur la série de Mie TE). (c) Front pour une exigence de manœuvre de 1,1 à 1,4. & \path{aero/xfoil_runner.py} étendu, \path{ser/mom2d.py} TE, figure « front selon $C_{L,\max}$ », réponse à H3 \\
+L4 & Quantique réaliste & QAOA avec bruit (Qiskit Aer, modèle de bruit d'un processeur réel), transpilation sur une topologie réelle : CNOT et profondeur en fonction du nombre de qubits ; à partir de quelle taille le bruit détruit-il la qualité des candidats ? & \path{quantique/bruit.py}, courbe qualité / taille avec et sans bruit \\
+L5 & Interface avec le groupe SER & Fonction d'interface unique \texttt{evaluer\_ser(contour, attitude, secteur)} pour brancher le solveur de l'autre groupe à la place de \path{ser/} ; contrôle sur quelques profils contre la méthode des moments. & \path{ser/interface.py}, note de comparaison \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Ordre.} L1 d'abord sur le problème V2, pour une comparaison directe avec les résultats existants ; puis L2, qui reprend L1 sur la grande grille. L3, L4 et L5 sont indépendants et peuvent avancer en parallèle.
+
+\paragraph{Hors périmètre de la V3} (candidats pour une V4) : SER 3D exacte sur l'aile extrudée (\texttt{bempp-cl}, sauf si le groupe SER la fournit), compressibilité, aile 3D, passage sur un vrai processeur quantique.
+
+\paragraph{Critère de clôture.} La V3 est close quand la fiche contient : le tableau de comparaison sur la grande grille avec l'optimisation bayésienne, le front recalculé avec le nouveau critère de décrochage, une réponse argumentée à H1, H2 et H3, et la décision qui ouvre la V4 ou prépare la présentation finale.
+
+\paragraph{Ce que la V3 ne pourra pas montrer.} À l'échelle du hackathon, le QUBO restera énumérable : aucun solveur quantique ne battra l'énumération. Le message défendable devant un jury reste la \emph{formulation} (un problème d'ingénierie bi-objectif sous contraintes mis sous forme de QUBO), la \emph{qualité} des candidats et l'\emph{évolution des ressources} avec la taille.
+
+\appendix
+\chapter{Tenir la fiche à jour}
+\begin{enumerate}
+\item À chaque changement significatif, ajouter une ligne au tableau de l'itération en cours (statut \og fait\fg{} et résultat).
+\item Relancer \texttt{python3 tools/chiffres.py} : les nombres de la fiche sont relus dans \texttt{Code/resultats/}.
+\item Dans les cours, marquer tout ajout ou toute révision par l'environnement \texttt{evolution} (couleur de l'itération), et tout nouveau chapitre par \verb|\iterbanner{Vk}|.
+\item Pour clore une itération : figer le code et les résultats dans \texttt{Code/archives/Vk\_nom/}, compléter l'index \texttt{Code/archives/README.md}, écrire la décision qui ouvre l'itération suivante.
+\item Pour créer une itération : ajouter sa couleur et son nom dans \texttt{Fiche\_Projet/iterations.tex}.
+\item \textbf{Git} : le dépôt partagé part du commit \og First Commit\fg{} (V2 close) ; l'historique antérieur n'y figure pas, les itérations V0 à V2 sont dans \path{Code/archives/} et dans cette fiche. Une branche par lot (\texttt{v3/l1-bayes}), chaque commit commence par l'itération (\texttt{[V3] ...}), fusion dans \texttt{main} par une demande de fusion relue par un autre membre. À la clôture, étiquette \texttt{git tag -a V3}. Détails dans \path{METHODE_DE_TRAVAIL.md}.
+\end{enumerate}
+
+\end{document}

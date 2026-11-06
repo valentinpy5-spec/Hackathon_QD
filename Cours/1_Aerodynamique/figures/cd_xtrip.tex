@@ -1,0 +1,8 @@
+% figure générée par tools/make_figures.py : cd_xtrip
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.4cm,xlabel={transition imposée $x_{tr}/c$ (deux faces)},ylabel={$C_D$ (counts)},
+  xmin=0,xmax=0.8,legend style={draw=none,font=\scriptsize},legend pos=north east]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(0.02,97.593) (0.05,95.511) (0.08,93.023) (0.11,90.368) (0.14,87.62) (0.17,84.83) (0.2,82.031) (0.23,79.231) (0.26,76.435) (0.29,73.664) (0.32,70.911) (0.35,68.203) (0.38,65.532) (0.41,63.877) (0.44,63.043) (0.47,62.211) (0.5,61.374) (0.53,60.543) (0.56,59.706) (0.59,58.873) (0.62,58.04) (0.65,57.206) (0.68,56.373) (0.71,55.538) (0.74,54.704) (0.77,53.87) (0.8,53.035)};\addlegendentry{transition imposée}
+\addplot[corange,dashed,very thick] coordinates {(0,69.17) (0.8,69.17)};\addlegendentry{transition libre (Michel)}
+\end{axis}
+\end{tikzpicture}

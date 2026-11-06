@@ -1,0 +1,111 @@
+\chapter{La traînée : formule de Squire-Young}\label{ch:trainee}
+\iterbanner{V0}
+
+\section{La traînée est dans le sillage}
+L'écoulement potentiel ne donne aucune traînée (d'Alembert). Toute la traînée de profil vient donc de la viscosité : le frottement à la paroi, et la \emph{traînée de forme}, qui est l'effet de l'épaississement de la couche limite sur la distribution de pression. Notre modèle ne calcule pas cette seconde part directement, puisque la pression vient de l'écoulement potentiel sans rétroaction. Il faut un autre chemin.
+
+\paragraph{Le bilan de quantité de mouvement.} Prenons un grand volume de contrôle autour du profil, fermé loin en aval là où la pression est revenue à $p_\infty$ (figure~\ref{fig:sillage}). Le bilan de quantité de mouvement selon $x$ dit que la traînée totale est égale au défaut de flux de quantité de mouvement dans le sillage :
+\[
+D'=\rho\int_{\text{sillage}}u\,(U_\infty-u)\,\dd y=\rho\,U_\infty^2\,\theta_\infty
+\quad\Longrightarrow\quad
+C_D=\frac{2\,\theta_\infty}{c}.
+\]
+Ce résultat contient automatiquement le frottement \emph{et} la traînée de forme, sans avoir à les séparer. C'est le principe de la mesure de traînée par sondage de sillage en soufflerie. Il reste à relier $\theta_\infty$ à ce que l'on connaît, l'état de la couche limite au bord de fuite.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1.25cm,y=1.25cm,scale=1.05]
+\fill[cmuted!25,draw=cink,thick] plot[smooth,tension=0.6] coordinates {(4,0) (3,0.2) (1.8,0.36) (0.8,0.36) (0.2,0.2) (0,0) (0.2,-0.15) (0.8,-0.2) (1.8,-0.16) (3,-0.06) (4,0)};
+\fill[cblue!12] (4,0.12) .. controls (6,0.2) and (8,0.35) .. (11,0.5) -- (11,-0.5) .. controls (8,-0.35) and (6,-0.2) .. (4,-0.1) -- cycle;
+\draw[cblue,dashed] (4,0.12) .. controls (6,0.2) and (8,0.35) .. (11,0.5);
+\draw[cblue,dashed] (4,-0.1) .. controls (6,-0.2) and (8,-0.35) .. (11,-0.5);
+\draw[cmuted,dashed] (-1,-1.6) rectangle (11,1.6);
+\node[cmuted,font=\small,anchor=south west] at (-1,1.6) {volume de contrôle};
+% profil de vitesse au BF et à l'infini
+\draw[cink,thin] (4,-0.6) -- (4,0.6);
+\draw[corange,thick] plot[smooth] coordinates {(4.0,-0.6) (4.6,-0.25) (4.15,-0.1) (4.0,0) (4.2,0.12) (4.6,0.3) (4.65,0.6)};
+\node[corange,font=\small,align=center] at (4.5,-1.15) {bord de fuite :\\ $\theta_{TE}$, $H_{TE}$, $U_{e,TE}<U_\infty$};
+\draw[cink,thin] (10.2,-0.9) -- (10.2,0.9);
+\draw[corange,thick] plot[smooth] coordinates {(10.75,-0.9) (10.7,-0.5) (10.5,-0.2) (10.4,0) (10.5,0.2) (10.7,0.5) (10.75,0.9)};
+\node[corange,font=\small,align=center] at (8.6,-1.15) {loin en aval :\\ $\theta_\infty$, $H\to1$, $U_e=U_\infty$};
+\draw[-{Stealth[length=2.5mm]},cink,thick] (-0.9,0.9) -- (0,0.9) node[midway,above,font=\small] {$U_\infty$};
+\end{tikzpicture}
+\caption{La traînée se lit dans le sillage lointain : $C_D=2\theta_\infty/c$. Squire et Young relient $\theta_\infty$ à l'état de la couche limite au bord de fuite.}\label{fig:sillage}
+\end{figure}
+
+\section{De $\theta_{TE}$ à $\theta_\infty$ : l'hypothèse de Squire et Young}
+Dans le sillage, il n'y a plus de paroi, donc $c_f=0$. L'équation de von Kármán, appliquée à chaque moitié du sillage, devient
+\[
+\frac{\dd\theta}{\dd s}=-(H+2)\frac{\theta}{U_e}\frac{\dd U_e}{\dd s}
+\quad\Longleftrightarrow\quad
+\frac{\dd\ln\theta}{\dd\ln U_e}=-(H+2).
+\]
+Entre le bord de fuite et l'infini aval, $U_e$ remonte de $U_{e,TE}$ à $U_\infty$ et le sillage se « remplit » : $H$ descend de $H_{TE}$ à 1 (profil uniforme). Squire et Young (1938) supposent que $H$ varie \emph{linéairement en $\ln U_e$} entre ces deux états :
+\[
+H=1+\big(H_{TE}-1\big)\,\frac{\ln(U_\infty/U_e)}{\ln(U_\infty/U_{e,TE})}.
+\]
+Posons $u=\ln(U_e/U_\infty)$, qui va de $u_{TE}<0$ à 0, et $\kappa=(H_{TE}-1)/u_{TE}$, de sorte que $H=1+\kappa u$. L'intégration donne
+\[
+\ln\frac{\theta_\infty}{\theta_{TE}}=-\int_{u_{TE}}^0\big(3+\kappa u\big)\,\dd u
+=3u_{TE}+\frac{\kappa}{2}u_{TE}^2
+=u_{TE}\Big(3+\frac{H_{TE}-1}{2}\Big)=\frac{H_{TE}+5}{2}\,\ln\frac{U_{e,TE}}{U_\infty}.
+\]
+D'où la \textbf{formule de Squire-Young}, sommée sur les deux faces :
+\[
+\boxed{\ C_D=\sum_{\text{faces}}2\,\frac{\theta_{TE}}{c}\left(\frac{U_{e,TE}}{U_\infty}\right)^{\frac{H_{TE}+5}{2}}\ }
+\]
+Comme $U_{e,TE}<U_\infty$, le facteur est inférieur à 1 : le sillage s'accélère en aval du bord de fuite, ce qui réduit $\theta$. L'exposant croît avec $H_{TE}$ : une couche épaisse et creusée au bord de fuite « perd » davantage en se remplissant.
+
+\begin{codebox}[ : \code{squire\_young} et la décomposition de $C_D$]
+\begin{lstlisting}
+def squire_young(theta_te, H_te, Ue_te):
+    return 2.0 * theta_te * Ue_te ** ((H_te + 5.0) / 2.0)
+
+CD = (squire_young(bl_up.theta_te, bl_up.H_te, bl_up.Ue_te)
+      + squire_young(bl_lo.theta_te, bl_lo.H_te, bl_lo.Ue_te))
+CD_f = (_friction_drag(bl_up, tx_up) + _friction_drag(bl_lo, tx_lo))   # sum cf Ue^2 |tx| ds
+\end{lstlisting}
+\code{CD\_f} intègre le frottement le long de la paroi, projeté sur la direction de la corde : $C_{D,f}=\sum c_f\,U_e^2\,|t_x|\,\Delta s$. La différence $C_D-C_{D,f}$ est la traînée de forme. Pour le NACA 2412 à $2^\circ$ : $C_D=69$~counts, dont 55 de frottement et 14 de forme.
+\end{codebox}
+
+\section{L'artefact du bord de fuite fermé et \code{x\_stop}}
+\paragraph{Le problème.} Un bord de fuite fermé d'angle non nul est un \textbf{point d'arrêt} de l'écoulement potentiel : la vitesse y tombe à zéro. Sur le dernier pour-cent de corde, $U_e$ chute brutalement (figure~\ref{fig:bf}). Pour le NACA 0012 à $\alpha=0$, elle passe de 0,88 en $x=0{,}985$ à 0,70 sur la dernière station, et $\theta$ y triple sous l'effet de ce gradient adverse violent. La quantité $\theta\,U_e^{(H+5)/2}$, censée être à peu près conservée en aval du point où l'on applique Squire-Young, ne l'est plus, et $C_D$ est surestimé d'environ 22~\%.
+
+Cette décélération n'existe pas dans l'écoulement réel : l'épaisseur de déplacement des deux couches limites et le sillage « ouvrent » le bord de fuite, et l'écoulement extérieur ne voit jamais de point d'arrêt. C'est exactement ce que corrige un couplage fort comme celui d'XFOIL.
+
+\paragraph{La correction.} On arrête la marche de couche limite en $x_{stop}=0{,}985$ et on applique Squire-Young là, juste avant la zone artificielle. La figure~\ref{fig:bf} montre que la sensibilité au choix de $x_{stop}$ est faible tant qu'on reste en dehors de cette zone : au plus $\pm1{,}5$~\% sur $C_D$ entre 0,97 et 0,99, contre un saut de +22~\% (0012) ou +26~\% (2412) si l'on va jusqu'au bout.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/bord_de_fuite}
+\caption{L'artefact de bord de fuite. À gauche et au centre, $U_e$ et $\theta$ sur l'extrados du NACA 0012 à $\alpha=0$, sans coupure : chute de vitesse et explosion de $\theta$ sur le dernier pour-cent. À droite, $C_D$ selon l'abscisse d'arrêt : plateau jusqu'à 0,995, puis saut.}\label{fig:bf}
+\end{figure}
+
+\begin{codebox}[ : la coupure en tête de \code{march\_surface}]
+\begin{lstlisting}
+keep = x <= x_stop
+keep[: np.argmax(x > 0.5)] = True     # ne coupe jamais cote bord d'attaque
+s, x, Ue = s[keep], x[keep], Ue[keep]
+\end{lstlisting}
+La deuxième ligne protège le bord d'attaque. Sur l'intrados d'un profil cambré, les premières stations peuvent avoir un $x$ légèrement négatif ou décroissant près du point d'arrêt, et ne doivent jamais être retirées.
+\end{codebox}
+
+\begin{piege}
+Squire-Young suppose un sillage qui se remplit régulièrement. Avec un décollement étendu, cette hypothèse tombe, et la formule n'a plus de sens. C'est une des raisons pour lesquelles un décollement turbulent en amont de $x/c=0{,}9$ rend le résultat invalide (ch.~\ref{ch:modele}).
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item $C_D=2\theta_\infty$ par bilan de quantité de mouvement : frottement et forme sont inclus.
+\item Squire-Young transporte $\theta$ du bord de fuite à l'infini avec l'exposant $(H_{TE}+5)/2$.
+\item On l'applique en $x_{stop}=0{,}985$, pour éviter le point d'arrêt artificiel du bord de fuite fermé. Sensibilité : au plus $\pm1{,}5$~\%.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Pour le NACA 2412 à $\alpha=2^\circ$ et $\Re=3\cdot10^6$, le code obtient en $x_{stop}$ : extrados $\theta=3{,}362\cdot10^{-3}$, $H=1{,}755$, $U_e=0{,}905$ ; intrados $\theta=1{,}650\cdot10^{-3}$, $H=1{,}504$, $U_e=0{,}873$. Calculer $C_D$ en counts, et la contribution de chaque face.
+\end{exercice}
+\begin{exercice}
+Refaire la démonstration de l'exposant en supposant cette fois que $H$ reste constant, égal à $H_{TE}$, dans tout le sillage. Quel exposant obtient-on ? Pourquoi cette hypothèse est-elle physiquement moins bonne ?
+\end{exercice}

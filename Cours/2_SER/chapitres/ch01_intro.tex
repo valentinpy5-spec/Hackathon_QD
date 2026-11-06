@@ -1,0 +1,93 @@
+\chapter{La SER : définition et ordres de grandeur}\label{ch:intro}
+\iterbanner{V1}
+
+\section{Définition}
+Un radar émet une onde, la cible en renvoie une partie, et le radar mesure l'écho. La SER $\sigma$ est la surface fictive qui, interceptant la puissance incidente et la réémettant de façon isotrope, produirait au radar le même écho que la cible :
+\[
+\sigma=\lim_{R\to\infty}4\pi R^2\,\frac{|\vect E_s|^2}{|\vect E_i|^2}\qquad[\mathrm{m}^2],
+\]
+où $\vect E_i$ est le champ incident sur la cible et $\vect E_s$ le champ diffusé à la distance $R$. On l'exprime en décibels relatifs à 1~m\textsuperscript{2} : $\sigma_{\mathrm{dBsm}}=10\log_{10}(\sigma/1\,\mathrm{m}^2)$.
+
+\paragraph{Monostatique ou bistatique.} Si l'émetteur et le récepteur sont au même endroit, la SER est \textbf{monostatique} : elle ne dépend que de la direction du radar. C'est le cas étudié dans le hackathon (note d'intention : « radar monostatique, à très haute fréquence, selon un angle d'incidence correspondant à une approche de face »).
+
+\section{Le cas 2D : largeur équivalente radar}
+Le profil est une section d'aile : l'objet électromagnétique naturel est un cylindre infini de section le profil. Son écho décroît en $1/\sqrt\rho$ (onde cylindrique) et non en $1/R$. On définit alors la \textbf{largeur équivalente radar} (\emph{echo width}), par unité d'envergure :
+\[
+\sigma_{2D}=\lim_{\rho\to\infty}2\pi\rho\,\frac{|\vect E_s|^2}{|\vect E_i|^2}\qquad[\mathrm{m}],\qquad
+\sigma_{2D,\mathrm{dB}}=10\log_{10}(\sigma_{2D}/1\,\mathrm{m})\quad[\mathrm{dBm}].
+\]
+Pour un tronçon d'aile d'envergure $b$, vu perpendiculairement à l'envergure, on repasse en 3D par la formule du cylindre fini :
+\[
+\sigma_{3D}\approx\frac{2b^2}{\lambda}\,\sigma_{2D}=\frac{k\,b^2}{\pi}\,\sigma_{2D}.
+\]
+Le facteur $b^2/\lambda$ vient de la cohérence de l'écho sur toute l'envergure. Il ne dépend pas du profil : pour \emph{comparer} des profils, $\sigma_{2D}$ suffit, et c'est ce que fait notre modèle.
+
+\section{Les régimes de diffusion}
+Tout dépend du rapport entre la taille de l'objet $a$ et la longueur d'onde, mesuré par $ka$ :
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Régime & $ka$ & Comportement \\
+\midrule
+Rayleigh & $\ll1$ & $\sigma\propto k^4a^6$ en 3D : l'objet est vu comme un dipôle \\
+résonance & $\sim1$ à $10$ & ondes rampantes, interférences : il faut résoudre Maxwell (MoM) \\
+optique & $\gg1$ & l'écho est formé localement : points spéculaires, arêtes \\
+\bottomrule
+\end{tabular}
+\end{center}
+Pour une corde de 1~m, $kc=21$ à 1~GHz et 209 à 10~GHz (bande X). Le profil est donc en régime optique : c'est le sens de « très haute fréquence » dans la note d'intention. Mais attention, le bord d'attaque, lui, a un rayon de 4 à 44~mm selon l'épaisseur, soit $k\,r_{BA}$ de 0,8 à 9 à 10~GHz. Le chapitre~\ref{ch:po} chiffre ce que cela coûte à l'optique physique.
+
+\section{La géométrie du problème}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.15]
+\draw[cmuted,dashed] (-5,0) -- (4.5,0) node[right,font=\small] {trajectoire};
+\begin{scope}[rotate=8]
+\fill[cmuted!25,draw=cink,thick] plot[smooth,tension=0.6] coordinates {(3,0) (2.2,0.16) (1.2,0.28) (0.5,0.27) (0.12,0.15) (0,0) (0.12,-0.1) (0.5,-0.13) (1.2,-0.12) (2.2,-0.05) (3,0)};
+\draw[cink,thin] (0,0) -- (3.6,0) node[right,font=\scriptsize] {corde};
+\end{scope}
+\draw[corange] (2.6,0) arc (0:8:2.6); \node[corange,font=\small] at (2.9,0.17) {$\alpha$};
+\fill[cblue] (-4.6,-1.6) circle (2pt) node[below,font=\small,cblue] {radar};
+\draw[cblue,-{Stealth[length=2.5mm]},thick] (-4.6,-1.6) -- (-0.15,-0.05);
+\draw[cblue,dashed] (-4.6,0) -- (-4.6,-1.6);
+\draw[cblue] (-3.2,0) arc (180:199.8:1.4); \node[cblue,font=\small] at (-3.45,-0.3) {$\varepsilon$};
+\draw[cgreen!60!black,thick,-{Stealth[length=2mm]}] (-0.2,0.0) -- (-1.4,-0.42) node[left,font=\small] {$\shat$};
+\fill[cgreen!12] (-4.9,0) -- (-4.9,1.75) -- (-0.3,0) -- cycle;
+\fill[cgreen!12] (-4.9,0) -- (-4.9,-1.75) -- (-0.3,0) -- cycle;
+\node[cgreen!50!black,font=\small,align=center] at (-3.6,1.0) {secteur d'approche\\ de face};
+\end{tikzpicture}
+\caption{Géométrie du problème. Le profil vole à l'incidence $\alpha$ donnée par l'aérodynamique. Le radar est devant l'avion, à l'élévation $\varepsilon$ par rapport à la trajectoire ($\varepsilon<0$ : radar en contrebas). $\shat$ est la direction unitaire du profil vers le radar.}\label{fig:geometrie}
+\end{figure}
+
+Dans le repère du profil, le vent relatif vient de la direction $(\cos\alpha,\sin\alpha)$. Un radar à l'élévation $\varepsilon$ est donc vu dans la direction
+\[
+\shat=-\big(\cos(\alpha-\varepsilon),\ \sin(\alpha-\varepsilon)\big).
+\]
+L'incidence $\alpha$ n'est \emph{pas} appliquée à la géométrie : c'est la direction radar qui est tournée, comme le prévoit l'interface de la phase~1.
+
+\section{La grandeur optimisée}
+La SER varie très vite avec l'angle (lobes, interférences). Un objectif d'optimisation doit être robuste : on moyenne donc $\sigma_{2D}$ \emph{en linéaire} sur un secteur d'élévations, puis on passe en décibels :
+\[
+\mathrm{SER}=10\log_{10}\Big(\frac{1}{N}\sum_{j=1}^N\sigma_{2D}(\varepsilon_j)\Big),\qquad \varepsilon_j\in[\varepsilon_{\min},\varepsilon_{\max}].
+\]
+Deux scénarios sont étudiés : S1, conforme à la note d'intention, avec $\varepsilon\in[-20^\circ,20^\circ]$ ; S2, un radar sol vu d'un avion qui l'approche, avec $\varepsilon\in[-60^\circ,0^\circ]$.
+
+\begin{piege}
+Moyenner les décibels au lieu des valeurs linéaires sous-estime fortement l'effet des lobes : la moyenne de $-30$~dB et de $0$~dB vaut $-3$~dB en linéaire, mais $-15$~dB en moyenne de décibels. C'est la puissance reçue qui compte, donc la moyenne linéaire.
+\end{piege}
+
+\exercices
+\begin{exercice}
+Le modèle donne $\sigma_{2D}=-13$~dBm pour un profil de corde 1~m à 10~GHz. Estimer la SER 3D d'un tronçon d'aile de 2~m d'envergure, vu perpendiculairement à l'envergure. Pourquoi cette valeur est-elle bien plus grande que celle d'un avion furtif entier vu de face ?
+\end{exercice}
+\begin{exercice}
+Calculer $k\,r_{BA}$ à 10~GHz pour $t=6$~\%, 12~\% et 20~\% ($r_{BA}=1{,}1019\,t^2c$, $c=1$~m). À partir de quelle fréquence le bord d'attaque du profil le plus mince est-il lui aussi en régime optique ($k\,r_{BA}\ge5$) ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Fixer avec le groupe SER la corde physique, la fréquence et le secteur : ce sont des paramètres du \emph{problème}, au même titre que le Reynolds côté aérodynamique.
+\item Remplacer la moyenne par une statistique plus proche de l'usage opérationnel : percentile 90, ou moyenne pondérée par la probabilité de présence de la menace.
+\item Étudier plusieurs fréquences (bandes S, X, Ku) : en 2D et en régime optique, $\sigma_{2D}$ dépend peu de la fréquence, mais $\sigma_{3D}$ croît avec $k$.
+\end{itemize}
+\end{pistes}

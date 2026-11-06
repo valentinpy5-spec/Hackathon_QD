@@ -1,0 +1,17 @@
+% figure générée par tools/make_figures_v2.py
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.6cm},width=0.48\linewidth,height=5.8cm,
+  xlabel={nombre de qubits $n$},xtick={6,9,12,15,18},title style={font=\small},tick label style={font=\scriptsize},
+  legend style={draw=none,font=\scriptsize}]
+\nextgroupplot[ymode=log,title={probabilité de mesurer l'optimum},legend pos=south west]
+\addplot[cblue,very thick,mark=*,mark size=1.3pt] coordinates {(6,0.079114) (9,0.016433) (12,0.0026563) (15,0.00038696) (18,5.1875e-05)};\addlegendentry{QAOA $p=1$}
+\addplot[corange,very thick,mark=square*,mark size=1.3pt] coordinates {(6,0.13783) (9,0.043653) (12,0.0093765) (15,0.0015763) (18,0.00023126)};\addlegendentry{QAOA $p=2$}
+\addplot[cviolet,very thick,mark=triangle*,mark size=1.6pt] coordinates {(6,0.17228) (9,0.077843) (12,0.020524) (15,0.0041741) (18,0.00068805)};\addlegendentry{QAOA $p=4$}
+\addplot[cmuted,dashed,thick] coordinates {(6,0.015625) (9,0.0019531) (12,0.00024414) (15,3.0518e-05) (18,3.8147e-06)};\addlegendentry{hasard, $2^{-n}$}
+\nextgroupplot[title={qualité de l'échantillon},ymin=0,ymax=1,legend pos=south west]
+\addplot[corange,very thick,mark=square*,mark size=1.3pt] coordinates {(6,0.13783) (9,0.189) (12,0.26423) (15,0.28981) (18,0.29489)};\addlegendentry{$P$(1~\% meilleur), $p=2$}
+\addplot[cviolet,very thick,mark=triangle*,mark size=1.6pt] coordinates {(6,0.17228) (9,0.32037) (12,0.50451) (15,0.57663) (18,0.59078)};\addlegendentry{$P$(1~\% meilleur), $p=4$}
+\addplot[cgreen,very thick,mark=*,mark size=1.3pt] coordinates {(6,0.9572) (9,0.96404) (12,0.95918) (15,0.9523) (18,0.94742)};\addlegendentry{rapport d'approx., $p=4$}
+\addplot[cmuted,very thick,dashed,mark=o,mark size=1.3pt] coordinates {(6,0.56) (9,0.58) (12,0.2) (15,0.08) (18,0)};\addlegendentry{recuit : lectures optimales}
+\end{groupplot}
+\end{tikzpicture}

@@ -1,0 +1,78 @@
+\chapter{V2 : rayon de bord d'attaque libre et XFOIL de référence}\label{ch:v2}
+\iterbanner{V2}
+
+\begin{evolution}{V2}{pourquoi ce chapitre}La V1 a montré deux limites du modèle de la note d'intention. Avec la famille NACA à 4 chiffres, l'épaisseur pilote à la fois la traînée et le rayon de bord d'attaque, donc la SER : il n'y a pas de vrai compromis. Et notre modèle rapide surestime $C_D$ de 27~\% par rapport à XFOIL, au point de déplacer l'optimum. La V2 change donc la géométrie et le simulateur de référence. Les chapitres~\ref{ch:intro} à \ref{ch:validation} restent valables pour le modèle rapide, conservé comme outil de développement.\end{evolution}
+
+\section{La série NACA à 4 chiffres modifiée}
+La série modifiée (Abbott et von Doenhoff, §6.4) garde la ligne moyenne à deux paraboles du chapitre~\ref{ch:naca}, mais remplace la loi d'épaisseur par deux polynômes raccordés à l'abscisse $T$ de l'épaisseur maximale, avec un nouveau paramètre : l'indice de rayon de bord d'attaque $I$. Pour un profil de 20~\% (demi-épaisseur 0,1 en $x=T$) :
+\[
+y_{20}(x)=\begin{cases}a_0\sqrt x+a_1x+a_2x^2+a_3x^3 & x\le T,\\ d_1(1-x)+d_2(1-x)^2+d_3(1-x)^3 & x\ge T,\end{cases}
+\qquad y_t=\frac{t}{0{,}2}\,y_{20}.
+\]
+\begin{itemize}
+\item $a_0=0{,}2969\,I/6$ fixe le nez. Le rayon de bord d'attaque vaut $r_{BA}=1{,}1019\,(tI/6)^2$ : à épaisseur donnée, il varie comme $I^2$. $I=6$ redonne le rayon du NACA standard.
+\item $d_1=\dfrac{2{,}24-5{,}42T+12{,}3T^2}{10(1-0{,}878T)}$ fixe la pente au bord de fuite (formule de Ladson et Brooks, 1975), et $d_0=0$ ferme le bord de fuite.
+\item $d_2$, $d_3$ sont choisis pour que $y_{20}(T)=0{,}1$ et $y_{20}'(T)=0$ ; puis $a_1$, $a_2$, $a_3$ pour que l'arc avant ait aussi $y=0{,}1$, $y'=0$ \emph{et la même courbure} que l'arc arrière en $x=T$. Deux petits systèmes linéaires suffisent.
+\end{itemize}
+Avec $I=6$ et $T=0{,}3$, on retrouve la loi du NACA standard à 0,1~\% de corde près. En V2, $T=0{,}3$ est fixé, et $I$ devient la quatrième variable de conception.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_formes}
+\caption{NACA 2412 modifié pour $I=2$, 4, 6, 8 (calculé par \code{naca4\_modified}). L'épaisseur maximale et sa position ne changent pas ; seul le nez, et la façon dont l'épaisseur y est atteinte, changent.}\label{fig:v2-formes}
+\end{figure}
+
+\begin{codebox}[ : \code{aero/naca4.py}, V2]
+\begin{lstlisting}
+def _modified_coeffs(I, T):
+    d1 = (2.24 - 5.42*T + 12.3*T**2) / (10*(1 - 0.878*T))          # pente au bord de fuite
+    u = 1 - T
+    d2, d3 = np.linalg.solve([[u**2, u**3], [2*u, 3*u**2]], [0.1 - d1*u, -d1])
+    ypp = 2*d2 + 6*d3*u                                           # courbure de l'arc arrière en T
+    a0 = 0.296904 * I / 6
+    M = [[T, T**2, T**3], [1, 2*T, 3*T**2], [0, 2, 6*T]]
+    rhs = [0.1 - a0*np.sqrt(T), -0.5*a0/np.sqrt(T), ypp + 0.25*a0*T**-1.5]
+    a1, a2, a3 = np.linalg.solve(M, rhs)
+\end{lstlisting}
+\end{codebox}
+
+\section{XFOIL comme simulateur de référence}
+\paragraph{Pourquoi.} Le test V5 (§\ref{sec:v5}) a montré que le modèle rapide classe bien les profils (corrélation de rang 0,91) mais surestime $C_D$ de 27~\% et déplace l'optimum. Pour un livrable, il faut le simulateur le plus juste disponible ; XFOIL coûte environ une seconde par point, et la grille V2 (1\,024 profils) se calcule en 6~minutes sur 10 cœurs. Le modèle rapide reste utile pour développer et tester, là où sa vitesse compte.
+
+\paragraph{Le point de croisière, à portance imposée.} On impose $C_L=0{,}4$ (commande \texttt{CL} d'XFOIL) : on compare ainsi les profils à mission égale, et XFOIL renvoie l'incidence de croisière, qui est aussi l'attitude vue par le radar. Le $C_D$ correspondant est le premier objectif.
+
+\paragraph{La contrainte de manœuvre.} Un avion doit pouvoir manœuvrer : on exige une portance maximale $C_{L,\max}\ge1{,}2$, estimée par une rampe d'incidence de 4 à $14^\circ$. Un nez aigu décroche tôt : la couche limite décolle juste après le pic d'aspiration, très intense sur un petit rayon. Dans XFOIL, cela se voit de deux façons : une portance qui plafonne puis chute, ou une non-convergence au-delà d'une certaine incidence. Dans les deux cas, $C_{L,\max}$ est pris comme la plus grande portance convergée.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_xfoil}
+\caption{Effet du rayon de bord d'attaque sur les 1\,024 profils V2 (XFOIL, $\Re=3\cdot10^6$). Un nez aigu ($I=2$) réduit un peu la traînée de croisière, mais fait chuter la portance maximale sous l'exigence de manœuvre.}\label{fig:v2-xfoil}
+\end{figure}
+
+\paragraph{Ce que montre la grille.}
+\begin{itemize}
+\item À $t=12$~\%, en médiane sur la cambrure, passer de $I=8$ à $I=2$ \emph{réduit} la traînée de croisière de 61 à 54~counts : un nez plus fin limite la survitesse et le gradient adverse qui suit.
+\item Mais $C_{L,\max}$ tombe de 1,63 à 1,01. Parmi les profils assez épais, 94 profils à $I=2$ ne tiennent pas l'exigence de manœuvre, contre 22 à $I=4$ et moins de 10 au-delà.
+\item XFOIL ne converge pas en croisière sur 104 profils, dont 70 à $I=2$ : ils sont déclarés infaisables. Au total, 702 profils sur 1\,024 sont faisables.
+\end{itemize}
+
+\begin{projet}
+C'est exactement le mécanisme qui manquait en V1. La SER veut un nez aigu (cours SER, chapitre V2), la croisière aussi, mais la manœuvre l'interdit. Le compromis traînée/SER se joue désormais sur l'épaisseur, la cambrure \emph{et} le rayon de bord d'attaque, et le front de Pareto n'est plus confiné à $t=t_{\min}$ (cours d'optimisation, chapitre V2).
+\end{projet}
+
+\begin{piege}
+La non-convergence d'XFOIL n'est pas une preuve de décrochage : elle peut venir d'un bulbe laminaire mal résolu ou d'un manque d'itérations. Considérer « non convergé » comme « décroché » est une hypothèse prudente mais grossière. Un critère plus propre serait une polaire complète avec détection du maximum de $C_L$, ou un calcul RANS sur quelques profils de contrôle.
+\end{piege}
+
+\exercices
+\begin{exercice}
+Pour $t=12$~\%, calculer le rayon de bord d'attaque pour $I=2$, 4, 6 et 8. De combien de décibels la SER de nez (loi $\pi r_{BA}$) diminue-t-elle entre $I=8$ et $I=2$ ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Libérer aussi la position de l'épaisseur maximale $T$ (cinquième variable), qui agit sur la position de la transition, donc sur la traînée.
+\item Remplacer « non convergé = décroché » par une détection propre du maximum de $C_L$ sur une polaire fine, et valider sur quelques profils par RANS.
+\item Calibrer le modèle rapide sur XFOIL (seuil de Michel, décambrage visqueux) pour disposer d'un simulateur basse fidélité fiable, utile à une approche multi-fidélité.
+\end{itemize}
+\end{pistes}

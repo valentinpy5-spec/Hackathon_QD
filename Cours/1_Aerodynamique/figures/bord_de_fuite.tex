@@ -1,0 +1,16 @@
+% figure générée par tools/make_figures.py : bord_de_fuite
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=3 by 1,horizontal sep=1.2cm},width=0.35\linewidth,height=5cm,
+  title style={font=\small},tick label style={font=\scriptsize},legend style={draw=none,font=\scriptsize}]
+\nextgroupplot[title={$U_e/U_\infty$ (NACA 0012, $\alpha=0$)},xlabel={$x/c$},xmin=0.85,xmax=1]
+\addplot[cblue,very thick,mark=*,mark size=1pt] coordinates {(0.85902,1.0004) (0.86977,0.99553) (0.88016,0.99049) (0.89017,0.98529) (0.89979,0.97992) (0.90902,0.97435) (0.91785,0.96858) (0.92627,0.96256) (0.93426,0.95629) (0.94183,0.94973) (0.94896,0.94284) (0.95565,0.93558) (0.96188,0.92789) (0.96766,0.91972) (0.97298,0.91098) (0.97784,0.90156) (0.98222,0.89131) (0.98612,0.88006) (0.98955,0.86751) (0.99249,0.85326) (0.99495,0.83669) (0.99692,0.81672) (0.9984,0.79134) (0.99938,0.75617) (0.99988,0.70067)};
+\addplot[cmuted,dashed] coordinates {(0.985,0.6) (0.985,1.0)};
+\node[cmuted,font=\scriptsize,anchor=south east,rotate=90] at (axis cs:0.985,0.62) {$x_{stop}$};
+\nextgroupplot[title={$10^3\,\theta/c$},xlabel={$x/c$},xmin=0.85,xmax=1]
+\addplot[corange,very thick,mark=*,mark size=1pt] coordinates {(0.85902,1.4903) (0.86977,1.5303) (0.88016,1.5713) (0.89017,1.6135) (0.89979,1.6571) (0.90902,1.7022) (0.91785,1.7491) (0.92627,1.7981) (0.93426,1.8497) (0.94183,1.9042) (0.94896,1.9622) (0.95565,2.0246) (0.96188,2.0921) (0.96766,2.1658) (0.97298,2.2475) (0.97784,2.3392) (0.98222,2.444) (0.98612,2.5661) (0.98955,2.7125) (0.99249,2.8951) (0.99495,3.1352) (0.99692,3.4815) (0.9984,4.0841) (0.99938,5.6476) (0.99988,7.6063)};
+\addplot[cmuted,dashed] coordinates {(0.985,1) (0.985,4)};
+\nextgroupplot[title={$C_D$ (counts) selon $x_{stop}$},xlabel={$x_{stop}$},xmin=0.95,xmax=1,legend pos=north west]
+\addplot[cblue,very thick,mark=*,mark size=1.3pt] coordinates {(0.95,64.755) (0.96,65.116) (0.97,65.784) (0.975,66.091) (0.98,66.382) (0.985,66.681) (0.99,67.269) (0.995,67.87) (1,81.584)};\addlegendentry{0012, $\alpha=0$}
+\addplot[corange,very thick,mark=square*,mark size=1.3pt] coordinates {(0.95,66.989) (0.96,67.393) (0.97,68.147) (0.975,68.501) (0.98,68.842) (0.985,69.17) (0.99,69.774) (0.995,69.962) (1,86.997)};\addlegendentry{2412, $\alpha=2^\circ$}
+\end{groupplot}
+\end{tikzpicture}

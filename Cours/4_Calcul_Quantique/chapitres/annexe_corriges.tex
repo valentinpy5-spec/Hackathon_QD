@@ -1,0 +1,62 @@
+\chapter{Corrigés des exercices}\label{annexe:corriges}
+\iterbanner{V0}
+
+\section*{Chapitre~\ref{ch:intro} — Pourquoi le calcul quantique}
+\textbf{Ex.~1.1.} $H\ket1=\tfrac1{\sqrt2}(\ket0-\ket1)=\ket-$ : probabilités $\tfrac12,\tfrac12$. Puis $H\ket-=\ket1$ : on lit 1 avec certitude. Les deux chemins vers $\ket0$ ont des amplitudes $+\tfrac12$ et $-\tfrac12$, qui s'annulent. Deux pièces donnent 50/50 quel que soit le bit de départ : les probabilités ne s'annulent jamais.
+
+\textbf{Ex.~1.2.} L'état final contient bien 512 amplitudes, mais une mesure ne renvoie \emph{qu'une} chaîne de 9 bits, tirée au hasard selon les $|\psi_x|^2$. On n'a pas accès aux 512 valeurs de coût. Un passage de QAOA produit \emph{un} profil candidat ; l'algorithme est réussi si les bons profils ont une grande probabilité, et l'on fait de nombreux shots pour les observer.
+
+\section*{Chapitre~\ref{ch:bases} — Les bases}
+\textbf{Ex.~2.1.} $|z_1|^2=|z_2|^2=\tfrac12$, donc $|z_1|^2+|z_2|^2=1$. Mais $z_2=\tfrac1{\sqrt2}e^{i\pi/4}e^{i\pi}=-z_1$, donc $z_1+z_2=0$ et $|z_1+z_2|^2=0$. $|z_1+z_2|^2$ est le module carré d'une somme d'\emph{amplitudes} : l'interférence est totalement destructive. $|z_1|^2+|z_2|^2$ est une somme de \emph{probabilités}.
+
+\textbf{Ex.~2.2.} $\cos^230^\circ\times\cos^2(90^\circ-30^\circ)=\tfrac34\times\tfrac14=\tfrac3{16}\approx0{,}19$. Sans le polariseur intermédiaire : $\cos^290^\circ=0$.
+
+\section*{Chapitre~\ref{ch:qubit} — Le qubit}
+\textbf{Ex.~3.1.} (a) $|\tfrac1{\sqrt2}|^2=|\tfrac i{\sqrt2}|^2=\tfrac12$. (b) $\cos\tfrac\theta2=\tfrac1{\sqrt2}\Rightarrow\theta=\tfrac\pi2$ ; $e^{i\varphi}=i\Rightarrow\varphi=\tfrac\pi2$ : c'est $\ket{+i}$, sur l'axe $+y$. (c) $\braket+\psi=\tfrac12(1+i)$, de module carré $\tfrac12$ ; de même pour $\ket-$ : 50/50 aussi.
+
+\textbf{Ex.~3.2.} (a) $-\ket-=\tfrac1{\sqrt2}(-\ket0+\ket1)$, soit le vecteur $\tfrac1{\sqrt2}(-1,1)$. Comme $-1=e^{i\pi}$, c'est $\ket-$ multiplié par une phase globale. Pour tout état $\ket u$, $|\braket{u}{-\psi}|^2=|-1|^2|\braket u\psi|^2=|\braket u\psi|^2$ : aucune mesure ne les distingue. (b) $\ket+$ et $\ket-$ ne diffèrent que par le signe de la composante sur $\ket1$, c'est-à-dire par une phase \emph{relative} $\varphi=\pi$. Leur produit scalaire vaut $\braket+-=\tfrac12(1-1)=0$ : ils sont orthogonaux, donc parfaitement distinguables. Procédure : appliquer $H$ puis mesurer en base de calcul. $H\ket+=\ket0$ donne toujours 0, et $H\ket-=\ket1$ donne toujours 1. (c) $\ket+$ est une lumière polarisée linéairement à $45^\circ$, $\ket-$ à $135^\circ$. Un polariseur à $45^\circ$ transmet toujours la première et bloque toujours la seconde, alors qu'un polariseur horizontal transmet chacune une fois sur deux.
+
+\section*{Chapitre~\ref{ch:algebre} — Observables et évolution}
+\textbf{Ex.~4.1.} (a) $X\ket+=\tfrac1{\sqrt2}(\ket1+\ket0)=\ket+$ et $X\ket-=\tfrac1{\sqrt2}(\ket1-\ket0)=-\ket-$. (b) $\bra+Z\ket+=\tfrac12(1-1)=0$ et $\bra+X\ket+=1$ : le point $(x,y,z)=(1,0,0)$, sur l'équateur.
+
+\textbf{Ex.~4.2.} (a) $H^\dagger=H$ (réelle symétrique) et $H^2=\tfrac12\begin{pmatrix}2&0\\0&2\end{pmatrix}=\Id$, donc $H^\dagger H=\Id$. (b) Calcul direct : $HZH=\tfrac12\begin{pmatrix}1&1\\1&-1\end{pmatrix}\begin{pmatrix}1&1\\-1&1\end{pmatrix}=\begin{pmatrix}0&1\\1&0\end{pmatrix}=X$, et $HXH=H(HZH)H=Z$. Comme $H$ conjugue $Z$ en $X$, elle envoie les vecteurs propres de $Z$ sur ceux de $X$. (c) $X^2=\Id$, donc $e^{-i\theta X}=\sum_k\frac{(-i\theta)^k}{k!}X^k=\big(\sum_{k\text{ pair}}\cdots\big)\Id+\big(\sum_{k\text{ impair}}\cdots\big)X=\cos\theta\,\Id-i\sin\theta\,X$.
+
+\section*{Chapitre~\ref{ch:multi} — Plusieurs qubits}
+\textbf{Ex.~5.1.} (a) $\tfrac12(\ket0+\ket1)\otimes(\ket0-\ket1)=\ket+\ket-$ : produit (test : $\psi_{00}\psi_{11}-\psi_{01}\psi_{10}=-\tfrac14+\tfrac14=0$). (b) $\psi_{00}\psi_{11}-\psi_{01}\psi_{10}=0-\tfrac1{\sqrt2}\cdot(-\tfrac1{\sqrt2})=\tfrac12\neq0$ : intriqué (état singulet de Bell).
+
+\textbf{Ex.~5.2.} Dans l'ordre $x=0,1,2,3$, c'est-à-dire $(b_0,b_1)=(0,0),(1,0),(0,1),(1,1)$ :
+\[Z_0=\mathrm{diag}(1,-1,1,-1),\quad Z_1=\mathrm{diag}(1,1,-1,-1),\quad Z_0Z_1=\mathrm{diag}(1,-1,-1,1),\]
+\[\tfrac14(\Id-Z_0)(\Id-Z_1)=\tfrac14\mathrm{diag}(0\cdot0,\ 2\cdot0,\ 0\cdot2,\ 2\cdot2)=\mathrm{diag}(0,0,0,1).\]
+
+\section*{Chapitre~\ref{ch:circuits} — Portes et circuits}
+\textbf{Ex.~6.1.} $(H\otimes\Id)\ket{01}=H\ket0\otimes\ket1=\tfrac1{\sqrt2}(\ket{01}+\ket{11})$. La CNOT (contrôle $q_0$) laisse $\ket{01}$ inchangé (contrôle à 0) et envoie $\ket{11}$ sur $\ket{10}$ (contrôle à 1, la cible passe de 1 à 0). On obtient $\tfrac1{\sqrt2}(\ket{01}+\ket{10})$. Probabilités : $\tfrac12$ pour 01, $\tfrac12$ pour 10, 0 pour 00 et 11 : les deux bits sont toujours \emph{différents}. Intriqué : $\psi_{00}\psi_{11}-\psi_{01}\psi_{10}=0-\tfrac12\neq0$. C'est un autre état de Bell, noté $\ket{\Psi^+}$.
+
+\textbf{Ex.~6.2.} CNOT : $\ket{b_i,b_j}\mapsto\ket{b_i,b_i\oplus b_j}$. $R_Z(\theta)$ sur le second qubit multiplie par $e^{-i\theta/2}$ si $b_i\oplus b_j=0$, et par $e^{+i\theta/2}$ sinon. La seconde CNOT rétablit $\ket{b_i,b_j}$. Or $b_i\oplus b_j=0\Leftrightarrow s_is_j=+1$ : la phase est $e^{-i\theta s_is_j/2}$, qui est bien la valeur propre de $e^{-i\theta Z\otimes Z/2}$ sur $\ket{b_ib_j}$.
+
+\section*{Chapitre~\ref{ch:hamiltoniens} — Hamiltoniens}
+\textbf{Ex.~7.1.} $e^{-i\gamma Z}=\mathrm{diag}(e^{-i\gamma},e^{i\gamma})$, donc $e^{-i\gamma Z}\ket+=\tfrac1{\sqrt2}(e^{-i\gamma}\ket0+e^{i\gamma}\ket1)=e^{-i\gamma}\tfrac1{\sqrt2}(\ket0+e^{2i\gamma}\ket1)$. C'est une rotation d'angle $2\gamma$ autour de $z$ (longitude $\varphi=2\gamma$). Les probabilités restent $\tfrac12,\tfrac12$.
+
+\textbf{Ex.~7.2.} $-X_k$ a pour fondamental $\ket+$ (valeur propre $-1$). Les $X_k$ agissent sur des qubits différents et commutent, donc le fondamental de la somme est le produit des fondamentaux, $\ket+^{\otimes n}$, d'énergie $-n$. En développant, $\ket+^{\otimes n}=2^{-n/2}\sum_x\ket x$ : toutes les chaînes ont la même amplitude.
+
+\section*{Chapitre~\ref{ch:qubo} — QUBO et Ising}
+\textbf{Ex.~8.1.} $h_0=-\tfrac{-1}2-\tfrac14(2)=0$, $h_1=\tfrac12-\tfrac14(2+2)=-\tfrac12$, $h_2=0$ ; $J_{01}=J_{12}=\tfrac24=\tfrac12$ ; constante $=0+\tfrac12(-3)+\tfrac14(4)=-\tfrac12$. Pour $\mathbf s=(-1,1,-1)$ : $E=-\tfrac12\cdot1+\tfrac12(-1)(1)+\tfrac12(1)(-1)-\tfrac12=-2$. On retrouve bien $E(101)$.
+
+\textbf{Ex.~8.2.} $3\times8=24$ qubits au lieu de 9. Pénalité pour $m$ : $P\big(\sum_{j=0}^7b_{mj}-1\big)^2=P\big(1-\sum_jb_{mj}+2\sum_{j<l}b_{mj}b_{ml}\big)$. Elle ajoute $\binom82=28$ couplages par variable, soit 84 au total, en plus de ceux du coût. Le binaire est nettement plus économe pour notre projet. Le one-hot ne se justifierait que si le paysage binaire posait problème au recuit.
+
+\section*{Chapitre~\ref{ch:recuit} — Recuit}
+\textbf{Ex.~9.1.} $e^{-1/2}\approx0{,}61$ ; $e^{-2}\approx0{,}14$ ; $e^{-10}\approx4{,}5\cdot10^{-5}$. À haute température, on explore presque librement, ce qui permet de franchir les barrières. À basse température, on ne fait plus que descendre. Refroidir progressivement passe de l'exploration à l'exploitation.
+
+\textbf{Ex.~9.2.} $T\gg1/g_{\min}^2\sim2^n$ : le temps adiabatique croît comme l'énumération exhaustive. L'adiabatique n'apporte alors aucun avantage asymptotique ; tout dépend de la façon dont le gap se comporte sur la famille de problèmes considérée.
+
+\section*{Chapitre~\ref{ch:qaoa} — QAOA}
+\textbf{Ex.~10.1.} $e^{-i\gamma hZ}=R_Z(2h\gamma)$ fait tourner $\ket+$ de $2h\gamma$ autour de $z$ : $(\cos2h\gamma,\sin2h\gamma,0)$. $R_X(2\beta)$ donne ensuite $z=\sin2h\gamma\,\sin2\beta$, d'où $F_1=h\,\sin(2h\gamma)\sin2\beta$. Les minima, $F_1=-h$, sont atteints pour $\sin(2h\gamma)=\pm1$ et $\sin2\beta=\mp1$, par exemple $\gamma=\tfrac{\pi}{4h}$ et $\beta=-\tfrac\pi4$. Si $h$ est grand, la période en $\gamma$ ($\pi/h$) devient minuscule : le paysage oscille très vite et l'optimiseur se perd. C'est le piège de l'échelle, d'où la normalisation.
+
+\textbf{Ex.~10.2.} $H$ : 9 ; par couche, 9 $R_Z$, 36 $R_{ZZ}$ (72 CNOT et 36 $R_Z$) et 9 $R_X$. À $p=3$ : 216 CNOT, $3\times(9+36)=135$ $R_Z$, 27 $R_X$, plus 9 mesures. Shots : $1-(1-0{,}097)^N\ge0{,}99\Leftrightarrow N\ge\ln0{,}01/\ln0{,}903\approx45{,}2$, donc 46 shots.
+
+\section*{Chapitre~\ref{ch:outils} — Outils}
+\textbf{Ex.~11.1.} $16\cdot2^{30}\approx17$~Go ; $16\cdot2^{40}\approx17{,}6$~To. Coût par couche : $9\cdot2^9\approx4{,}6\cdot10^3$ opérations contre $30\cdot2^{30}\approx3{,}2\cdot10^{10}$, soit environ 7 millions de fois plus.
+
+\textbf{Ex.~11.2.} $\sigma_E/\sqrt N=0{,}01\Rightarrow N=10^4$ shots \emph{par évaluation} de $F_p$. Un optimiseur qui fait des centaines d'évaluations demande donc des millions de shots. Sur matériel réel, c'est le coût dominant ; et le bruit statistique peut tromper un optimiseur qui compare des valeurs très proches.
+
+\section*{Chapitre~\ref{ch:projet} — Le projet}
+\textbf{Ex.~12.1.} $N\approx3/P_{\text{opt}}$ pour $P$ petit : environ 710 tirs à 15 qubits ($P=0{,}0042$) et 4\,300 à 18 qubits ($P=0{,}0007$), soit un facteur 6 tous les 3 qubits. En prolongeant : environ $4\,300\times36\approx1{,}5\cdot10^5$ tirs à 24 qubits, encore 100 fois moins que les $2^{24}\approx1{,}7\cdot10^7$ chaînes. Mais l'écart diminue avec $n$, et il faut ajouter les milliers d'évaluations nécessaires pour régler les angles, chacune demandant elle-même des centaines de tirs.

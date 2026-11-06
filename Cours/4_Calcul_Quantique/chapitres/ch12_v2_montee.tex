@@ -1,0 +1,71 @@
+\chapter{V2 : que devient QAOA quand le problème grandit ?}\label{ch:montee}
+\iterbanner{V2}
+
+\begin{evolution}{V2}{pourquoi ce chapitre}La V1 a montré qu'à 13 qubits, le solveur du QUBO ne compte presque pas : le QUBO se résout exactement en une milliseconde, et QAOA fait aussi bien. La seule question quantique pertinente est donc celle du passage à l'échelle, que pose la note d'intention (« seuls les simulateurs et le nombre de variables changent »). Ce chapitre y répond par simulation exacte, jusqu'à 18 qubits.\end{evolution}
+
+\section{Le protocole}
+On garde \emph{le même} problème physique : le modèle quadratique de la somme pondérée traînée/SER ($w=0{,}5$), ajusté sur la base exhaustive V1. On affine seulement la grille : $b$ bits par variable, pour 3 variables, soit $n=3b$ qubits, de 6 à 18. Le QUBO grandit, mais sa structure reste la même : c'est exactement ce qui arriverait si l'on demandait une conception plus fine.
+
+Pour chaque $n$ (\texttt{Code/quantique/montee\_en\_taille.py}) :
+\begin{itemize}
+\item les $2^n$ énergies sont calculées exactement, ce qui donne l'optimum de référence ;
+\item QAOA ($p=1$ à 4) est simulé par vecteur d'état. Les angles de $p=1$ sont optimisés avec plusieurs départs ; ceux de $p\ge2$ partent du meilleur de deux initialisations : l'interpolation des angles optimaux de $p-1$ (méthode INTERP) et le transfert depuis la taille précédente, comme on le ferait sur une machine où chaque évaluation coûte cher ;
+\item on mesure la probabilité de l'optimum, la probabilité de tomber dans le 1~\% meilleur des chaînes, et le rapport d'approximation $r=(E_{\max}-\expval{E})/(E_{\max}-E_{\min})$ ;
+\item on compare au recuit simulé (part des lectures qui trouvent l'optimum, 100 balayages).
+\end{itemize}
+
+\section{Les résultats}
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_montee}
+\caption{Montée en taille de 6 à 18 qubits, sur le même problème physique. À gauche, la probabilité de mesurer l'optimum, en échelle logarithmique. À droite, des indicateurs plus robustes : probabilité d'une chaîne du 1~\% meilleur, rapport d'approximation, et réussite du recuit simulé.}\label{fig:montee}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{rrrrrr}
+\toprule
+$n$ & CNOT par couche & $P(\text{opt})$, $p=2$ & $P(\text{opt})$, $p=4$ & 1~\% meilleur, $p=4$ & hasard \\
+\midrule
+6 & 30 & 0,14 & 0,17 & 0,17 & 0,016 \\
+9 & 72 & 0,044 & 0,078 & 0,32 & 0,002 \\
+12 & 132 & 0,0094 & 0,021 & 0,50 & $2{,}4\cdot10^{-4}$ \\
+15 & 210 & 0,0016 & 0,0042 & 0,58 & $3{,}1\cdot10^{-5}$ \\
+18 & 306 & 0,0002 & 0,0007 & 0,59 & $3{,}8\cdot10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{1. Trouver l'optimum devient exponentiellement difficile.} $P(\text{opt})$ est divisée par 3 à 7 tous les 3 qubits, en $2^{-0{,}7\,n}$ environ entre 6 et 18 qubits. QAOA garde un avantage sur le hasard (facteur 9 à 180 selon $p$ et $n$), mais cet avantage ne croît pas assez vite : le nombre de tirs nécessaires pour voir l'optimum croît, lui aussi, exponentiellement (environ 4\,000 tirs à 18 qubits avec $p=4$).
+
+\paragraph{2. Mais l'échantillon reste bon.} La probabilité de tomber dans le 1~\% meilleur se \emph{stabilise} : environ 0,3 avec $p=2$, environ 0,59 avec $p=4$, et le rapport d'approximation reste au-dessus de 0,92. Quand le problème grandit, l'optimum exact devient une aiguille parmi de nombreuses chaînes presque aussi bonnes (la grille plus fine crée beaucoup de voisins quasi équivalents). Pour notre boucle, qui cherche des \emph{candidats} à simuler et non l'optimum exact du QUBO, c'est la bonne mesure.
+
+\paragraph{3. La profondeur aide, à condition de bien initialiser les angles.} Avec l'initialisation INTERP, chaque couche supplémentaire améliore l'échantillon : à 18 qubits, la part de mesures dans le 1~\% meilleur passe de 0,29 ($p=2$) à 0,59 ($p=4$).
+
+\begin{evolution}{V2}{correction en cours d'itération}Une première version de cette étude initialisait les angles de $p\ge3$ au hasard, ou par transfert seul : $p=3$ ne faisait alors pas mieux que $p=2$, et l'on avait conclu que la profondeur n'aidait pas. C'était un défaut de l'optimiseur classique, pas de QAOA : le paysage des angles devient plat et rugueux quand $p$ croît, et un départ aléatoire s'y perd. L'interpolation des angles optimaux de $p-1$ (Zhou et al., 2020) corrige le problème. Les résultats de la première version sont conservés dans \texttt{Code/resultats/montee\_en\_taille\_init\_aleatoire.json}.\end{evolution}
+
+\paragraph{4. Le recuit simulé, réglé tel quel, s'effondre aussi.} Avec 100 balayages, il trouve l'optimum dans 58~\% des lectures à 9 qubits, mais plus jamais à 18. Comme pour QAOA, cela traduit surtout la multiplication des quasi-optima ; un recuit plus long, ou un critère « 1~\% meilleur », le remettrait à niveau.
+
+\begin{resultat}
+\begin{itemize}
+\item Sur notre problème, QAOA reste meilleur que le hasard, mais trouver l'\emph{optimum exact} coûte exponentiellement plus de tirs quand $n$ croît.
+\item En revanche, QAOA produit de bons \emph{candidats} à toute taille testée : environ un tiers des mesures tombent dans le 1~\% meilleur. C'est ce que la boucle exploite.
+\item Le coût en portes croît comme $n^2$ (graphe complet) : 306 CNOT par couche à 18 qubits, avant le routage sur une vraie puce.
+\end{itemize}
+\end{resultat}
+
+\begin{projet}
+Le message à porter devant le jury change de nature. On ne prétend pas que QAOA résout mieux le QUBO : à ces tailles, l'énumération et le recuit classiques suffisent. On montre comment évoluent qualité et coût quand le problème grandit, et que le rôle utile du solveur, dans la boucle, est de fournir des candidats de bonne qualité, ce que QAOA fait de façon stable.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Le nombre de tirs nécessaires pour voir au moins une fois l'optimum avec 95~\% de chances vaut $N=\ln0{,}05/\ln(1-P_{\text{opt}})$. Le calculer à 15 et 18 qubits pour $p=4$ (tableau), puis l'extrapoler à $n=24$ en supposant que la tendance continue. Comparer au nombre de chaînes $2^{24}$.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item \iterbadge{V2}~\textbf{Fait} : initialisation INTERP, qui rend les couches supplémentaires utiles. Reste à aller au-delà de $p=4$ et à comparer aux angles fixes de la littérature.
+\item Remplacer « probabilité de l'optimum » par « probabilité d'un candidat utile » comme indicateur principal.
+\item Ajouter le bruit (dépolarisation par CNOT) et le routage sur une topologie réelle pour estimer le coût sur machine.
+\end{itemize}
+\end{pistes}

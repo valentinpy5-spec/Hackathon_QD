@@ -1,0 +1,26 @@
+\chapter{Aide-mémoire}\label{annexe:memo}
+\iterbanner{V0}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.45}
+\begin{tabularx}{\linewidth}{>{\bfseries}l X}
+\toprule
+NACA & $y_c=\frac{m}{p^2}(2px-x^2)$ ($x<p$), $\frac{m}{(1-p)^2}(1-2p+2px-x^2)$ ($x\ge p$) ; $y_t=5t(0{,}2969\sqrt x-0{,}126x-0{,}3516x^2+0{,}2843x^3-0{,}1036x^4)$ ; $r_{BA}=1{,}1019\,t^2$ ; $x_k=\frac12(1-\cos\frac{k\pi}{n})$\\
+Panneau (local) & source : $u=\frac{\sigma}{2\pi}\ln\frac{r_1}{r_2}$, $v=\frac{\sigma}{2\pi}(\theta_2-\theta_1)$ ; tourbillon : $u=-\frac{\gamma}{2\pi}(\theta_2-\theta_1)$, $v=\frac{\gamma}{2\pi}\ln\frac{r_1}{r_2}$ ; auto-influence $\theta_2-\theta_1=-\pi$\\
+Hess-Smith & $N$ sources $\sigma_j$ + 1 tourbillon $\gamma$ ; $\vect V\cdot\vect n_i=0$ ; Kutta $V_{t,1}+V_{t,N}=0$ ; $\vect n=(t_y,-t_x)$ sortante\\
+Sorties & $C_p=1-V_t^2$ ; $\vect F=-\sum C_p\vect nL$ ; $C_L=F_y\cos\alpha-F_x\sin\alpha$ ; $C_{L,KJ}=-2\gamma\,\ell_{tot}$ ; $C_{D,p}\to0$\\
+Von Kármán & $\theta'+(2+H)\frac{\theta}{U_e}U_e'=\frac{c_f}{2}$ ; $H=\delta^*/\theta$\\
+Thwaites & $\theta^2=\frac{0{,}45\,\nu}{U_e^6}\int_0^sU_e^5$ ; $\lambda=\frac{\theta^2}{\nu}U_e'$ ; $c_f=2\ell(\lambda)/\Re_\theta$ ; décollement $\lambda=-0{,}09$\\
+Transition & premier de : Michel $\Re_\theta>1{,}174(1+\frac{22\,400}{\Re_x})\Re_x^{0{,}46}$ ; $\lambda<-0{,}09$ ; $x_{trip}$ ; position interpolée\\
+Head & $\theta'=\frac{c_f}{2}-(H+2)\frac{\theta}{U_e}U_e'$ ; $(U_e\theta H_1)'=U_e\,0{,}0306(H_1-3)^{-0{,}6169}$ ; $c_f=0{,}246\cdot10^{-0{,}678H}\Re_\theta^{-0{,}268}$ ; départ $H=1{,}4$ ; décollement $H=2{,}4$\\
+Squire-Young & $C_D=\sum_{\text{faces}}2\,\theta_{TE}\,U_{e,TE}^{(H_{TE}+5)/2}$, appliqué en $x_{stop}=0{,}985$\\
+Validité & invalide si décollement turbulent en amont de $x/c=0{,}9$, point d'arrêt ambigu, ou échec d'intégration\\
+\midrule
+API & \code{evaluate(m, p, t, alpha, Re)} $\to$ \code{AeroResult} ; \code{evaluate\_at\_cl(m, p, t, CL)} ; \code{alpha\_for\_cl} ; \code{naca4(m, p, t, n\_half)} ; \code{solve(X, Y, alpha, cache)}\\
+Grille & \code{DesignSpace} : $8^3$ niveaux, 9 bits, \code{encode}/\code{decode} (poids faible en premier) ; \code{AeroSimulator(space, case)} : cache, \code{n\_sims}, \code{constraints}\\
+Scripts & \code{demo\_profil.py} ; \code{validation.py} (V1--V5) ; \code{generer\_base.py [cl]} ; \code{analyse\_quadratique.py}\\
+Ordres de grandeur & 8~ms/profil ; NACA 2412, $2^\circ$, $\Re=3\cdot10^6$ : $C_L=0{,}498$, $C_D=69$~counts (55 frottement + 14 forme), $C_M=-0{,}057$, $x_{tr}=0{,}28/0{,}48$\\
+\bottomrule
+\end{tabularx}
+\end{center}

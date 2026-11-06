@@ -1,0 +1,49 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_SER.tex
+% Figures à données : python3 tools/make_figures.py (appelle Code/ser et Code/aero)
+\input{preambule}
+\newcommand{\shat}{\hat{\vect s}}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{La surface équivalente radar d'un profil}\\[0.4em]\large Un modèle simplifié par optique physique, son implémentation\\ et son intégration dans la chaîne d'optimisation du hackathon quantique}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 4 novembre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Objet.} Le second objectif du hackathon est la surface équivalente radar (SER) du profil. Le modèle définitif sera construit par un autre groupe, à partir d'un maillage facetté et d'un solveur électromagnétique. Pour construire et tester toute la chaîne d'optimisation dès maintenant, on a écrit un modèle \textbf{simplifié mais physique} : l'optique physique (PO) en 2D, monostatique, sur le contour même qu'utilise l'aérodynamique. Ce cours explique ce modèle de la théorie au code, montre ce qu'il dit des profils NACA, et précise comment le vrai solveur viendra le remplacer.
+
+\paragraph{Ce qu'on suppose connu.} Les équations de Maxwell et la notion d'onde plane. Le reste est posé ici : définition de la SER, régimes de diffusion, courants de l'optique physique, intégrale de rayonnement 2D, phase stationnaire.
+
+\paragraph{Fil conducteur.} Définition et ordres de grandeur (ch.~\ref{ch:intro}) $\to$ mécanismes de diffusion haute fréquence et principes de furtivité (ch.~\ref{ch:mecanismes}) $\to$ théorie de l'optique physique (ch.~\ref{ch:po}) $\to$ implémentation et validation (ch.~\ref{ch:code}) $\to$ SER des profils NACA (ch.~\ref{ch:naca}) $\to$ intégration dans la chaîne (ch.~\ref{ch:integration}) $\to$ limites et feuille de route (ch.~\ref{ch:limites}).
+
+\paragraph{Figures et chiffres.} Les courbes à données sont calculées par le code du projet (\texttt{Code/ser/} et \texttt{Code/aero/}) via \texttt{tools/make\_figures.py}. Les chiffres cités sont dans \texttt{figures/chiffres.json}. Chaque chapitre se termine par des exercices (corrigés en annexe~\ref{annexe:corriges}) et par un encadré violet de \textbf{pistes d'amélioration}.
+
+\paragraph{Conventions.} Conducteur électrique parfait. Dépendance temporelle $e^{i\omega t}$ omise. $k=2\pi/\lambda$. Repère du profil : $x$ le long de la corde vers l'aval, $y$ vers l'extrados, origine au bord d'attaque. Corde $c=1$~m, fréquence de référence 10~GHz ($\lambda=3$~cm, $kc\approx209$).
+
+\paragraph{Itérations du projet.} Le projet avance par itérations, chacune avec sa couleur dans tous les cours et dans la fiche projet (dossier \texttt{Fiche\_Projet/} du projet). Chaque chapitre commence par un bandeau qui indique l'itération de son contenu ; un ajout ou une révision faite lors d'une itération ultérieure apparaît dans un encadré « Évolution » de la couleur correspondante.
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_intro}
+\input{chapitres/ch02_mecanismes}
+\input{chapitres/ch03_po}
+\input{chapitres/ch04_code}
+\input{chapitres/ch05_naca}
+\input{chapitres/ch06_integration}
+\input{chapitres/ch07_limites}
+\input{chapitres/ch08_v2}
+
+\appendix
+\input{chapitres/annexe_corriges}
+
+\end{document}

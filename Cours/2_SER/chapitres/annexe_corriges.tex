@@ -1,0 +1,32 @@
+\chapter{Corrigés des exercices}\label{annexe:corriges}
+\iterbanner{V1}
+
+\section*{Chapitre~\ref{ch:intro}}
+\textbf{Ex.~1.1.} $\sigma_{2D}=10^{-1{,}3}=0{,}050$~m. $\sigma_{3D}=kb^2\sigma_{2D}/\pi=209{,}6\times4\times0{,}050/\pi\approx13$~m\textsuperscript{2}, soit environ 11~dBsm. C'est une valeur énorme parce que la direction perpendiculaire à l'envergure est un \emph{spéculaire de ligne} : tout le bord d'attaque renvoie en phase. Un avion furtif évite précisément cette configuration (flèche du bord d'attaque, qui renvoie l'écho hors de l'axe de la menace).
+
+\textbf{Ex.~1.2.} $k=209{,}6$~m\textsuperscript{-1}. $r_{BA}=4{,}0$, $15{,}9$ et $44{,}1$~mm, soit $kr_{BA}=0{,}83$, $3{,}3$ et $9{,}2$. Pour $kr\ge5$ avec $r=4$~mm : $k\ge1\,250$~m\textsuperscript{-1}, soit $f\ge60$~GHz.
+
+\section*{Chapitre~\ref{ch:mecanismes}}
+\textbf{Ex.~2.1.} Facette : $kw^2=209{,}6\times0{,}01=2{,}1$~m, soit $+3{,}2$~dBm. Bord d'attaque : $\pi\times0{,}016=0{,}050$~m, soit $-13$~dBm. Écart : environ 16~dB. Inclinée de $10^\circ$ : $kw\sin10^\circ=3{,}6$, $\operatorname{sinc}^2(3{,}6)\approx0{,}015$, soit $-18$~dB par rapport au pic : la facette tombe vers $-15$~dBm. Une facette est très forte dans sa direction et très faible ailleurs : c'est le principe du F-117.
+
+\section*{Chapitre~\ref{ch:po}}
+\textbf{Ex.~3.1.} Les deux facettes ont des normales opposées ; une seule est éclairée ($\vect n\cdot\shat>0$). Pour elle, $\vect n\cdot\shat=\cos\theta$, $\vect t\cdot\shat=\sin\theta$, $L=w$ : $\sigma_{2D}=k\,|\cos\theta\,w\,\operatorname{sinc}(kw\sin\theta)|^2$, la formule de la bande.
+
+\textbf{Ex.~3.2.} $\sigma_{2D}=\pi\rho=\pi b^2/a$. Avec $a=0{,}5$~m et $b=0{,}06$~m : $\pi\times0{,}0072=0{,}023$~m, soit $-16{,}4$~dBm, environ 3~dB de moins qu'un NACA 0012 de même épaisseur : l'ellipse a un nez plus pointu ($\rho=7{,}2$~mm contre 15,9~mm).
+
+\section*{Chapitre~\ref{ch:code}}
+\textbf{Ex.~4.1.} Environ $400\times81\approx3\cdot10^4$ évaluations de sinus, cosinus et exponentielles, soit quelques dizaines de microsecondes de calcul effectif ; le reste est la construction du contour. Une méthode des moments à 400 inconnues demande de remplir une matrice de $1{,}6\cdot10^5$ termes (fonctions de Hankel) puis une factorisation en $N^3/3\approx2\cdot10^7$ opérations, mais pour \emph{toutes} les directions à la fois : quelques dizaines de millisecondes. C'est encore très raisonnable en 2D.
+
+\section*{Chapitre~\ref{ch:naca}}
+\textbf{Ex.~5.1.} $20\log_{10}(8/12)=-3{,}5$~dB. Côté aérodynamique, à $\alpha=2^\circ$, la traînée diminue aussi quand l'épaisseur baisse (quelques counts entre 12 et 8~\% pour un profil symétrique, voir la base). Les deux objectifs vont dans le même sens : c'est l'origine du front dégénéré.
+
+\textbf{Ex.~5.2.} Paramétrons $x=y^2/(2r)$. Alors $x'=y/r$, $x''=1/r$, et la courbure vaut $\kappa=|x''|/(1+x'^2)^{3/2}=\frac{1/r}{(1+y^2/r^2)^{3/2}}$. La normale fait l'angle $\beta$ avec l'axe des $x$ quand la pente $\dd x/\dd y=y/r=\tan\beta$. Donc $1+y^2/r^2=1/\cos^2\beta$ et $\rho=1/\kappa=r/\cos^3\beta$.
+
+\section*{Chapitre~\ref{ch:integration}}
+\textbf{Ex.~6.1.} Dans le repère du profil, $\shat=-(\cos(\alpha-\varepsilon),\sin(\alpha-\varepsilon))$. Pour $\alpha=-4^\circ$ et $\varepsilon=0$, $\shat$ pointe vers l'avant et vers le \emph{haut} du profil : le radar voit davantage l'extrados. À $+2^\circ$, il le voit par en dessous, côté intrados. L'extrados, plus bombé, présente au radar une courbure différente : l'écho dans le secteur se déplace, et la valeur moyenne change de quelques dixièmes de décibel à quelques décibels selon le secteur.
+
+\section*{Chapitre~\ref{ch:limites}}
+\textbf{Ex.~7.1.} En TM, le champ électrique est parallèle à l'envergure : l'équation intégrale est scalaire et son noyau est simplement $H_0^{(2)}$, avec une singularité logarithmique facile à intégrer. En TE, il faut la dérivée normale du noyau, plus singulière. Il faut environ 10 inconnues par longueur d'onde pour représenter correctement la variation du courant (deux fois Nyquist, avec une marge). Le contour d'un profil mesure environ $2c=2$~m, soit 67 longueurs d'onde à 10~GHz : environ 700 inconnues, plus un raffinement au bord d'attaque.
+
+\section*{Chapitre~\ref{ch:v2} \iterbadge{V2}}
+\textbf{Ex.~8.1.} $r_{BA}=1{,}1019\times(0{,}12\times2/6)^2=1{,}76$~mm. $k=3/r=1\,700$~m\textsuperscript{-1}, soit $f=kc_0/(2\pi)\approx81$~GHz et $\lambda\approx3{,}7$~mm. Aucun radar de surveillance usuel n'opère à cette fréquence : pour ces nez, il faut un solveur exact.

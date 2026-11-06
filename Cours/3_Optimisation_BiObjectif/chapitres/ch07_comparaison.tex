@@ -1,0 +1,88 @@
+\chapter{Comparaison de toute la chaîne}\label{ch:comparaison}
+\iterbanner{V1}
+
+\section{Le protocole}
+Toutes les méthodes passent par le même compteur et sont arrêtées dès que le front exact est entièrement simulé (budget maximal : 150 simulations pour la boucle). On répète chaque expérience sur 20 graines (10 pour QAOA, plus coûteux à simuler) et on rapporte la médiane et les quartiles de deux grandeurs :
+\begin{itemize}
+\item le nombre de simulations pour avoir simulé \textbf{tout le front exact} ;
+\item le nombre de simulations pour atteindre \textbf{99~\% de l'hypervolume exact}, c'est-à-dire un front pratiquement aussi bon que le vrai.
+\end{itemize}
+Les méthodes comparées : tirage aléatoire sans remise (la référence naïve), NSGA-II ($N=16$, et $N=8$ pour le réglage optimal du chapitre~\ref{ch:nsga-res}), et la boucle QUBO avec trois solveurs : exact, recuit simulé, QAOA $p=2$. Le script est \code{optim/experiences\_pipeline.py} ; il tourne environ une heure, dont l'essentiel pour QAOA.
+
+\section{Les courbes de convergence}
+\begin{figure}[htbp]
+\centering
+\input{figures/convergence_front}
+\caption{Fraction du front exact déjà simulée, en fonction du nombre de simulations (médiane ; tirets : premier quartile).}\label{fig:conv-front}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/convergence_hv}
+\caption{Hypervolume relatif des profils simulés. La boucle atteint très vite un front presque optimal ; c'est la complétion des derniers points qui coûte.}\label{fig:conv-hv}
+\end{figure}
+
+\section{Le tableau de synthèse}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{S1 (7 profils)} & \multicolumn{2}{c}{S2 (15 profils)} \\
+ & front complet & HV 99~\% & front complet & HV 99~\% \\
+\midrule
+tirage aléatoire & 454 & 222 & 494 & 274 \\
+NSGA-II, $N=16$ & 106,5 & 95 & 106 & 89 \\
+NSGA-II, $N=8$ (réglé) & 65 & --- & 81 & --- \\
+boucle QUBO, solveur exact & \textbf{35} & 35 & \textbf{67,5} & 40 \\
+boucle QUBO, recuit simulé & 40 & 30 & 85\textsuperscript{*} & 50 \\
+boucle QUBO, QAOA $p=2$ & \textbf{35} & 30 & 80 & \textbf{37,5} \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize Médianes en nombre de simulations distinctes. \textsuperscript{*}Une graine sur 20 n'a pas complété le front dans le budget de 150 simulations.}
+\end{center}
+
+\section{Lecture}
+\paragraph{1. Toutes les méthodes battent le hasard, de loin.} Pour avoir tout le front, le tirage aléatoire doit simuler presque toute la grille (454 et 494 profils sur 512) : les derniers profils du front sont trouvés au hasard parmi les tout derniers tirages.
+
+\paragraph{2. La boucle QUBO économise des simulations, surtout sur le front court.} Dans S1, elle retrouve le front en 35 simulations, trois fois moins que NSGA-II par défaut et presque deux fois moins que NSGA-II bien réglé. Dans S2, l'écart se réduit : 67,5 contre 106 et 81. Face à un NSGA-II réglé, le gain n'est plus que de 17~\% avec le solveur exact, et devient nul avec QAOA.
+
+\paragraph{3. Trouver un bon front est facile ; le compléter coûte.} Pour atteindre 99~\% de l'hypervolume, la boucle n'a besoin que de 30 à 50 simulations dans les deux scénarios, deux fois moins que NSGA-II. La complétion du front de S2 est plus coûteuse parce que 10 de ses 15 profils ne sont pas supportés : la somme pondérée ne les vise jamais directement, et la boucle ne les trouve qu'indirectement (exclusion des profils déjà simulés, erreurs du modèle quadratique).
+
+\paragraph{4. Le solveur quantique ne change presque rien.} Avec 13 qubits, le QUBO est résolu exactement en une fraction de seconde. QAOA ($p=2$) et le recuit renvoient parfois un candidat un peu moins bon que l'optimum du QUBO, ce qui ajoute quelques itérations : $+0$ à $+13$ simulations pour QAOA, $+5$ à $+18$ pour le recuit. \textbf{Tout le gain de la boucle vient du modèle de substitution}, qui exploite la régularité des deux objectifs ; le solveur n'est qu'un composant interchangeable.
+
+\section{Ce que coûterait une vraie machine}
+Une itération de la boucle avec QAOA, c'est 5 QUBO (un par poids), chacun optimisé par COBYLA avec 3 départs, soit environ 600 évaluations de l'énergie moyenne. Sur un ordinateur quantique, chaque évaluation est une estimation statistique sur des centaines à des milliers de tirs. Avec environ 14 itérations pour S2 :
+\[
+14\times5\times600\approx4\cdot10^4\ \text{évaluations}\quad\Rightarrow\quad\text{de l'ordre de }10^7\text{ exécutions de circuit à }1\,000\text{ tirs.}
+\]
+Chaque circuit compte environ 69 couplages, donc 138 CNOT par couche et 276 pour $p=2$, avant tout routage sur la topologie réelle. C'est faisable, mais coûteux et bruité, pour un problème qu'un ordinateur portable résout exactement en une milliseconde. Le seul argument quantique tenable porte donc sur le passage à l'échelle, et c'est ce que doit mesurer l'itération suivante.
+
+\begin{resultat}
+\begin{itemize}
+\item La boucle QUBO retrouve le front exact avec 1,2 à 3 fois moins de simulations que NSGA-II, et atteint 99~\% de l'hypervolume deux fois plus vite.
+\item Ce gain vient du modèle de substitution ; le solveur (exact, recuit, QAOA) ne change presque rien à 13 qubits.
+\item La somme pondérée laisse de côté les points non supportés, qui font l'essentiel du coût de complétion quand le front est long.
+\end{itemize}
+\end{resultat}
+
+\begin{projet}
+C'est le résultat de l'itération V1. Il répond à la question de la note d'intention, mais il montre aussi ses limites : le problème est presque dégénéré et trop petit pour que le quantique joue un rôle. D'où la reformulation de l'itération V2 (voir la fiche projet).
+\end{projet}
+
+\exercices
+\begin{exercice}
+À partir du tableau, calculer le facteur de gain de la boucle (solveur exact) par rapport à NSGA-II réglé ($N=8$), pour chaque scénario. Pourquoi le gain diminue-t-il quand le front s'allonge ?
+\end{exercice}
+\begin{exercice}
+On veut estimer l'énergie moyenne d'un circuit QAOA à $\pm0{,}01$ près, l'énergie normalisée ayant un écart-type de l'ordre de 1. Combien de tirs faut-il par évaluation ? En déduire le nombre total de tirs pour une exécution de la boucle sur S2.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Mesurer la boucle avec un critère d'arrêt réaliste (stagnation de l'hypervolume) plutôt qu'avec le front exact.
+\item Réutiliser les angles optimaux de QAOA d'une itération à l'autre : le nombre d'évaluations diminuerait fortement.
+\item Ajouter l'optimisation bayésienne multi-objectif comme concurrent classique de même nature que la boucle.
+\end{itemize}
+\end{pistes}

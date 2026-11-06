@@ -1,0 +1,58 @@
+\chapter{Mécanismes de diffusion et principes de furtivité}\label{ch:mecanismes}
+\iterbanner{V1}
+
+\section{D'où vient l'écho en régime optique}
+En régime optique, l'écho n'est pas « réparti » sur tout l'objet : il est formé en quelques endroits, chacun avec sa loi propre (figure~\ref{fig:mecanismes}).
+\begin{itemize}
+\item \textbf{Réflexion spéculaire} : là où la normale à la surface pointe vers le radar. Sur une surface courbe de rayon de courbure $\rho$, elle donne $\sigma_{2D}=\pi\rho$, indépendamment de la fréquence (ch.~\ref{ch:po}). Sur une facette plane de largeur $w$ vue de face, $\sigma_{2D}=kw^2$, énorme et très directif.
+\item \textbf{Diffraction par les arêtes} : un bord de fuite aigu ou une arête de facette diffracte dans un cône de directions. C'est un écho faible mais présent sous tous les angles.
+\item \textbf{Ondes rampantes} : en polarisation TE surtout, une onde contourne l'objet par l'ombre et revient vers le radar. C'est important quand le rayon de courbure est de l'ordre de $\lambda$.
+\item \textbf{Ondes progressives, cavités, multi-réflexions} : entrées d'air, jonctions, dièdres. Absentes d'un profil isolé.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.3]
+\fill[cmuted!25,draw=cink,thick] plot[smooth,tension=0.6] coordinates {(5,0) (3.7,0.27) (2,0.47) (0.8,0.45) (0.2,0.25) (0,0) (0.2,-0.17) (0.8,-0.22) (2,-0.2) (3.7,-0.08) (5,0)};
+\draw[cblue,very thick,-{Stealth[length=2.5mm]}] (-2.2,0) -- (-0.1,0);
+\draw[corange,very thick,-{Stealth[length=2.5mm]}] (-0.1,0.08) -- (-2.2,0.08);
+\node[font=\small,align=center] at (-1.2,0.45) {spéculaire au BA\\ $\sigma_{2D}=\pi r_{BA}$};
+\draw[cblue,thick,-{Stealth[length=2mm]}] (1.2,1.6) -- (1.0,0.52);
+\draw[corange,thick,-{Stealth[length=2mm]}] (1.05,0.55) -- (1.25,1.62);
+\node[font=\small,align=left,anchor=west] at (1.35,1.5) {spéculaire sur l'extrados\\ (radar vu de dessus)};
+\draw[cblue,thick,-{Stealth[length=2mm]}] (6.3,0.9) -- (5.05,0.03);
+\foreach \a in {150,180,210,240}{\draw[corange,thick,-{Stealth[length=1.6mm]}] (5.05,0) -- ++(\a:0.7);}
+\node[font=\small,align=center] at (6.3,-0.6) {diffraction\\ par le bord de fuite};
+\draw[cviolet,thick,dashed,-{Stealth[length=2mm]}] (0.15,-0.25) .. controls (1.5,-0.55) and (3.5,-0.4) .. (4.8,-0.1);
+\node[cviolet,font=\small] at (2.6,-0.75) {onde rampante (TE)};
+\end{tikzpicture}
+\caption{Mécanismes de diffusion haute fréquence sur un profil. Notre modèle (optique physique) capture la réflexion spéculaire, et une partie seulement de la diffraction d'arête ; il ignore les ondes rampantes.}\label{fig:mecanismes}
+\end{figure}
+
+\section{Les deux philosophies de la furtivité}
+La note d'intention rappelle l'histoire. Le F-117 (années 1970-1980) est fait de \textbf{facettes planes} : chaque facette ne renvoie un écho fort que dans la direction de sa normale, choisie hors des directions de menace, et les arêtes sont alignées sur quelques directions. Les codes de l'époque ne savaient calculer que des surfaces planes. Le B-2 utilise des \textbf{surfaces courbes} continues, une fois les codes capables de les traiter : un spéculaire sur une surface courbe vaut $\pi\rho$, faible si $\rho$ est petit, et l'écho reste modéré dans toutes les directions.
+
+Deux règles qualitatives en découlent :
+\begin{itemize}
+\item éviter les grandes surfaces planes ou peu courbées face à la menace (le spéculaire est proportionnel à $\rho$, ou à $kw^2$) ;
+\item garder les arêtes aiguës, et les orienter hors du secteur de menace.
+\end{itemize}
+
+\section{Ce que cela dit pour un profil vu de face}
+Vu de face, le premier point spéculaire d'un profil est son \textbf{bord d'attaque}. Sa contribution vaut $\pi\rho$ au point où la normale pointe vers le radar : pour un radar dans l'axe, c'est $\pi r_{BA}=1{,}1019\,\pi t^2c$. L'épaisseur, qui fixe ce rayon, sera donc le paramètre dominant. Quand le radar s'écarte de l'axe, le point spéculaire glisse sur l'extrados ou l'intrados, où la courbure est plus faible et $\rho$ plus grand : l'écho croît. La cambrure, qui modifie la courbure de ces deux faces, prend alors de l'importance.
+
+\begin{projet}
+Ce raisonnement prédit le résultat principal du chapitre~\ref{ch:naca} : pour une approche de face, la SER d'un profil NACA est essentiellement une fonction de $t$. Comme la traînée croît aussi avec $t$, les deux objectifs poussent dans le même sens, et le compromis se joue sur la cambrure, à épaisseur minimale.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Comparer, à 10~GHz, la largeur équivalente radar d'une facette plane de 10~cm vue de face ($kw^2$) et celle d'un bord d'attaque de rayon 1,6~cm ($\pi\rho$). Combien de décibels les séparent ? Que se passe-t-il si la facette est inclinée de $10^\circ$ ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Une paramétrisation qui sépare le rayon de bord d'attaque de l'épaisseur (NACA 4 chiffres modifiée, CST) permettrait de découpler les deux objectifs, et ferait apparaître un vrai compromis.
+\item Ajouter un profil « facetté » (bord d'attaque en dièdre) comme cas de comparaison, pour illustrer la philosophie F-117 sur le même problème.
+\end{itemize}
+\end{pistes}

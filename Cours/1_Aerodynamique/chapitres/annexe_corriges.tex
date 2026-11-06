@@ -1,0 +1,69 @@
+\chapter{Corrigés des exercices}\label{annexe:corriges}
+\iterbanner{V0}
+
+\section*{Chapitre~\ref{ch:intro} — Rôle du modèle}
+\textbf{Ex.~1.1.} (a) $40\times50\times10=2\cdot10^4$ appels au plus (un peu plus avec la population initiale). (b) À 8~ms : 160~s, moins de 3~minutes. Avec un RANS à 30~min : $10^4$~heures, plus d'un an de calcul séquentiel. (c) La grille ne contient que 512 profils, donc au plus 512 simulations distinctes ; NSGA-II réévalue en permanence les mêmes individus (élitisme, croisements qui redonnent des parents), et le cache d'\code{AeroSimulator} ne compte chaque profil qu'une fois.
+
+\textbf{Ex.~1.2.} (1) Une énumération qui contient des trous n'est plus exhaustive : le front « exact » ne l'est plus, et il faut décider quoi faire des profils manquants. (2) Les échecs ne sont pas aléatoires : ils se concentrent sur les formes extrêmes, donc biaisent l'échantillon et l'ajustement quadratique. (3) Un échec silencieux, ou une convergence partielle, injecte des valeurs fausses ou bruitées que les moindres carrés ne savent pas distinguer des bonnes.
+
+\section*{Chapitre~\ref{ch:naca} — Géométrie}
+\textbf{Ex.~2.1.} (a) Avant $p$ : $y_c(p)=\frac{m}{p^2}(2p^2-p^2)=m=0{,}02$. Après $p$ : $\frac{m}{(1-p)^2}(1-2p+2p^2-p^2)=\frac{m}{(1-p)^2}(1-p)^2=m$. Les deux pentes valent $\frac{2m}{\cdot}(p-p)=0$ : raccord $C^1$. (b) $r_{BA}=1{,}1019\times0{,}12^2=0{,}0159\,c$. (c) $y_c''=-2m/p^2=-0{,}25$ avant, $-2m/(1-p)^2=-0{,}111$ après : la courbure saute en $x=p$.
+
+\textbf{Ex.~2.2.} Cosinus : $x_1=\tfrac12(1-\cos\tfrac{\pi}{100})=2{,}47\cdot10^{-4}$. Uniforme : $10^{-2}$, quarante fois plus grand. Les points du contour sont des \emph{extrémités} de panneaux ; les collocations sont les milieux. Le point de bord d'attaque est l'extrémité commune de deux panneaux, il n'est donc jamais un point de collocation (de même pour le bord de fuite). C'est pourquoi le point d'arrêt est interpolé entre deux collocations.
+
+\section*{Chapitre~\ref{ch:potentiel} — Écoulement potentiel}
+\textbf{Ex.~3.1.} $\Gamma=\tfrac12C_LU_\infty c=\tfrac12\times0{,}5\times50\times1=12{,}5$~m\textsuperscript{2}/s. $L'=\rho U_\infty\Gamma=1{,}2\times50\times12{,}5=750$~N/m, ce qu'on retrouve par $\tfrac12\rho U_\infty^2cC_L$.
+
+\textbf{Ex.~3.2.} Le rectangle a pour longueur $\Delta s$ le long de la nappe et une hauteur qui tend vers 0. Le débit sortant par les côtés courts tend vers 0 ; par les grands côtés, il vaut $(v_+-v_-)\Delta s$. Il doit égaler le débit des sources contenues, $\sigma\Delta s$ : $v_+-v_-=\sigma$. Pour une nappe plane isolée, le problème est symétrique par réflexion à travers la nappe, donc $v_-=-v_+$, d'où $\pm\sigma/2$.
+
+\section*{Chapitre~\ref{ch:panneaux} — Hess-Smith}
+\textbf{Ex.~4.1.} Une primitive de $\eta/((\xi'-\xi)^2+\eta^2)$ est $\arctan\frac{\xi'-\xi}{\eta}$, d'où $\int_0^L=\arctan\frac{L-\xi}{\eta}+\arctan\frac{\xi}{\eta}$. Pour $\eta>0$, $\theta_1=\tfrac\pi2-\arctan\frac\xi\eta$ et $\theta_2=\tfrac\pi2+\arctan\frac{L-\xi}{\eta}$, donc $\theta_2-\theta_1$ est bien cette somme : c'est l'angle sous lequel on voit le panneau depuis $P$. Très loin, cet angle vaut environ $L\,\eta/r^2$, et $v_\sigma\approx\frac{\sigma L}{2\pi r}\frac{\eta}{r}$ : la composante normale d'une source ponctuelle de débit $\sigma L$. Vu de loin, le panneau est un point.
+
+\textbf{Ex.~4.2.} (a) Inversion : de l'ordre de $N^3\approx8\cdot10^6$ opérations, environ une milliseconde. Nouvelle incidence : un produit matrice-vecteur, $N^2\approx4\cdot10^4$ opérations, deux cents fois moins. La construction des matrices d'influence, en $O(N^2)$ avec des fonctions transcendantes, coûte plus que ce produit. (b) Avec le cache, seule la première évaluation construit et inverse la matrice ; les 5 à 8 suivantes de la recherche de Brent ne coûtent qu'un produit matrice-vecteur et l'intégration des efforts.
+
+\section*{Chapitre~\ref{ch:cl} — Couche limite intégrale}
+\textbf{Ex.~5.1.} Profil linéaire : $\delta^*/\delta=\int_0^1(1-\eta)\dd\eta=\tfrac12$, $\theta/\delta=\int_0^1\eta(1-\eta)\dd\eta=\tfrac16$, $H=3$. Profil en $1/7$ : $\delta^*/\delta=1-\tfrac78=\tfrac18$, $\theta/\delta=\tfrac78-\tfrac79=\tfrac7{72}$, $H=\tfrac97\approx1{,}29$. Le premier, peu rempli, ressemble à un profil laminaire (Blasius : 2,59) ; le second, très plein près de la paroi, à un profil turbulent.
+
+\textbf{Ex.~5.2.} À incidence positive, l'écoulement amont arrive par en dessous du profil, et la circulation horaire accélère l'extrados et ralentit l'intrados. La ligne de courant qui se partage entre les deux faces vient donc frapper le profil sous le bord d'attaque géométrique, sur l'intrados. Quand $\alpha$ augmente, le point d'arrêt recule le long de l'intrados ($x\approx0{,}001$ pour le 2412 à $2^\circ$).
+
+\section*{Chapitre~\ref{ch:thwaites} — Thwaites}
+\textbf{Ex.~6.1.} $\int_0^sk^5s'^5\dd s'=k^5s^6/6$, donc $\theta^2=\frac{0{,}45\,\nu}{k^6s^6}\frac{k^5s^6}{6}=0{,}075\,\frac{\nu}{k}$, constant. $\lambda=\theta^2k/\nu=0{,}075$. $H(0{,}075)=2{,}61-3{,}75\times0{,}075+5{,}24\times0{,}075^2=2{,}36$.
+
+\textbf{Ex.~6.2.} $\frac{U_e}{\nu}\frac{\dd\theta^2}{\dd s}=a-b\frac{\theta^2U_e'}{\nu}$ s'écrit $U_e(\theta^2)'+b\,\theta^2U_e'=a\nu$. En multipliant par $U_e^{b-1}$, le membre de gauche devient $\frac{\dd}{\dd s}(\theta^2U_e^b)$, d'où $\theta^2U_e^b=a\nu\int_0^sU_e^{b-1}$. Avec $b=6$, on retrouve la puissance 5.
+
+\section*{Chapitre~\ref{ch:transition} — Transition}
+\textbf{Ex.~7.1.} L'équation est $0{,}671\sqrt{\Re_x}=1{,}174\,(1+22\,400/\Re_x)\,\Re_x^{0{,}46}$. Une méthode de dichotomie ou de Newton donne $\Re_x\approx1{,}66\cdot10^6$ et $\Re_\theta\approx864$. À $\Re=3\cdot10^6$, $x_{tr}\approx0{,}55$.
+
+\textbf{Ex.~7.2.} Sans interpolation, $x_{tr}$ ne prend que les abscisses des stations : quand $t$ varie, il reste constant puis saute d'une station à la suivante. $C_D(t)$ est alors une fonction en escalier, avec des marches d'environ 1~\%. Pour les moindres carrés, ces marches sont un bruit qui dégrade le $R^2$ et peut déplacer le minimum du modèle. Pour un optimiseur par gradient, la dérivée est nulle presque partout et infinie aux marches, et les différences finies deviennent erratiques.
+
+\section*{Chapitre~\ref{ch:head} — Head}
+\textbf{Ex.~8.1.} $H_1(1{,}3)=9{,}83$, $H_1(1{,}4)=7{,}18$, $H_1(2{,}4)=3{,}59$. $F(7{,}18)=0{,}0306\times4{,}18^{-0{,}6169}\approx0{,}0127$. Pour $\theta=10^{-3}c$ et $H=1{,}4$ : $\delta-\delta^*=H_1\theta\approx7{,}2\cdot10^{-3}c$.
+
+\textbf{Ex.~8.2.} $\frac{\dd\ln H_1}{\dd s}=\frac{\dd\ln E}{\dd s}-\frac{\dd\ln(U_e\theta)}{\dd s}$. Avec le système de Head : $\frac{\dd\ln E}{\dd s}=\frac{F}{\theta H_1}$ et $\frac{\dd(U_e\theta)}{\dd s}=U_e\frac{c_f}{2}-(H+1)\theta U_e'$. D'où
+\[
+\frac{\dd\ln H_1}{\dd s}=\frac{F}{\theta H_1}-\frac{c_f}{2\theta}+(H+1)\frac{U_e'}{U_e}.
+\]
+En gradient adverse, le dernier terme est négatif et domine : $H_1$ diminue. Comme $H_1$ est une fonction décroissante de $H$, $H$ augmente.
+
+\section*{Chapitre~\ref{ch:trainee} — Squire-Young}
+\textbf{Ex.~9.1.} Extrados : exposant $(1{,}755+5)/2=3{,}377$, $0{,}905^{3{,}377}=0{,}714$, contribution $2\times3{,}362\cdot10^{-3}\times0{,}714=48{,}0$~counts. Intrados : exposant 3,252, $0{,}873^{3{,}252}=0{,}642$, contribution $21{,}2$~counts. Total : $69{,}2$~counts, la valeur du code.
+
+\textbf{Ex.~9.2.} Avec $H$ constant, $\ln(\theta_\infty/\theta_{TE})=-(H_{TE}+2)\int_{u_{TE}}^0\dd u=(H_{TE}+2)\,u_{TE}$ : l'exposant devient $H_{TE}+2$ (3,75 au lieu de 3,38 pour $H_{TE}=1{,}75$), et la traînée est sous-estimée. L'hypothèse ignore que le sillage se remplit ($H\to1$) : le facteur $(H+2)$ qui fait décroître $\theta$ diminue en réalité vers l'aval.
+
+\section*{Chapitre~\ref{ch:modele} — Assemblage}
+\textbf{Ex.~10.1.} $\alpha=\alpha_{L0}+C_L/(\dd C_L/\dd\alpha)=-2{,}13^\circ+\frac{0{,}4}{6{,}88}\,\text{rad}=-2{,}13^\circ+3{,}33^\circ=1{,}20^\circ$, contre $1{,}19^\circ$ pour \code{alpha\_for\_cl} : $C_L(\alpha)$ est bien quasi linéaire.
+
+\textbf{Ex.~10.2.} \code{up:turbulent\_separation} : sur l'extrados, $H$ a atteint 2,4 dans la méthode de Head, en $x_{sep}$. \code{te\_separation} : ce décollement est en aval de $x_{sep,crit}=0{,}9$, donc toléré comme artefact probable du bord de fuite fermé. Le résultat devient invalide si le décollement remonte en amont de $x/c=0{,}9$ (incidence plus forte, gradient adverse plus marqué), ou si l'intégration échoue.
+
+\section*{Chapitre~\ref{ch:espace} — Espace de conception}
+\textbf{Ex.~11.1.} (a) $4\to(0,0,1)$, $3\to(1,1,0)$, $1\to(1,0,0)$, soit \texttt{001110100}. Valeurs : $m=4$~\%, $p=0{,}20+3\times0{,}05=0{,}35$, $t=6+2=8$~\%. (b) $m=0$ impose les trois premiers bits à 0 ; restent $8\times8=64$ chaînes, pour seulement 8 profils distincts (un par épaisseur) : chaque profil symétrique est représenté par 8 chaînes, une par valeur de $p$.
+
+\textbf{Ex.~11.2.} (1) Le temps dépend de l'implémentation et du matériel : QAOA simulé sur un ordinateur classique est lent par construction, et une machine réelle ajoute des files d'attente. (2) Dans un cas industriel, une simulation RANS coûte des heures et domine tout le reste ; le nombre de simulations distinctes est la grandeur qui se transpose à l'échelle, pas le temps du démonstrateur.
+
+\section*{Chapitre~\ref{ch:validation} — Validation}
+\textbf{Ex.~12.1.} A. Un optimiseur ne compare que des profils entre eux : un biais commun ne change pas le classement, donc pas le front. Une corrélation de rang de 0,97 garantit que les meilleurs profils restent les meilleurs. B, plus juste en moyenne, se trompe souvent sur l'ordre, et mènerait à de mauvais choix.
+
+\textbf{Ex.~12.2.} Près du bord de fuite, la couche limite de l'extrados, sous gradient adverse, est bien plus épaisse que celle de l'intrados : $\delta^*_{up}>\delta^*_{lo}$. Le profil « vu » par l'écoulement extérieur, déplacé de $\delta^*$, a donc un bord de fuite relevé : c'est comme un volet braqué vers le haut, qui décambre le profil. La condition de Kutta, appliquée à ce bord de fuite effectif, donne moins de circulation. La vitesse de transpiration, positive (soufflage) là où $U_e\delta^*$ croît, c'est-à-dire surtout en fin d'extrados, reproduit cet effet.
+
+\section*{Chapitre~\ref{ch:v2} \iterbadge{V2}}
+\textbf{Ex.~13.1.} $r_{BA}=1{,}1019\,(0{,}12\,I/6)^2$ : 1,8~mm ($I=2$), 7,1~mm ($I=4$), 15,9~mm ($I=6$), 28,2~mm ($I=8$) pour une corde de 1~m. La loi $\pi r_{BA}$ prédit $10\log_{10}(r_8/r_2)=10\log_{10}16=12$~dB de moins. Le modèle d'optique physique donne un peu moins (environ 7~dB entre $I=6$ et $I=2$ au lieu des 9,5~dB prévus) : à 10~GHz, $k\,r_{BA}=0{,}37$ pour $I=2$, bien en dessous du régime optique, et la loi $\pi\rho$ n'est plus qu'indicative (cours SER).

@@ -1,0 +1,7 @@
+# Testé avec Python 3.14, NumPy 2.3, SciPy 1.18, Matplotlib 3.10
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.8
+# optionnel : vérification croisée de NSGA-II (optim/check_pymoo.py)
+pymoo>=0.6
+# hors pip : XFOIL (simulateur aéro de référence depuis la V2), voir README.md

@@ -1,0 +1,4 @@
+\section*{Chapitre~\ref{ch:comparaison}}
+\textbf{Ex.~7.1.} S1 : $65/35\approx1{,}9$. S2 : $81/67{,}5=1{,}2$. Le gain diminue parce que la boucle, fondée sur une somme pondérée, ne vise directement que les points supportés (4 sur 7 dans S1, 5 sur 15 dans S2) : plus le front contient de points non supportés, plus la boucle dépend de l'exploration indirecte, moins efficace. NSGA-II, lui, entretient une population répartie le long du front et ne fait pas de différence entre points supportés et non supportés.
+
+\textbf{Ex.~7.2.} L'erreur d'une moyenne empirique vaut $\sigma/\sqrt{N}$ : $1/\sqrt N=0{,}01$ donne $N=10^4$ tirs. Avec environ $4\cdot10^4$ évaluations par exécution de la boucle, cela fait $4\cdot10^8$ tirs. Même à quelques milliers de tirs par seconde, il faut des jours de machine pour un problème résolu classiquement en une milliseconde : la boucle variationnelle elle-même est le goulot d'étranglement.

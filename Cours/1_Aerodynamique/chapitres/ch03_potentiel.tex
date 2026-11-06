@@ -1,0 +1,126 @@
+\chapter{L'écoulement potentiel et ses singularités}\label{ch:potentiel}
+\iterbanner{V0}
+
+Ce chapitre rassemble ce dont la méthode des panneaux a besoin : le problème de Laplace extérieur, les singularités élémentaires, l'idée de les poser sur la frontière, et ce qui rend la solution unique, la condition de Kutta.
+
+\section{Le problème à résoudre}
+Hors de la couche limite et du sillage, l'écoulement est incompressible et irrotationnel. Il dérive donc d'un potentiel, $\vect V=\nabla\phi$, et la conservation de la masse $\nabla\cdot\vect V=0$ donne l'équation de Laplace :
+\[
+\nabla^2\phi=0\quad\text{dans le fluide},\qquad
+\frac{\partial\phi}{\partial n}=\vect V\cdot\vect n=0\quad\text{sur le profil},\qquad
+\nabla\phi\to\vect U_\infty\quad\text{à l'infini}.
+\]
+Le problème est \textbf{linéaire} et \textbf{elliptique}. La pression s'obtient ensuite par Bernoulli, valable partout puisque l'écoulement est irrotationnel :
+\[
+C_p=\frac{p-p_\infty}{\tfrac12\rho U_\infty^2}=1-\left(\frac{V}{U_\infty}\right)^2 .
+\]
+Sur la paroi, la vitesse est tangente, donc $V=|V_t|$ et $C_p=1-V_t^2$ en variables adimensionnées.
+
+\section{Les singularités élémentaires}
+La linéarité permet de superposer des solutions élémentaires de Laplace. En 2D, deux suffisent, toutes deux centrées en un point et de vitesse en $1/r$ :
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{lccl}
+\toprule
+ & potentiel $\phi$ & vitesse & porte\\
+\midrule
+source $\sigma$ & $\dfrac{\sigma}{2\pi}\ln r$ & $\dfrac{\sigma}{2\pi r}\,\vect e_r$ & un débit $\sigma$\\
+tourbillon $\Gamma$ & $\dfrac{\Gamma}{2\pi}\,\vartheta$ & $\dfrac{\Gamma}{2\pi r}\,\vect e_\vartheta$ & une circulation $\Gamma$ (sens trigo.)\\
+\bottomrule
+\end{tabular}
+\end{center}
+Le tourbillon n'est rien d'autre qu'une source dont la vitesse a été tournée de $90^\circ$. Cette remarque servira à obtenir les intégrales de panneau du tourbillon gratuitement à partir de celles de la source.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{scope}
+\fill[cblue] (0,0) circle (2pt);
+\foreach \a in {0,30,...,330}{\draw[cblue,-{Stealth[length=1.6mm]}] (\a:0.25) -- (\a:1.1);}
+\node[font=\small] at (0,-1.5) {source $\sigma>0$ : débit sortant};
+\end{scope}
+\begin{scope}[xshift=6.5cm]
+\fill[corange] (0,0) circle (2pt);
+\foreach \r in {0.4,0.75,1.1}{\draw[corange,thick,postaction={decorate},decoration={markings,mark=at position 0.25 with {\arrow{Stealth[length=1.8mm]}},mark=at position 0.75 with {\arrow{Stealth[length=1.8mm]}}}] (\r,0) arc (0:360:\r);}
+\node[font=\small] at (0,-1.5) {tourbillon $\Gamma>0$ : rotation trigonométrique};
+\end{scope}
+\end{tikzpicture}
+\caption{Les deux singularités élémentaires 2D. Leur vitesse décroît en $1/r$ et satisfait automatiquement $\nabla^2\phi=0$ hors du centre et la condition à l'infini.}
+\end{figure}
+
+\section{Poser les singularités sur la frontière}
+Plutôt que de chercher $\phi$ dans tout le plan, on cherche des \emph{distributions} de singularités le long du contour du profil. Une source répartie avec une densité linéique $\sigma(s)$ forme une \textbf{nappe de sources}, et un tourbillon réparti avec une densité $\gamma(s)$ une \textbf{nappe tourbillonnaire}. Le champ qu'elles induisent satisfait Laplace partout hors de la nappe et décroît à l'infini. Il ne reste qu'à choisir les densités pour que la condition de glissement soit vérifiée sur la paroi.
+
+Ce choix est légitime : la troisième identité de Green montre que toute fonction harmonique à l'extérieur d'un contour s'écrit comme le potentiel d'une couche de sources plus une couche de doublets posées sur ce contour, et une couche de doublets équivaut à une nappe tourbillonnaire. Conséquence pratique majeure : on ne maille que la paroi, une courbe 1D pour un problème 2D, et la condition à l'infini est vérifiée d'office. C'est la famille des \textbf{méthodes d'éléments de frontière} (BEM).
+
+\paragraph{Les sauts à travers une nappe.} En traversant une nappe :
+\begin{itemize}
+\item une nappe de sources fait sauter la vitesse \emph{normale} de $\sigma$ : elle vaut $+\sigma/2$ d'un côté et $-\sigma/2$ de l'autre, comptée selon la normale. La vitesse tangentielle est continue ;
+\item une nappe tourbillonnaire fait sauter la vitesse \emph{tangentielle} de $\gamma$, soit $\pm\gamma/2$ de part et d'autre. La vitesse normale est continue.
+\end{itemize}
+Ces demi-sauts réapparaîtront au chapitre suivant comme « auto-influence » d'un panneau sur son propre point de collocation.
+
+\section{Non-unicité et condition de Kutta}
+Autour d'un profil, le domaine fluide n'est pas simplement connexe : un contour qui entoure le profil ne peut pas être réduit à un point sans traverser l'obstacle. On peut alors ajouter à toute solution un tourbillon libre de circulation $\Gamma$ quelconque : il vérifie Laplace, la condition à l'infini, et sa vitesse peut être rendue tangente à la paroi. Il existe donc une \emph{famille} de solutions, une par valeur de $\Gamma$.
+
+Pour presque toutes ces valeurs, l'écoulement contourne le bord de fuite aigu, ce qui demande une vitesse infinie à l'angle (figure~\ref{fig:kutta}). Physiquement, la viscosité l'interdit : au démarrage, un tourbillon de démarrage est lâché et la circulation autour du profil s'ajuste jusqu'à ce que l'écoulement quitte proprement le bord de fuite.
+
+\begin{definition}[ (condition de Kutta)]
+Parmi toutes les solutions potentielles, on retient celle où l'écoulement quitte le bord de fuite sans le contourner, avec des vitesses finies et égales sur l'extrados et l'intrados. Cette condition fixe $\Gamma$, donc la portance.
+\end{definition}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=5cm,y=5cm]
+\foreach \xs/\titre/\k in {0/{$\Gamma=0$ : l'écoulement contourne le bord de fuite}/0, 1.3/{$\Gamma$ de Kutta : départ tangent au bord de fuite}/1}{
+\begin{scope}[xshift=\xs*5cm]
+\fill[cmuted!25,draw=cink,thick] plot[smooth,tension=0.6] coordinates {(1,0) (0.75,0.05) (0.45,0.085) (0.2,0.08) (0.05,0.045) (0,0) (0.05,-0.035) (0.2,-0.045) (0.45,-0.035) (0.75,-0.012) (1,0)};
+\draw[-{Stealth[length=2mm]},cink,thick] (-0.25,-0.05) -- (-0.08,-0.05) node[midway,above,font=\scriptsize] {$U_\infty$, $\alpha$};
+\ifnum\k=0
+  \draw[cblue,thick,-{Stealth[length=1.8mm]}] (0.6,-0.11) .. controls (0.95,-0.07) and (1.06,-0.02) .. (1.0,0.02) .. controls (0.95,0.05) and (0.88,0.05) .. (0.82,0.045);
+  \fill[corange] (0.82,0.045) circle (0.012);
+  \node[corange,font=\scriptsize,align=center] at (0.75,0.17) {point d'arrêt arrière\\ sur l'extrados};
+  \node[cblue,font=\scriptsize] at (1.08,-0.1) {$V\to\infty$};
+\else
+  \draw[cblue,thick,-{Stealth[length=1.8mm]}] (0.6,0.14) .. controls (0.85,0.1) and (0.95,0.04) .. (1.25,-0.02);
+  \draw[cblue,thick,-{Stealth[length=1.8mm]}] (0.6,-0.1) .. controls (0.85,-0.07) and (0.95,-0.03) .. (1.25,-0.025);
+  \fill[corange] (1,0) circle (0.012);
+  \node[corange,font=\scriptsize] at (1.05,0.08) {bord de fuite};
+\fi
+\node[font=\small,text width=4.6cm,align=center] at (0.5,-0.27) {\titre};
+\end{scope}}
+\end{tikzpicture}
+\caption{La condition de Kutta sélectionne, dans la famille des solutions potentielles, celle qui quitte proprement le bord de fuite.}\label{fig:kutta}
+\end{figure}
+
+La condition de Kutta est donc un \emph{morceau de physique visqueuse} injecté dans un modèle non visqueux. Elle explique aussi pourquoi le $C_L$ réel est un peu plus faible que le $C_L$ potentiel : la couche limite épaissie près du bord de fuite décambre le profil effectif, ce que notre couplage faible ne voit pas (ch.~\ref{ch:validation}).
+
+\section{Portance, traînée, et deux résultats de référence}
+\paragraph{Kutta-Joukowski et d'Alembert.} Pour un écoulement potentiel 2D autour d'un corps de circulation $\Gamma$ (comptée dans le sens horaire), la force par unité d'envergure est perpendiculaire à $\vect U_\infty$ :
+\[
+L'=\rho\,U_\infty\,\Gamma\quad\Longrightarrow\quad C_L=\frac{2\Gamma}{U_\infty c},\qquad D'=0 .
+\]
+La traînée nulle est le \textbf{paradoxe de d'Alembert}. Il a deux conséquences pour nous. D'une part, le $C_{D,p}$ obtenu en intégrant $C_p$ sur le contour discret n'est pas une traînée, mais une erreur de discrétisation qui doit tendre vers 0 : c'est un excellent indicateur de convergence. D'autre part, toute la traînée devra venir de la couche limite (ch.~\ref{ch:trainee}).
+
+\paragraph{Théorie des profils minces.} Pour un profil mince et peu cambré, la portance est affine en incidence :
+\[
+C_L=2\pi\big(\alpha-\alpha_{L0}\big),\qquad
+\alpha_{L0}=-\frac1\pi\int_0^\pi\frac{\dd y_c}{\dd x}\,\big(\cos\vartheta_0-1\big)\,\dd\vartheta_0,\qquad x=\tfrac12(1-\cos\vartheta_0).
+\]
+Pour le NACA 2412, $\alpha_{L0}=-2{,}08^\circ$. L'épaisseur, absente de cette théorie, augmente la pente d'environ $0{,}77\,t$ en relatif. Ces deux résultats serviront de contrôle à la méthode des panneaux (figure~\ref{fig:cl-alpha}).
+
+\begin{resultat}
+\begin{itemize}
+\item Le problème potentiel est linéaire : on superpose des sources et des tourbillons posés sur la paroi, et on ne maille que le contour.
+\item Il a une infinité de solutions, une par circulation. La condition de Kutta au bord de fuite choisit la bonne et fixe la portance.
+\item La traînée potentielle est nulle. Une valeur non nulle de $C_{D,p}$ mesure l'erreur de discrétisation.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Un profil de corde $c=1$~m vole à $U_\infty=50$~m/s avec $C_L=0{,}5$. Calculer la circulation $\Gamma$ autour du profil, et la portance par mètre d'envergure pour $\rho=1{,}2$~kg/m\textsuperscript{3}.
+\end{exercice}
+\begin{exercice}
+Par un bilan de débit sur un petit rectangle aplati qui enjambe une nappe de sources de densité $\sigma$, montrer que la vitesse normale saute de $\sigma$ à la traversée. Pourquoi, par symétrie, vaut-elle $+\sigma/2$ d'un côté et $-\sigma/2$ de l'autre pour une nappe plane isolée ?
+\end{exercice}

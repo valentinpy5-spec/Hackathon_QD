@@ -1,0 +1,140 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_Calcul_Quantique.tex (ou xelatex / pdflatex, deux passes)
+% Figures à données : python3 tools/make_figures.py (régénère figures/*.tex depuis les expériences du projet)
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+\fi
+\usepackage[french]{babel}
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,shapes.geometric,decorations.pathreplacing,babel}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\usepackage{tabularx,booktabs,array}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\usepackage{listings}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[raggedright]{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+\definecolor{cblue}{HTML}{2A78D6}
+\definecolor{corange}{HTML}{EB6834}
+\definecolor{cgreen}{HTML}{1BAF7A}
+\definecolor{cink}{HTML}{1F2328}
+\definecolor{cmuted}{HTML}{6B6F76}
+
+% ---------------------------------------------------------------- notations
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\bra}[1]{\langle #1\rvert}
+\newcommand{\braket}[2]{\langle #1\vert #2\rangle}
+\newcommand{\expval}[1]{\langle #1\rangle}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+\usepackage{dsfont}
+\newcommand{\Id}{\mathds{1}}
+\newcommand{\tr}{\operatorname{tr}}
+
+% ---------------------------------------------------------------- encadrés
+\tcbset{coursbox/.style={enhanced,breakable,boxrule=0pt,leftrule=2.5pt,arc=0pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,fonttitle=\bfseries\small,coltitle=cink,
+  attach title to upper={\ }}}
+\newtcolorbox{definition}[1][]{coursbox,colback=cblue!5,colframe=cblue,title={Définition#1.}}
+\newtcolorbox{resultat}[1][]{coursbox,colback=cgreen!6,colframe=cgreen,title={À retenir#1.}}
+\newtcolorbox{projet}[1][]{coursbox,colback=corange!6,colframe=corange,title={Dans notre projet#1.}}
+\newtcolorbox{piege}[1][]{coursbox,colback=cmuted!7,colframe=cmuted,title={Piège#1.}}
+
+% ---------------------------------------------------------------- exercices
+\newcounter{exo}[chapter]
+\renewcommand{\theexo}{\thechapter.\arabic{exo}}
+\newenvironment{exercice}[1][]{\refstepcounter{exo}\par\medskip\noindent
+  \textbf{\color{cblue}Exercice~\theexo}\if\relax\detokenize{#1}\relax\else\ (#1)\fi.\ }{\par}
+\newcommand{\exercices}{\section*{Exercices}\addcontentsline{toc}{section}{Exercices}
+  \noindent\textit{Corrigés en annexe~\ref{annexe:corriges}. Chercher d'abord sans les regarder.}}
+
+% ---------------------------------------------------------------- circuits
+\tikzset{
+  gate/.style={draw=cink,fill=white,minimum width=7mm,minimum height=6mm,inner sep=1.5pt,font=\small},
+  wgate/.style={gate,minimum width=13mm},
+  ctrl/.style={circle,fill=cink,inner sep=1.5pt},
+  flow/.style={draw=cink,rounded corners=2pt,fill=white,align=center,font=\small,inner sep=4pt},
+  arr/.style={-{Stealth[length=2.2mm]},cink,thick},
+}
+\newcommand{\targ}[2]{\draw[cink] (#1,#2) circle (2.1mm);
+  \draw[cink] ([xshift=-2.1mm]#1,#2) -- ([xshift=2.1mm]#1,#2);
+  \draw[cink] ([yshift=-2.1mm]#1,#2) -- ([yshift=2.1mm]#1,#2);}
+\newcommand{\meter}[2]{\node[gate,minimum width=8mm] at (#1,#2) {};
+  \draw[cink] ([xshift=-2.6mm,yshift=-1.2mm]#1,#2) arc (160:20:2.75mm);
+  \draw[cink,-{Stealth[length=1.1mm]}] ([yshift=-1.4mm]#1,#2) -- ++(60:3mm);}
+
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,frame=single,rulecolor=\color{cmuted!50},
+  backgroundcolor=\color{cmuted!6},keywordstyle=\color{cblue}\bfseries,commentstyle=\color{cmuted}\itshape,
+  stringstyle=\color{corange},showstringspaces=false,language=Python,
+  literate={é}{\'e}1{è}{\`e}1{à}{\`a}1{ê}{\^e}1{ç}{\c c}1{ô}{\^o}1{î}{\^i}1{ù}{\`u}1{É}{\'E}1{→}{$\to$}1{γ}{$\gamma$}1{β}{$\beta$}1}
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{1}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{Calcul quantique pour l'optimisation}\\[0.4em]\large Du qubit au QAOA : tout ce qu'il faut pour la formulation quantique\\ du compromis traînée / SER (hackathon quantique)}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 30 octobre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Pour qui, pour quoi.} Ce cours s'adresse à un ingénieur à l'aise avec l'algèbre linéaire, l'analyse et la mécanique des fluides, mais qui n'a \emph{jamais} fait de physique quantique. Il part des postulats et s'arrête exactement là où commence notre implémentation : la formulation \textbf{QUBO} d'un problème d'optimisation de forme, sa traduction en \textbf{hamiltonien d'Ising}, et sa résolution par \textbf{recuit} (simulé ou quantique) et par \textbf{QAOA}. Il ne couvre ni l'information quantique générale (téléportation, codes correcteurs), ni les algorithmes de Shor ou de Grover, sauf pour situer ce que le quantique promet et ne promet pas.
+
+\paragraph{Fil conducteur.} Pourquoi le quantique, et la notion d'interférence (ch.~\ref{ch:intro}) $\to$ les bases sans prérequis : nombres complexes, expériences fondatrices, postulats (ch.~\ref{ch:bases}) $\to$ un qubit (ch.~\ref{ch:qubit}) $\to$ observables et évolution, c'est-à-dire de l'algèbre linéaire sur $\C^n$ (ch.~\ref{ch:algebre}) $\to$ $n$ qubits et produit tensoriel (ch.~\ref{ch:multi}) $\to$ portes et circuits (ch.~\ref{ch:circuits}) $\to$ hamiltoniens : un problème d'optimisation devient « trouver l'état d'énergie minimale » (ch.~\ref{ch:hamiltoniens}) $\to$ QUBO et Ising (ch.~\ref{ch:qubo}) $\to$ recuit simulé et quantique (ch.~\ref{ch:recuit}) $\to$ QAOA (ch.~\ref{ch:qaoa}) $\to$ simulateurs et outils (ch.~\ref{ch:outils}) $\to$ la chaîne complète du hackathon (ch.~\ref{ch:projet}).
+
+\paragraph{Si vous n'avez jamais fait de quantique.} Lire les chapitres~\ref{ch:intro} à \ref{ch:multi} dans l'ordre, sans sauter : chaque notion y est d'abord motivée par une expérience ou un exemple chiffré, puis formalisée. Les chapitres~\ref{ch:circuits} à \ref{ch:qaoa} n'utilisent rien d'autre.
+
+\paragraph{Lien avec le projet.} Les encadrés orange \emph{Dans notre projet} relient chaque notion à la chaîne du hackathon : profil NACA $(m,p,t)$ codé sur 9 bits, modèle quadratique de $C_D$ ajusté sur le modèle aérodynamique de la phase~1, QUBO à 9 qubits, QAOA et recuit. \textbf{Tous les nombres et toutes les courbes de résultats de ce cours sont calculés}, pas illustratifs : ils sortent de \texttt{Code/quantique/} (simulation exacte par vecteur d'état en NumPy), script \texttt{experiences.py}. Le chapitre~10 explique ce code.
+
+\paragraph{Comment utiliser ce document.} Chaque chapitre se termine par un ou deux exercices courts, corrigés en annexe~\ref{annexe:corriges}. L'annexe~\ref{annexe:memo} est un aide-mémoire d'une page à garder sous la main pendant le hackathon.
+
+\paragraph{Conventions.} Unités où $\hbar=1$. Les bits sont notés $b_k\in\{0,1\}$ et les spins $s_k\in\{-1,+1\}$, avec $b_k=(1-s_k)/2$. Pour un registre de $n$ qubits, on écrit $\ket{b_0b_1\cdots b_{n-1}}$, le qubit~0 \emph{à gauche}, et on indexe le vecteur d'état par l'entier $x=\sum_k b_k2^k$. Attention : Qiskit affiche les chaînes de bits dans l'ordre inverse (§\ref{sec:pieges-outils}).
+
+\paragraph{Itérations du projet.} Le projet avance par itérations, chacune avec sa couleur dans tous les cours et dans la fiche projet (dossier \texttt{Fiche\_Projet/} du projet). Chaque chapitre commence par un bandeau qui indique l'itération de son contenu ; un ajout ou une révision faite lors d'une itération ultérieure apparaît dans un encadré « Évolution » de la couleur correspondante.
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_introduction}
+\input{chapitres/ch01b_bases_physique}
+\input{chapitres/ch02_qubit}
+\input{chapitres/ch03_algebre}
+\input{chapitres/ch04_multiqubits}
+\input{chapitres/ch05_circuits}
+\input{chapitres/ch06_hamiltoniens}
+\input{chapitres/ch07_qubo_ising}
+\input{chapitres/ch08_recuit}
+\input{chapitres/ch09_qaoa}
+\input{chapitres/ch10_outils}
+\input{chapitres/ch11_projet}
+\input{chapitres/ch12_v2_montee}
+
+\appendix
+\input{chapitres/annexe_corriges}
+\input{chapitres/annexe_memo}
+\input{chapitres/annexe_pistes}
+
+\end{document}

@@ -1,0 +1,57 @@
+\chapter{Hamiltoniens : l'énergie comme fonction de coût}\label{ch:hamiltoniens}
+\iterbanner{V0}
+
+\section{Qu'est-ce qu'un hamiltonien ?}
+En mécanique classique, l'énergie totale d'un système (cinétique + potentielle) gouverne son mouvement. En quantique, l'énergie est une \emph{observable}, donc une matrice hermitienne $H$ appelée \textbf{hamiltonien}.
+\begin{itemize}
+\item Ses valeurs propres $E_0\le E_1\le\cdots$ sont les \textbf{niveaux d'énergie} possibles (ch.~\ref{ch:bases}).
+\item Ses vecteurs propres sont les états d'énergie bien définie.
+\item Le plus bas, $\ket{E_0}$, est l'\textbf{état fondamental}.
+\end{itemize}
+Le hamiltonien joue un double rôle : il \emph{définit l'énergie} et il \emph{génère l'évolution dans le temps}.
+
+\section{L'équation de Schrödinger}
+\begin{definition}[ (évolution temporelle)]
+\[ i\frac{d}{dt}\ket{\psi(t)}=H\ket{\psi(t)}\qquad\Longrightarrow\qquad \ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}\quad(H\text{ constant}). \]
+\end{definition}
+C'est une EDO linéaire du premier ordre, comme $\dot y=Ay$ en dynamique des systèmes, mais avec $-iH$. Comme $H$ est hermitienne, $e^{-iHt}$ est \emph{unitaire} : on retrouve le postulat d'évolution. En décomposant $\ket{\psi(0)}=\sum_kc_k\ket{E_k}$ :
+\[\ket{\psi(t)}=\sum_kc_k\,e^{-iE_kt}\ket{E_k}.\]
+Chaque composante \emph{tourne en phase} à la vitesse de son énergie ; les modules $|c_k|$ ne bougent pas. Un état propre ne fait que tourner d'une phase globale : il est \emph{stationnaire}.
+
+\begin{resultat}
+Faire évoluer sous un hamiltonien diagonal $H_C$ pendant un « temps » $\gamma$ multiplie chaque état de base par $e^{-i\gamma E(x)}$. \textbf{La fonction de coût est inscrite dans les phases.} Les probabilités ne changent pas : il faudra un second hamiltonien, qui ne commute pas avec $H_C$, pour transformer ces phases en différences de probabilité.
+\end{resultat}
+
+\section{État fondamental et principe variationnel}
+Pour tout état normé $\ket\psi$ :
+\[\bra\psi H\ket\psi=\sum_kE_k|c_k|^2\ \ge\ E_0,\]
+avec égalité si et seulement si $\ket\psi$ est un état fondamental. C'est le quotient de Rayleigh d'une matrice symétrique, que vous connaissez en algèbre linéaire. Conséquence : \textbf{minimiser $\expval{H}$ sur une famille d'états paramétrés donne une borne supérieure de $E_0$}, et l'atteint si la famille est assez riche. C'est le principe des algorithmes \emph{variationnels}, dont QAOA (ch.~\ref{ch:qaoa}).
+
+\section{Un hamiltonien diagonal est une fonction de coût}
+Si $H_C=\sum_xE(x)\ket x\bra x$ (ch.~\ref{ch:multi}), ses niveaux d'énergie sont les valeurs $E(x)$ sur les $2^n$ chaînes de bits, et son état fondamental est la meilleure chaîne. La figure~\ref{fig:niveaux} montre le problème « jouet » à 3 bits du chapitre suivant.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[y=1.2cm]
+\draw[->,cmuted] (-0.3,-2.4) -- (-0.3,1.5) node[above,cink,font=\small] {énergie $E(x)$};
+\foreach \e/\l/\xo in {0/000/0,0/110/1.4,0/011/2.8,-1/100/0,-1/010/1.4,-1/001/2.8,1/111/1.4}{
+  \draw[cink,thick] (\xo,\e) -- ++(1,0) node[right,font=\scriptsize] {$\ket{\l}$};}
+\draw[cblue,very thick] (1.4,-2) -- ++(1,0) node[right,font=\scriptsize] {$\ket{101}$};
+\foreach \e in {-2,-1,0,1}{\node[font=\small,anchor=east] at (-0.35,\e) {$\e$};}
+\node[cblue,font=\small,anchor=west] at (4.3,-2) {état fondamental = solution};
+\end{tikzpicture}
+\caption{Niveaux d'énergie du hamiltonien diagonal associé au QUBO jouet du chapitre~\ref{ch:qubo} (pas deux bits voisins à 1). Plusieurs chaînes partagent le même niveau : on dit que le niveau est \emph{dégénéré}.}\label{fig:niveaux}
+\end{figure}
+
+\section{Deux hamiltoniens qui ne commutent pas : la formule de Trotter}
+Si $[A,B]=AB-BA\neq0$, alors $e^{-i(A+B)t}\neq e^{-iAt}e^{-iBt}$. Mais en découpant le temps en $N$ petits pas :
+\[e^{-i(A+B)t}=\lim_{N\to\infty}\big(e^{-iAt/N}e^{-iBt/N}\big)^N,\qquad \text{erreur d'un pas}\sim\tfrac{t^2}{2N^2}\|[A,B]\|.\]
+C'est l'analogue exact du \emph{splitting d'opérateurs} (Lie-Trotter, Strang) utilisé en CFD pour séparer convection et diffusion. QAOA est une telle alternance, entre $e^{-i\gamma H_C}$ et $e^{-i\beta H_M}$, mais où l'on laisse \emph{libres} les durées de chaque pas.
+
+\exercices
+\begin{exercice}
+Calculer $e^{-i\gamma Z}\ket+$. Montrer que c'est, à une phase globale près, $\tfrac1{\sqrt2}(\ket0+e^{2i\gamma}\ket1)$. Quelle rotation de la sphère de Bloch a-t-on effectuée ? Les probabilités en base de calcul ont-elles changé ?
+\end{exercice}
+\begin{exercice}
+Montrer que l'état fondamental de $H_M=-\sum_{k=0}^{n-1}X_k$ est $\ket+^{\otimes n}=H^{\otimes n}\ket{0\cdots0}$, d'énergie $-n$. Pourquoi cet état est-il appelé « superposition uniforme » ?
+\end{exercice}

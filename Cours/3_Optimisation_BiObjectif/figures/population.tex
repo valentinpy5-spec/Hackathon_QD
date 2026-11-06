@@ -1,0 +1,12 @@
+% figure générée par tools/make_figures.py : population
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.6cm,xlabel={taille de population $N$},ylabel={simulations pour le front complet},
+  xmode=log,xtick={8,12,16,24,32,48},xticklabels={8,12,16,24,32,48},legend style={draw=none,font=\scriptsize},legend pos=north west,ymin=0]
+\addplot[cblue,very thick,mark=*,mark size=1.5pt,error bars/.cd,y dir=both,y explicit] coordinates {(8,65.0) +- (0,0) (12,75.5) +- (0,0) (16,106.5) +- (0,0) (24,122.0) +- (0,0) (32,149.0) +- (0,0) (48,180.5) +- (0,0)};\addlegendentry{S1 : approche de face}
+\addplot[cblue,dashed,forget plot] coordinates {(8,61) (12,68.75) (16,97.25) (24,110.75) (32,124) (48,175.5)};
+\addplot[cblue,dashed,forget plot] coordinates {(8,76) (12,85) (16,113) (24,131.25) (32,163) (48,205)};
+\addplot[corange,very thick,mark=*,mark size=1.5pt,error bars/.cd,y dir=both,y explicit] coordinates {(8,81.0) +- (0,0) (12,92.5) +- (0,0) (16,106.0) +- (0,0) (24,129.5) +- (0,0) (32,150.0) +- (0,0) (48,207.5) +- (0,0)};\addlegendentry{S2 : radar en contrebas}
+\addplot[corange,dashed,forget plot] coordinates {(8,73.75) (12,82.75) (16,98.5) (24,125.5) (32,145) (48,197.25)};
+\addplot[corange,dashed,forget plot] coordinates {(8,88) (12,99.25) (16,111.5) (24,135.75) (32,163.75) (48,213.25)};
+\end{axis}
+\end{tikzpicture}

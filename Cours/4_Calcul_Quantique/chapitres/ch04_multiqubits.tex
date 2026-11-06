@@ -1,0 +1,220 @@
+\chapter{Plusieurs qubits}\label{ch:multi}
+\iterbanner{V0}
+
+\section{Produit tensoriel}
+\paragraph{Le point de départ : une amplitude par configuration.} Deux bits classiques ont quatre configurations possibles : 00, 01, 10, 11. Pour un qubit, on attache une amplitude complexe à chacun des deux résultats possibles. Pour deux qubits, la règle est la même : on attache une amplitude à chacun des \emph{quatre} résultats possibles de la mesure des deux qubits.
+\[
+\ket\psi=\psi_{00}\ket{00}+\psi_{01}\ket{01}+\psi_{10}\ket{10}+\psi_{11}\ket{11},\qquad |\psi_{00}|^2+|\psi_{01}|^2+|\psi_{10}|^2+|\psi_{11}|^2=1 .
+\]
+Le ket $\ket{ab}$ désigne l'état où le qubit~0 vaut $a$ et le qubit~1 vaut $b$, et $|\psi_{ab}|^2$ est la probabilité de lire $a$ sur le qubit~0 \emph{et} $b$ sur le qubit~1. Avec $n$ qubits, il y a $2^n$ chaînes de bits, donc $2^n$ amplitudes :
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+qubits $n$ & 1 & 2 & 3 & 9 (notre QUBO) & 30 & 50\\
+\midrule
+amplitudes $2^n$ & 2 & 4 & 8 & 512 & $\approx10^9$ & $\approx10^{15}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+L'état de $n$ qubits n'est donc \emph{pas} une liste de $n$ états à un qubit, ce qui ferait $2n$ nombres. C'est un vecteur de $\C^{2^n}$. Pour nos 9 qubits, c'est une amplitude par profil $(m,p,t)$ de la grille.
+
+\paragraph{Le produit tensoriel : combiner deux qubits indépendants.} Supposons que le qubit~0 soit dans l'état $\alpha\ket0+\beta\ket1$ et le qubit~1, préparé séparément, dans $\gamma\ket0+\delta\ket1$. L'amplitude de chaque configuration jointe est le \emph{produit} des amplitudes individuelles, comme la probabilité de deux événements indépendants est le produit des probabilités. On note cette opération $\otimes$ :
+\[
+(\alpha\ket0+\beta\ket1)\otimes(\gamma\ket0+\delta\ket1)=\alpha\gamma\ket{00}+\alpha\delta\ket{01}+\beta\gamma\ket{10}+\beta\delta\ket{11}.
+\]
+En pratique, on développe comme un produit ordinaire, en gardant l'ordre des facteurs : $\ket a\otimes\ket b=\ket{ab}$, et on écrit souvent $\ket a\ket b$. La normalisation est automatique : $\sum|\cdot|^2=(|\alpha|^2+|\beta|^2)(|\gamma|^2+|\delta|^2)=1$.
+
+\paragraph{Exemples.}
+\begin{itemize}
+\item $\ket0\otimes\ket1=\ket{01}$ : un état de base, avec une seule amplitude non nulle.
+\item $\ket0\otimes\ket+=\ket0\otimes\tfrac1{\sqrt2}(\ket0+\ket1)=\tfrac1{\sqrt2}(\ket{00}+\ket{01})$. Le qubit~0 vaut 0 à coup sûr, et le qubit~1 est à pile ou face.
+\item $\ket+\otimes\ket+=\tfrac12(\ket{00}+\ket{01}+\ket{10}+\ket{11})$ : les quatre configurations ont la même probabilité $\tfrac14=\tfrac12\cdot\tfrac12$.
+\item $\ket+^{\otimes3}=\ket+\otimes\ket+\otimes\ket+=\tfrac1{2\sqrt2}\big(\ket{000}+\ket{001}+\dots+\ket{111}\big)$ : 8 chaînes, chacune de probabilité $\tfrac18$. De même, $\ket+^{\otimes9}$ donne la même amplitude $2^{-9/2}$ aux 512 profils : c'est l'état de départ de QAOA.
+\end{itemize}
+
+\paragraph{Une porte qui agit sur un seul qubit.} L'opérateur $A\otimes B$ applique $A$ au qubit~0 et $B$ au qubit~1 : $(A\otimes B)(\ket u\otimes\ket v)=A\ket u\otimes B\ket v$. Pour ne toucher qu'un qubit, on met l'identité $\Id$ (« ne rien faire ») sur l'autre :
+\[
+(X\otimes\Id)\ket{01}=X\ket0\otimes\ket1=\ket{11},\qquad (H\otimes\Id)\ket{00}=H\ket0\otimes\ket0=\tfrac1{\sqrt2}(\ket{00}+\ket{10}).
+\]
+Sur un état qui n'est pas un produit, on applique la règle à chaque terme, par linéarité.
+
+\paragraph{Dans la mémoire de l'ordinateur.} Un simulateur range les $2^n$ amplitudes dans un tableau de nombres complexes. Le produit de Kronecker (\texttt{np.kron}) calcule ce tableau à partir des facteurs :
+\[
+\begin{pmatrix}\alpha\\\beta\end{pmatrix}\otimes\begin{pmatrix}\gamma\\\delta\end{pmatrix}=\begin{pmatrix}\alpha\gamma\\\alpha\delta\\\beta\gamma\\\beta\delta\end{pmatrix}
+\quad\text{rangé dans l'ordre}\quad 00,\ 01,\ 10,\ 11 .
+\]
+Avec \texttt{np.kron(u, v)}, le \emph{premier} facteur donne le bit de poids fort de l'indice.
+
+\begin{piege}[ : l'ordre de rangement est une convention]
+L'état physique ne dépend d'aucune convention. Seul l'\emph{ordre} dans lequel on range les amplitudes dans le tableau en dépend. Dans ce cours et dans notre code, la chaîne $\ket{b_0b_1\cdots b_{n-1}}$ (qubit~0 écrit à gauche) est rangée à l'indice $x=\sum_kb_k2^k$ : le qubit~0 est le bit de \emph{poids faible}. Avec \texttt{np.kron}, il faut donc écrire les facteurs à l'envers, \texttt{kron(q[n-1], ..., q[0])}. C'est aussi la convention d'indice de Qiskit, qui \emph{affiche} en revanche les chaînes de droite à gauche ($q_{n-1}\cdots q_0$, comme on écrit le nombre $x$ en binaire). Il faut toujours vérifier l'ordre sur un exemple à deux qubits avant d'interpréter des résultats.
+\end{piege}
+
+\section{États produits et états intriqués}\label{sec:intrique}
+\paragraph{Définition.} Un état est \textbf{produit} s'il s'écrit $\ket{\phi_0}\otimes\ket{\phi_1}\otimes\cdots$ : chaque qubit a alors son propre état, indépendant des autres. Sinon, il est \textbf{intriqué} : l'état du système ne se décompose pas en états individuels.
+
+\paragraph{Le test à deux qubits.} Rangeons les quatre amplitudes dans un tableau $2\times2$, avec le qubit~0 en ligne et le qubit~1 en colonne. Pour un état produit, $\psi_{ab}=u_a\,v_b$ : chaque case est le produit d'un facteur de ligne par un facteur de colonne (figure~\ref{fig:tableau-amplitudes}). On en déduit
+\[
+\psi_{00}\,\psi_{11}=u_0v_0\,u_1v_1=u_0v_1\,u_1v_0=\psi_{01}\,\psi_{10}.
+\]
+Un état produit vérifie donc $\psi_{00}\psi_{11}-\psi_{01}\psi_{10}=0$ : le déterminant du tableau est nul. Réciproquement, un tableau $2\times2$ de déterminant nul est de rang 1, donc s'écrit $u_av_b$. Ce critère est une équivalence.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[cell/.style={draw=cink,minimum width=1.25cm,minimum height=0.8cm,font=\small}]
+\foreach \titre/\aa/\ab/\ba/\bb/\fa/\fb/\fc/\fd [count=\i] in
+  {{$\ket+\ket+$ (produit)}/{$\tfrac12$}/{$\tfrac12$}/{$\tfrac12$}/{$\tfrac12$}/25/25/25/25,
+   {$\ket0\ket+$ (produit)}/{$\tfrac1{\sqrt2}$}/{$\tfrac1{\sqrt2}$}/{$0$}/{$0$}/40/40/0/0,
+   {$\ket{\Phi^+}$ (intriqué)}/{$\tfrac1{\sqrt2}$}/{$0$}/{$0$}/{$\tfrac1{\sqrt2}$}/40/0/0/40}{
+  \begin{scope}[xshift={(\i-1)*4.6cm}]
+    \node[cell,fill=cblue!\fa] at (0,0) {\aa};
+    \node[cell,fill=cblue!\fb] at (1.25,0) {\ab};
+    \node[cell,fill=cblue!\fc] at (0,-0.8) {\ba};
+    \node[cell,fill=cblue!\fd] at (1.25,-0.8) {\bb};
+    \node[font=\scriptsize,cmuted] at (0,0.62) {$q_1=0$};
+    \node[font=\scriptsize,cmuted] at (1.25,0.62) {$q_1=1$};
+    \node[font=\scriptsize,cmuted,anchor=east] at (-0.68,0) {$q_0=0$};
+    \node[font=\scriptsize,cmuted,anchor=east] at (-0.68,-0.8) {$q_0=1$};
+    \node[font=\small] at (0.62,-1.65) {\titre};
+  \end{scope}}
+\end{tikzpicture}
+\caption{Les amplitudes de deux qubits rangées en tableau (ligne : qubit~0, colonne : qubit~1). Pour un état produit, les lignes sont proportionnelles (rang 1, déterminant nul). Pour $\ket{\Phi^+}$, le déterminant vaut $\tfrac12$ : impossible de factoriser.}\label{fig:tableau-amplitudes}
+\end{figure}
+
+\paragraph{Exemples.}
+\begin{itemize}
+\item $\tfrac12(\ket{00}+\ket{01}+\ket{10}+\ket{11})$ : $\tfrac12\cdot\tfrac12-\tfrac12\cdot\tfrac12=0$, donc produit. C'est $\ket+\ket+$.
+\item $\tfrac1{\sqrt2}(\ket{00}+\ket{01})$ : $\tfrac1{\sqrt2}\cdot0-\tfrac1{\sqrt2}\cdot0=0$, donc produit. C'est $\ket0\ket+$.
+\item L'\textbf{état de Bell} $\ket{\Phi^+}=\tfrac1{\sqrt2}(\ket{00}+\ket{11})$ : $\tfrac1{\sqrt2}\cdot\tfrac1{\sqrt2}-0\cdot0=\tfrac12\neq0$, donc intriqué. On peut le voir directement. Si l'on avait $\psi_{ab}=u_av_b$, alors $\psi_{00}\neq0$ imposerait $u_0\neq0$, et $\psi_{11}\neq0$ imposerait $v_1\neq0$. On aurait donc $\psi_{01}=u_0v_1\neq0$, alors que $\psi_{01}=0$. Contradiction.
+\end{itemize}
+
+\paragraph{Ce que l'intrication change aux mesures.} Comparons les probabilités jointes $P(ab)=|\psi_{ab}|^2$ :
+\begin{itemize}
+\item pour $\ket+\ket+$, $P(ab)=\tfrac14$ partout. Lire le qubit~0 n'apprend \emph{rien} sur le qubit~1. C'est vrai de tout état produit, pour lequel $P(ab)=|u_a|^2|v_b|^2$ : les deux résultats sont des variables aléatoires indépendantes ;
+\item pour $\ket{\Phi^+}$, $P(00)=P(11)=\tfrac12$ et $P(01)=P(10)=0$. Chaque qubit, regardé seul, est à pile ou face, mais les deux résultats sont \emph{toujours égaux}. Lire le qubit~0 donne le qubit~1 à coup sûr.
+\end{itemize}
+
+\paragraph{Corrélation quantique ou simple corrélation classique ?} Deux pièces truquées, collées pour tomber toujours du même côté, donnent aussi « 00 ou 11, à 50/50 ». En base de calcul, $\ket{\Phi^+}$ ressemble donc à ce \emph{mélange classique}. La différence apparaît dans une autre base (§\ref{sec:autre-base}). Un calcul direct montre que
+\[
+\ket{\Phi^+}=\tfrac1{\sqrt2}\big(\ket{++}+\ket{--}\big).
+\]
+Mesurés tous deux en base $\{\ket+,\ket-\}$, les deux qubits donnent encore toujours le même résultat. Pour le mélange classique, en revanche, chaque qubit est un $\ket0$ ou un $\ket1$, qui donne 50/50 en base $\{\ket\pm\}$, indépendamment de l'autre : la corrélation disparaît. L'intrication est une corrélation qui tient \emph{dans toutes les bases à la fois}, ce qu'aucun mélange de bits classiques ne permet.
+
+\paragraph{D'où vient l'intrication ?} Une porte à un qubit transforme un état produit en un autre état produit, puisque $(A\otimes B)(\ket u\otimes\ket v)=A\ket u\otimes B\ket v$. Pour intriquer, il faut une porte qui agit sur deux qubits \emph{à la fois} et dont l'effet sur l'un dépend de l'autre. C'est le cas de la CNOT et de $R_{ZZ}$ (ch.~\ref{ch:circuits}). Dans QAOA, ce sont précisément les termes de couplage $Q_{ij}b_ib_j$ du coût qui produisent ces portes.
+
+\paragraph{Pourquoi c'est utile pour l'optimisation.} Prenons un QUBO à deux bits, $E(b_0,b_1)=b_0+b_1-3\,b_0b_1$, soit $E(00)=0$, $E(01)=E(10)=1$ et $E(11)=-1$. Le meilleur choix pour $b_0$ dépend de $b_1$ : si $b_1=0$, il faut $b_0=0$ ; si $b_1=1$, il faut $b_0=1$. Les bonnes chaînes sont celles où $b_0=b_1$.
+
+Un état qui « a compris » cette structure met beaucoup de probabilité sur 00 et 11, et peu sur 01 et 10, par exemple $P(00)=P(11)=0{,}45$ et $P(01)=P(10)=0{,}05$. Aucun état produit ne peut faire cela. Pour un état produit, $P(00)\,P(11)=P(01)\,P(10)$, ce qui donnerait ici $0{,}2025=0{,}0025$, impossible. Il faut un état intriqué pour représenter la règle « $b_0=b_1$ » sans encore savoir quelle valeur choisir.
+
+Au fil des couches de QAOA, l'état passe de $\ket+^{\otimes n}$, qui est produit et uniforme, à des états intriqués qui concentrent la probabilité sur les chaînes compatibles avec les couplages. L'optimum lui-même, $\ket{x^\star}=\ket{11}$ ici, est un état de base, donc produit : l'intrication sert pendant le chemin, pas à l'arrivée.
+
+\section{Opérateurs sur $n$ qubits}
+\paragraph{Agir sur un seul qubit.} Un opérateur qui agit sur le seul qubit $k$ s'écrit $Z_k=\Id\otimes\cdots\otimes Z\otimes\cdots\otimes\Id$, avec $Z$ sur le facteur du qubit $k$ et $\Id$ sur tous les autres. Sur une chaîne de bits, il suffit de regarder ce que fait chaque facteur :
+\[
+Z_k\ket{b_0\cdots b_k\cdots b_{n-1}}=\ket{b_0}\otimes\cdots\otimes Z\ket{b_k}\otimes\cdots\otimes\ket{b_{n-1}}=s_k\,\ket{b_0\cdots b_{n-1}},\qquad s_k=1-2b_k .
+\]
+$Z_k$ \textbf{lit} le bit $k$ et multiplie la chaîne par $+1$ ou $-1$ selon sa valeur, sans la modifier. Toutes les chaînes $\ket x$ sont donc vecteurs propres de $Z_k$ : sa matrice est \emph{diagonale} dans la base de calcul. Exemple à deux qubits :
+\[
+Z_0\ket{00}=+\ket{00},\quad Z_0\ket{10}=-\ket{10},\quad Z_0\ket{01}=+\ket{01},\quad Z_0\ket{11}=-\ket{11}.
+\]
+À l'inverse, $X_k$ \textbf{retourne} le bit $k$ : $X_0\ket{00}=\ket{10}$ et $X_0\ket{11}=\ket{01}$. Il fait passer d'une chaîne à une autre, donc sa matrice n'est pas diagonale. Toute la suite repose sur cette distinction :
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Opérateur & Effet sur $\ket x$ & Matrice & Rôle dans QAOA \\
+\midrule
+$Z_k$, $Z_iZ_j$, $\hat b_k$ & multiplie par un nombre & diagonale & coût $H_C$ \\
+$X_k$ & change de chaîne (retourne un bit) & non diagonale & mélangeur $H_M$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Produits d'opérateurs diagonaux.} Les opérateurs diagonaux commutent, et un produit d'opérateurs diagonaux multiplie leurs valeurs propres :
+\[
+Z_iZ_j\ket x=s_is_j\ket x,\qquad \hat b_k=\frac{\Id-Z_k}2\ \Rightarrow\ \hat b_k\ket x=\frac{1-s_k}{2}\ket x=b_k\ket x,\qquad \hat b_i\hat b_j\ket x=b_ib_j\ket x .
+\]
+L'opérateur $\hat b_k$ « affiche » le bit $k$, et $\hat b_i\hat b_j$ affiche le produit $b_ib_j$, qui vaut 1 seulement si les deux bits valent 1. Par linéarité, n'importe quel polynôme en bits devient un opérateur qui affiche la valeur de ce polynôme.
+
+\paragraph{Exemple complet : le QUBO à deux bits du §\ref{sec:intrique}.} Pour $E(b_0,b_1)=b_0+b_1-3\,b_0b_1$, on remplace chaque bit par son opérateur :
+\[
+H_C=\hat b_0+\hat b_1-3\,\hat b_0\hat b_1 .
+\]
+Sur chaque chaîne, $H_C\ket{b_0b_1}=(b_0+b_1-3b_0b_1)\ket{b_0b_1}=E(b_0,b_1)\ket{b_0b_1}$. Dans l'ordre $x=0,1,2,3$, c'est-à-dire $\ket{00},\ket{10},\ket{01},\ket{11}$ :
+\[
+H_C=\mathrm{diag}\big(E(00),E(10),E(01),E(11)\big)=\mathrm{diag}(0,\ 1,\ 1,\ -1).
+\]
+La fonction de coût est simplement \emph{écrite sur la diagonale}. En remplaçant $\hat b_k=(\Id-Z_k)/2$ et en développant, on obtient la même matrice exprimée avec des $Z$ :
+\[
+H_C=\tfrac14\,\Id+\tfrac14\,(Z_0+Z_1)-\tfrac34\,Z_0Z_1 .
+\]
+Sur $\ket{11}$, par exemple, $s_0=s_1=-1$, et on retrouve bien $\tfrac14-\tfrac12-\tfrac34=-1$. C'est la \emph{forme d'Ising} du coût, que le chapitre~\ref{ch:qubo} construit en général. Elle est utile parce que chaque terme correspond à une porte : $Z_k$ à une rotation $R_Z$, $Z_iZ_j$ à une $R_{ZZ}$ (ch.~\ref{ch:circuits}).
+
+\begin{resultat}
+Toute fonction de coût polynomiale en bits $E(b_0,\dots,b_{n-1})$ devient un opérateur \textbf{diagonal} dans la base de calcul en remplaçant chaque $b_k$ par $\hat b_k=(\Id-Z_k)/2$ :
+\[H_C=\sum_xE(x)\ket x\bra x,\qquad H_C\ket x=E(x)\ket x.\]
+Sa plus petite valeur propre est $\min_xE(x)$, et le vecteur propre associé est le ket de la meilleure chaîne de bits.
+\end{resultat}
+
+\paragraph{Ce que fait $H_C$ à une superposition.} Par linéarité, sur $\ket\psi=\sum_x\psi_x\ket x$ :
+\begin{itemize}
+\item $H_C\ket\psi=\sum_xE(x)\,\psi_x\ket x$ : chaque amplitude est multipliée par le coût de sa chaîne ;
+\item $\expval{H_C}=\sum_xE(x)\,|\psi_x|^2$ : le coût moyen des chaînes tirées à la mesure (§\ref{sec:observables}) ;
+\item $e^{-i\gamma H_C}\ket\psi=\sum_xe^{-i\gamma E(x)}\psi_x\ket x$ : chaque amplitude reçoit une phase proportionnelle à son coût, sans que son module change. C'est la première étape d'une couche de QAOA, et la raison pour laquelle on a tant insisté sur les phases au §\ref{sec:phases}.
+\end{itemize}
+
+\paragraph{On n'écrit jamais la matrice $2^n\times2^n$.} Pour 9 qubits, $H_C$ est une matrice $512\times512$, mais seule sa diagonale compte : un vecteur de 512 coûts, que notre code calcule à partir de la matrice $Q$. Sur un ordinateur quantique, on n'a même pas besoin de cette liste. On applique une porte par terme du polynôme : 9 termes linéaires et $\binom92=36$ couplages, soit 45 portes. Le nombre de termes croît comme $n^2$, alors que le nombre de chaînes croît comme $2^n$ : c'est ce qui rend le codage d'un QUBO sur machine quantique efficace.
+
+\section{Le coût exponentiel de la simulation}
+\paragraph{Mémoire.} Un simulateur par vecteur d'état stocke les $2^n$ amplitudes complexes, à 16~octets chacune en double précision (deux réels de 8~octets) :
+\begin{center}
+\begin{tabular}{rrrl}
+\toprule
+$n$ & amplitudes $2^n$ & mémoire $16\cdot2^n$ & machine \\
+\midrule
+9 & 512 & 8~ko & tout (notre QUBO) \\
+20 & $\approx10^6$ & 16~Mo & tout \\
+30 & $\approx10^9$ & 16~Go & portable puissant \\
+40 & $\approx10^{12}$ & 16~To & grand cluster \\
+50 & $\approx10^{15}$ & 16~Po & hors de portée \\
+\bottomrule
+\end{tabular}
+\end{center}
+Chaque qubit ajouté \emph{double} la mémoire (figure~\ref{fig:memoire}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{semilogyaxis}[width=0.8\linewidth,height=5.6cm,axis lines=left,xmin=0,xmax=52,ymin=10,ymax=1e17,
+  xlabel={nombre de qubits $n$},ylabel={mémoire du vecteur d'état (octets)},
+  ytick={1e3,1e6,1e9,1e12,1e15},yticklabels={1~ko,1~Mo,1~Go,1~To,1~Po}]
+\addplot[cblue,very thick,domain=0:52,samples=53] {16*2^x};
+\addplot[only marks,mark=*,corange,mark size=2.4pt] coordinates {(9,8192) (30,1.718e10) (45,5.6e14)};
+\node[anchor=west,font=\small] at (axis cs:10,8192) {$n=9$ : 8~ko (notre QUBO)};
+\node[anchor=north west,font=\small] at (axis cs:30.5,1.7e10) {$n=30$ : 16~Go (portable)};
+\node[anchor=south east,font=\small] at (axis cs:44,5.6e14) {$n\approx45$ : supercalculateur};
+\end{semilogyaxis}
+\end{tikzpicture}
+\caption{Mémoire d'une simulation exacte : $16\cdot2^n$ octets. Chaque qubit ajouté double le coût.}\label{fig:memoire}
+\end{figure}
+
+\paragraph{Temps de calcul.} Appliquer une porte, même sur un seul qubit, modifie en général toutes les amplitudes. Par exemple, $X_0$ échange les amplitudes de $\ket{0\cdots}$ et $\ket{1\cdots}$ deux à deux. Chaque porte coûte donc environ $2^n$ opérations. Une couche de QAOA sur notre QUBO, soit 45 termes de coût et 9 portes de mélange, revient à quelques dizaines de passes sur 512 nombres : quelques microsecondes. À 40 qubits, chaque passe porte sur $10^{12}$ nombres.
+
+\paragraph{Pourquoi on ne peut pas compresser.} Un état produit n'a besoin que de $2n$ amplitudes, deux par qubit. C'est l'intrication (§\ref{sec:intrique}) qui oblige à garder les $2^n$ nombres, car ils ne se factorisent plus. Des méthodes approchées, comme les réseaux de tenseurs, exploitent les états \emph{peu} intriqués pour aller plus loin. Mais pour un état fortement intriqué, aucune méthode classique connue n'évite le coût exponentiel.
+
+\paragraph{Ce que change une vraie machine, et ce qu'elle ne change pas.} Sur un processeur quantique, les $2^n$ amplitudes ne sont stockées nulle part : elles \emph{sont} l'état physique des $n$ qubits, et une porte prend le même temps quel que soit $n$. Mais on ne peut pas lire ces amplitudes. Chaque shot ne renvoie que $n$ bits, une seule chaîne tirée selon la règle de Born. Le vecteur d'état exponentiel n'est donc pas une mémoire exponentielle consultable. L'avantage n'existe que si le circuit, par interférence, concentre la probabilité sur les bonnes chaînes, pour qu'un petit nombre de shots suffise à les trouver.
+
+\begin{projet}
+Nos 9 bits donnent $2^9=512$ amplitudes : \emph{exactement} la taille de la grille de profils. Simuler QAOA coûte donc au moins autant que d'énumérer le QUBO, et c'est voulu, puisque le cas doit rester vérifiable : on peut comparer la sortie de QAOA au vrai optimum. Deux ordres de grandeur à garder en tête pour les extensions :
+\begin{itemize}
+\item 3 variables à 16 niveaux (4 bits chacune) : 12 qubits, 4\,096 amplitudes. C'est encore trivial à simuler ;
+\item 20 variables de forme à 4 bits : 80 qubits. Ni l'énumération ($2^{80}\approx10^{24}$ profils) ni la simulation ne sont possibles. C'est le régime où un ordinateur quantique pourrait servir.
+\end{itemize}
+L'intérêt d'une machine réelle n'apparaîtrait que pour $n\gtrsim50$. C'est pourquoi l'analyse des \emph{ressources} en fonction de $n$ (qubits, portes, shots) fait partie du livrable.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Dire si chaque état est produit ou intriqué, et le factoriser le cas échéant : (a) $\tfrac12(\ket{00}-\ket{01}+\ket{10}-\ket{11})$ ; (b) $\tfrac1{\sqrt2}(\ket{01}-\ket{10})$.
+\end{exercice}
+\begin{exercice}
+Pour $n=2$, écrire les matrices diagonales de $Z_0$, $Z_1$, $Z_0Z_1$ et $\hat b_0\hat b_1=\tfrac14(\Id-Z_0)(\Id-Z_1)$ dans la base $(\ket{00},\ket{10},\ket{01},\ket{11})$, c'est-à-dire dans l'ordre $x=0,1,2,3$ avec $x=b_0+2b_1$. Vérifier que $\hat b_0\hat b_1$ vaut 1 sur $\ket{11}$ seulement.
+\end{exercice}

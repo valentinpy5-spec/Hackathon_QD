@@ -1,0 +1,225 @@
+\chapter{Portes et circuits quantiques}\label{ch:circuits}
+\iterbanner{V0}
+
+Un \textbf{circuit quantique} est la façon standard d'écrire une suite d'opérations unitaires (des \emph{portes}) suivie de mesures. C'est l'équivalent d'un programme : QAOA est un circuit.
+
+\section{Lire un circuit}
+\begin{itemize}
+\item Chaque \emph{ligne horizontale} est un qubit ; le temps s'écoule de gauche à droite.
+\item Chaque \emph{boîte} est une porte, c'est-à-dire une matrice unitaire appliquée au(x) qubit(s) qu'elle touche.
+\item Le symbole \emph{cadran} est une mesure en base de calcul ; il en sort un bit classique.
+\item Par convention, tous les qubits commencent dans $\ket0$.
+\end{itemize}
+Une suite de portes $U_1$ puis $U_2$ correspond au produit matriciel $U_2U_1$ : l'ordre est inversé, car la première porte est la plus proche du vecteur.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1.15cm,y=0.9cm]
+\draw[cink] (0,0) -- (3.2,0);
+\node[anchor=east,font=\small] at (0,0) {$\ket0$};
+\node[gate] at (1,0) {$H$};
+\meter{2.2}{0}
+\draw[cink,double] (2.62,0) -- (3.3,0) node[right,font=\small] {bit : 0 ou 1, prob.\ $\tfrac12$};
+\end{tikzpicture}
+\caption{Le plus petit circuit utile : un générateur de bit aléatoire parfait. $H\ket0=\ket+$, puis la mesure donne 0 ou 1 avec probabilité $1/2$.}
+\end{figure}
+
+\section{Portes à un qubit}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{llp{7.3cm}}
+\toprule
+Porte & Matrice & Effet\\
+\midrule
+$X$ (NOT) & $\begin{pmatrix}0&1\\1&0\end{pmatrix}$ & échange $\ket0\leftrightarrow\ket1$ ; demi-tour autour de $x$\\
+$Z$ & $\begin{pmatrix}1&0\\0&-1\end{pmatrix}$ & change le signe de $\ket1$ ; demi-tour autour de $z$\\
+$H$ (Hadamard) & $\tfrac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$ & $\ket0\mapsto\ket+$, $\ket1\mapsto\ket-$ ; crée la superposition\\
+$R_X(\theta)$ & $e^{-i\theta X/2}$ & rotation d'angle $\theta$ autour de $x$ \textbf{(mélangeur de QAOA)}\\
+$R_Z(\theta)$ & $\mathrm{diag}(e^{-i\theta/2},e^{i\theta/2})$ & rotation autour de $z$, déphasage \textbf{(termes linéaires du coût)}\\
+\bottomrule
+\end{tabular}
+\end{center}
+Remarque utile : $R_Z(\theta)=e^{-i\theta/2}\,\mathrm{diag}(1,e^{i\theta})$. Les conventions diffèrent d'une phase globale selon les bibliothèques, ce qui est sans conséquence physique (ch.~\ref{ch:qubit}).
+
+\subsection*{Pourquoi les portes à un qubit sont des rotations}
+\paragraph{L'argument géométrique.} Une porte $U$ est unitaire, donc elle conserve les produits scalaires : $|\braket{U\phi}{U\psi}|=|\braket\phi\psi|$. Or on a vu au §\ref{sec:autre-base} que $|\braket\phi\psi|^2=\tfrac12(1+\vec r_\phi\cdot\vec r_\psi)$, où $\vec r_\phi$ et $\vec r_\psi$ sont les points de Bloch des deux états. Une porte conserve donc le produit scalaire entre points de la sphère, c'est-à-dire les angles et les distances : c'est une \emph{isométrie} de la sphère, qui fixe son centre. Les seules isométries qu'on peut atteindre continûment depuis « ne rien faire », en tournant progressivement un bouton physique (durée d'une impulsion, champ magnétique), sont les \textbf{rotations}.
+
+\paragraph{Vérification directe sur $R_Z$.} Partons d'un état quelconque, écrit avec ses angles de Bloch : $\ket\psi=\cos\tfrac\theta2\ket0+e^{i\varphi}\sin\tfrac\theta2\ket1$. Alors
+\[
+R_Z(\alpha)\ket\psi=e^{-i\alpha/2}\cos\tfrac\theta2\ket0+e^{i\alpha/2}e^{i\varphi}\sin\tfrac\theta2\ket1
+=e^{-i\alpha/2}\Big(\cos\tfrac\theta2\ket0+e^{i(\varphi+\alpha)}\sin\tfrac\theta2\ket1\Big).
+\]
+Le facteur $e^{-i\alpha/2}$ est une phase globale, sans effet. Il reste $\theta\to\theta$ et $\varphi\to\varphi+\alpha$ : la latitude ne bouge pas, la longitude augmente de $\alpha$. C'est exactement une rotation d'angle $\alpha$ autour de l'axe $z$ (figure~\ref{fig:rotations}a). Les probabilités en base de calcul ne changent pas ; seule la phase relative tourne.
+
+\paragraph{Vérification directe sur $R_X$.} Comme $X^2=\Id$, on a (exercice~4.2) $R_X(\theta)=e^{-i\theta X/2}=\cos\tfrac\theta2\,\Id-i\sin\tfrac\theta2\,X$, soit
+\[
+R_X(\theta)=\begin{pmatrix}\cos\frac\theta2&-i\sin\frac\theta2\\[2pt]-i\sin\frac\theta2&\cos\frac\theta2\end{pmatrix},\qquad
+R_X(\theta)\ket0=\cos\tfrac\theta2\ket0+e^{-i\pi/2}\sin\tfrac\theta2\ket1 .
+\]
+On lit les angles de Bloch du résultat : latitude $\theta$, longitude $\varphi=-\pi/2$. Le pôle nord $\ket0$, de coordonnées $(0,0,1)$, arrive en $(0,-\sin\theta,\cos\theta)$ : il a tourné d'un angle $\theta$ dans le plan $(y,z)$, autour de l'axe $x$ (figure~\ref{fig:rotations}b). Contrairement à $R_Z$, cette rotation \emph{change les probabilités} : $P(1)$ passe de 0 à $\sin^2\tfrac\theta2$. Par exemple, $R_X(\pi/2)\ket0=\tfrac1{\sqrt2}(\ket0-i\ket1)=\ket{-i}$ : un quart de tour amène le pôle nord sur l'équateur.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>={Stealth[length=2mm]}]
+\foreach \pan/\xs in {a/0,b/8}{
+\begin{scope}[xshift=\xs cm,x={(-0.92cm,-0.39cm)},y={(1.31cm,-0.275cm)},z={(0cm,1.53cm)}]
+  \draw[cink,thin] (0,0,0) circle (1.6cm);
+  \draw[cmuted,thin] plot[domain=0:360,samples=90,smooth] ({cos(\x)},{sin(\x)},0);
+  \draw[->,cmuted] (0,0,0) -- (1.35,0,0) node[anchor=north east,cink,font=\small] {$x$};
+  \draw[->,cmuted] (0,0,0) -- (0,1.35,0) node[anchor=west,cink,font=\small] {$y$};
+  \draw[->,cmuted] (0,0,0) -- (0,0,1.3) node[anchor=south west,cink,font=\small] {$z$};
+  \fill[cink] (0,0,1) circle (1.3pt) node[anchor=south east,font=\small] {$\ket0$};
+  \fill[cink] (0,0,-1) circle (1.3pt) node[anchor=north,font=\small] {$\ket1$};
+\end{scope}}
+% (a) R_Z : |+> tourne sur l'équateur
+\begin{scope}[x={(-0.92cm,-0.39cm)},y={(1.31cm,-0.275cm)},z={(0cm,1.53cm)}]
+  \fill[cblue] (1,0,0) circle (1.8pt) node[anchor=north,font=\small,cblue,yshift=-2pt] {$\ket+$};
+  \draw[corange,very thick,->] plot[domain=0:70,samples=30,smooth] ({cos(\x)},{sin(\x)},0);
+  \fill[cblue] ({cos(70)},{sin(70)},0) circle (1.8pt);
+  \draw[cblue,thick,->] (0,0,0) -- ({cos(70)},{sin(70)},0);
+  \draw[corange,thick,->] plot[domain=20:330,samples=40,smooth] ({0.18*cos(\x)},{0.18*sin(\x)},0.7);
+  \node[corange,font=\small] at (0.75,0.95,0) {$\alpha$};
+\end{scope}
+\node[font=\small,align=center,text width=7cm] at (0,-2.6) {(a) $R_Z(\alpha)$ : rotation autour de $z$.\\ La longitude $\varphi$ tourne, $P(0)$ et $P(1)$ restent fixes.};
+% (b) R_X : |0> tourne dans le plan (y,z)
+\begin{scope}[xshift=8cm,x={(-0.92cm,-0.39cm)},y={(1.31cm,-0.275cm)},z={(0cm,1.53cm)}]
+  \draw[corange,very thick,->] plot[domain=0:70,samples=30,smooth] (0,{-sin(\x)},{cos(\x)});
+  \fill[cblue] (0,{-sin(70)},{cos(70)}) circle (1.8pt);
+  \draw[cblue,thick,->] (0,0,0) -- (0,{-sin(70)},{cos(70)});
+  \draw[cmuted,dashed] (0,0,0) -- (0,-1,0) node[anchor=east,cink,font=\small] {$\ket{-i}$};
+  \draw[corange,thick,->] plot[domain=20:330,samples=40,smooth] (1.2,{0.18*cos(\x)},{0.18*sin(\x)});
+  \node[corange,font=\small] at (0,-0.75,0.95) {$\theta$};
+\end{scope}
+\node[font=\small,align=center,text width=7cm] at (8,-2.6) {(b) $R_X(\theta)$ : rotation autour de $x$.\\ Le pôle $\ket0$ descend vers l'équateur : $P(1)=\sin^2\frac\theta2$.};
+\end{tikzpicture}
+\caption{Les deux rotations de QAOA sur la sphère de Bloch, ici pour $\alpha=\theta=70^\circ$. $R_Z$ écrit une phase sans changer les probabilités (étape de coût). $R_X$ fait basculer l'état entre les pôles, ce qui transforme une phase en probabilité (étape de mélange).}\label{fig:rotations}
+\end{figure}
+
+\paragraph{Toutes les portes à un qubit.} Plus généralement, pour un axe unitaire $\vec n=(n_x,n_y,n_z)$, la porte $R_{\vec n}(\theta)=e^{-i\theta(n_xX+n_yY+n_zZ)/2}$ est la rotation d'angle $\theta$ autour de $\vec n$, et \emph{toute} porte à un qubit est une telle rotation, à une phase globale près. Les portes du tableau en sont des cas particuliers :
+\begin{itemize}
+\item $X=i\,R_X(\pi)$ et $Z=i\,R_Z(\pi)$ : des demi-tours autour de $x$ et de $z$ ;
+\item $H=\tfrac1{\sqrt2}(X+Z)=i\,R_{\vec n}(\pi)$ avec $\vec n=\tfrac1{\sqrt2}(1,0,1)$ : un demi-tour autour de la diagonale entre $x$ et $z$. Il échange les axes $x$ et $z$, donc $\ket0\leftrightarrow\ket+$ et $\ket1\leftrightarrow\ket-$.
+\end{itemize}
+
+\paragraph{D'où vient le facteur $\tfrac12$ ?} Dans $R_Z(\alpha)=e^{-i\alpha Z/2}$, l'angle sur la sphère est $\alpha$, alors que les amplitudes ne reçoivent que $\pm\alpha/2$. C'est le même « angle moitié » que dans $\cos\tfrac\theta2$ (§3.4) : deux états orthogonaux ne font que $90^\circ$ dans l'espace des vecteurs, mais $180^\circ$ sur la sphère. Conséquence surprenante : $R_Z(2\pi)=-\Id$. Un tour complet ramène le point de Bloch à sa place, mais multiplie l'état par $-1$, une phase globale invisible.
+
+\section{Portes à deux qubits}
+\paragraph{Pourquoi une porte à deux qubits ?} Avec des portes à un qubit seulement, un état produit reste produit (§\ref{sec:intrique}) : les qubits évoluent chacun de leur côté et ne s'influencent jamais. Pour que la valeur d'un qubit agisse sur un autre, comme $b_ib_j$ dans un QUBO, il faut au moins une porte qui agisse sur deux qubits à la fois. La plus simple est la CNOT.
+
+\paragraph{CNOT (NON contrôlé) : définition.} Elle a un qubit \emph{contrôle} $c$ et un qubit \emph{cible} $t$. Elle applique $X$ (NOT) à la cible si et seulement si le contrôle vaut 1 :
+\[
+\mathrm{CNOT}\ket{c,t}=\ket{c,\ t\oplus c},
+\]
+où $\oplus$ est l'addition modulo 2 ($1\oplus1=0$). Le contrôle n'est jamais modifié. Sur les quatre états de base :
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+entrée $\ket{c,t}$ & action sur la cible & sortie $\ket{c,t\oplus c}$\\
+\midrule
+$\ket{00}$ & contrôle à 0 : rien & $\ket{00}$\\
+$\ket{01}$ & contrôle à 0 : rien & $\ket{01}$\\
+$\ket{10}$ & contrôle à 1 : NOT & $\ket{11}$\\
+$\ket{11}$ & contrôle à 1 : NOT & $\ket{10}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Ce tableau définit entièrement la porte, puisqu'une porte est linéaire. Sur une superposition, on l'applique terme à terme.
+
+\paragraph{Sa matrice.} Dans l'ordre des étiquettes $\ket{c,t}=\ket{00},\ket{01},\ket{10},\ket{11}$, la matrice est une permutation : elle échange les deux dernières lignes. Elle se lit aussi par blocs :
+\[
+\mathrm{CNOT}=\begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&0&1\\0&0&1&0\end{pmatrix}=\begin{pmatrix}\Id&0\\0&X\end{pmatrix}
+=\ket0\bra0\otimes\Id+\ket1\bra1\otimes X .
+\]
+Autrement dit, « si le contrôle est dans $\ket0$, ne rien faire ; s'il est dans $\ket1$, appliquer $X$ à la cible ». C'est une matrice de permutation réelle et symétrique, donc unitaire, et elle est sa propre inverse : $\mathrm{CNOT}^2=\Id$. Appliquer deux CNOT de suite ne fait rien, ce qui servira pour $R_{ZZ}$.
+
+\paragraph{Deux usages classiques.} Sur des états de base, la CNOT est une porte logique ordinaire :
+\begin{itemize}
+\item elle calcule le \textbf{XOR} : la cible reçoit $t\oplus c$, qui vaut 1 si les deux bits diffèrent. C'est la \emph{parité} des deux bits ;
+\item si la cible part de 0, elle \textbf{copie} le contrôle : $\ket{c,0}\mapsto\ket{c,c}$.
+\end{itemize}
+
+\paragraph{Sur une superposition : intrication, pas copie.} Prenons un contrôle dans un état quelconque $\alpha\ket0+\beta\ket1$ et une cible dans $\ket0$. Par linéarité, chaque terme est traité séparément :
+\[
+\mathrm{CNOT}\big[(\alpha\ket0+\beta\ket1)\otimes\ket0\big]=\alpha\,\mathrm{CNOT}\ket{00}+\beta\,\mathrm{CNOT}\ket{10}=\alpha\ket{00}+\beta\ket{11}.
+\]
+Ce n'est \emph{pas} une copie de l'état. Une copie serait $(\alpha\ket0+\beta\ket1)\otimes(\alpha\ket0+\beta\ket1)$, qui contient des termes $\alpha\beta\ket{01}$ et $\alpha\beta\ket{10}$. Le résultat est intriqué dès que $\alpha$ et $\beta$ sont tous deux non nuls : son déterminant $\psi_{00}\psi_{11}-\psi_{01}\psi_{10}=\alpha\beta$ n'est pas nul. La CNOT a copié la \emph{valeur de base} de chaque branche, pas l'état. C'est une illustration du théorème de non-clonage : aucune porte ne peut copier un état quantique inconnu. Avec $\alpha=\beta=\tfrac1{\sqrt2}$, c'est-à-dire un contrôle préparé par $H$, on obtient l'état de Bell (figure~\ref{fig:bell}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1.15cm,y=0.9cm]
+\draw[cink] (0,0) -- (3.4,0); \draw[cink] (0,-1) -- (3.4,-1);
+\node[anchor=east,font=\small] at (0,0) {$q_0:\ \ket0$};
+\node[anchor=east,font=\small] at (0,-1) {$q_1:\ \ket0$};
+\node[gate] at (0.9,0) {$H$};
+\draw[cink] (1.9,0) -- (1.9,-1); \node[ctrl] at (1.9,0) {}; \targ{1.9}{-1}
+\meter{2.9}{0} \meter{2.9}{-1}
+\node[font=\small,anchor=west] at (3.6,-0.5) {$\to\ \tfrac1{\sqrt2}(\ket{00}+\ket{11})$ : on lit 00 ou 11, jamais 01 ni 10};
+\end{tikzpicture}
+\caption{Préparation de l'état de Bell : une superposition (porte $H$) puis une CNOT.}\label{fig:bell}
+\end{figure}
+
+\paragraph{Sur le circuit.} Le contrôle est représenté par un point plein ($\bullet$) et la cible par le symbole $\oplus$, reliés par un trait vertical. Sur le matériel supraconducteur, la porte native à deux qubits est souvent la $CZ$, qui applique $Z$ au lieu de $X$ (soit un signe $-1$ sur $\ket{11}$ seulement). On en tire la CNOT en entourant la cible de deux $H$, puisque $HZH=X$ : $\mathrm{CNOT}=(\Id\otimes H)\,CZ\,(\Id\otimes H)$.
+
+\paragraph{La porte $R_{ZZ}$ : le couplage du QUBO.} Le terme $J\,Z_iZ_j$ d'un coût d'Ising demande d'appliquer $e^{-i\theta Z_iZ_j/2}$. C'est une matrice diagonale, qui multiplie $\ket{b_ib_j}$ par $e^{-i\theta s_is_j/2}$ : la phase est $e^{-i\theta/2}$ si les bits sont égaux, et $e^{+i\theta/2}$ s'ils diffèrent. Comme $(Z\otimes Z)^2=\Id$, on a aussi $e^{-i\theta Z_iZ_j/2}=\cos\tfrac\theta2\,\Id-i\sin\tfrac\theta2\,Z_iZ_j$ : c'est une « rotation » à deux qubits, dont l'axe est $Z\otimes Z$. Sur les états de base, elle ne fait qu'ajouter une phase qui dépend de la \emph{parité} des deux bits :
+\begin{center}
+\begin{tabular}{ccccc}
+\toprule
+$b_i$ & $b_j$ & parité $b_i\oplus b_j$ & $s_is_j$ & phase \\
+\midrule
+0 & 0 & 0 & $+1$ & $e^{-i\theta/2}$\\
+0 & 1 & 1 & $-1$ & $e^{+i\theta/2}$\\
+1 & 0 & 1 & $-1$ & $e^{+i\theta/2}$\\
+1 & 1 & 0 & $+1$ & $e^{-i\theta/2}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Aucune porte de base ne fait directement cela, mais on la construit avec deux CNOT et une rotation (figure~\ref{fig:rzz}), en trois temps :
+\begin{enumerate}
+\item la première CNOT écrit la parité $b_i\oplus b_j$ dans le qubit $j$ : $\ket{b_i,b_j}\mapsto\ket{b_i,\,b_i\oplus b_j}$ ;
+\item $R_Z(\theta)$ sur le qubit $j$ applique $e^{-i\theta/2}$ si ce qubit vaut 0 (bits égaux), et $e^{+i\theta/2}$ s'il vaut 1 (bits différents). C'est exactement la phase voulue ;
+\item la seconde CNOT « décalcule » la parité. Comme $\mathrm{CNOT}^2=\Id$, le qubit $j$ retrouve sa valeur $b_j$, et il ne reste que la phase.
+\end{enumerate}
+Dans QAOA, l'angle vaut $\theta=2\gamma J_{ij}$, où $J_{ij}$ est le couplage d'Ising entre les bits $i$ et $j$ (ch.~\ref{ch:qaoa}). C'est par ces portes que la structure du QUBO entre dans le circuit, et elles sont la source de l'intrication.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1.1cm,y=0.9cm]
+\draw[cink] (0,0) -- (1.6,0); \draw[cink] (0,-1) -- (1.6,-1);
+\node[anchor=east,font=\small] at (0,0) {$q_i$}; \node[anchor=east,font=\small] at (0,-1) {$q_j$};
+\node[draw=cink,fill=white,minimum width=12mm,minimum height=15mm,font=\small] at (0.8,-0.5) {$R_{ZZ}(\theta)$};
+\node at (2.1,-0.5) {$=$};
+\draw[cink] (2.6,0) -- (6.2,0); \draw[cink] (2.6,-1) -- (6.2,-1);
+\draw[cink] (3.2,0) -- (3.2,-1); \node[ctrl] at (3.2,0) {}; \targ{3.2}{-1}
+\node[gate,minimum width=12mm] at (4.4,-1) {$R_Z(\theta)$};
+\draw[cink] (5.6,0) -- (5.6,-1); \node[ctrl] at (5.6,0) {}; \targ{5.6}{-1}
+\end{tikzpicture}
+\caption{$R_{ZZ}(\theta)=e^{-i\theta Z\otimes Z/2}=\mathrm{CNOT}\,(\Id\otimes R_Z(\theta))\,\mathrm{CNOT}$. Chaque coefficient non nul $Q_{ij}$ du QUBO coûte ainsi \textbf{deux CNOT} par couche de QAOA.}\label{fig:rzz}
+\end{figure}
+
+\section{Universalité et coût réel d'un circuit}
+Les rotations à un qubit et la CNOT forment un ensemble \textbf{universel} : tout unitaire sur $n$ qubits peut s'en approcher. Deux mesures du coût :
+\begin{itemize}
+\item la \textbf{profondeur} : le nombre de « tranches » de portes exécutables en parallèle. Elle mesure la durée du calcul face à la durée de vie de l'information quantique (décohérence, ch.~\ref{ch:outils}) ;
+\item le \textbf{nombre de portes à deux qubits} : elles sont environ dix fois plus bruitées que les portes à un qubit sur le matériel actuel. C'est le coût qui compte.
+\end{itemize}
+Sur un vrai processeur, seuls certains couples de qubits sont physiquement reliés. Coupler deux qubits éloignés demande des portes SWAP supplémentaires, ce qui augmente la profondeur.
+
+\section{Mesures, shots et statistique}
+Exécuter un circuit une fois donne \emph{une} chaîne de bits. On l'exécute $N$ fois (shots) pour estimer :
+\begin{itemize}
+\item une probabilité $P(x)$ par la fréquence $\hat P$, d'écart-type $\sqrt{P(1-P)/N}$ ;
+\item une valeur moyenne $\expval{H_C}$ par la moyenne empirique de $E(x)$ sur les shots, d'écart-type $\sigma_E/\sqrt N$.
+\end{itemize}
+Pour l'optimisation, on ne s'intéresse pas seulement à la moyenne : on garde \textbf{la meilleure chaîne observée}, dont on recalcule le coût classiquement et exactement.
+
+\begin{projet}
+Le circuit QAOA de notre QUBO n'utilise que $H$ (initialisation), $R_Z$ (termes linéaires), $R_{ZZ}$ (couplages) et $R_X$ (mélangeur). Notre QUBO aéro a des couplages entre \emph{tous} les couples de bits : $\binom92=36$ portes $R_{ZZ}$, soit 72 CNOT par couche.
+\end{projet}
+
+\exercices
+\begin{exercice}
+On modifie le circuit de la figure~\ref{fig:bell} en partant de $\ket{q_0q_1}=\ket{01}$ au lieu de $\ket{00}$. Calculer pas à pas l'état obtenu : d'abord $(H\otimes\Id)\ket{01}$, puis l'effet de la CNOT. Quelles sont les probabilités des quatre résultats de mesure ? L'état final est-il intriqué ?
+\end{exercice}
+\begin{exercice}
+Vérifier l'identité de la figure~\ref{fig:rzz} sur les quatre états de base : suivre $\ket{b_ib_j}$ à travers CNOT, $R_Z(\theta)$ sur le second qubit, puis CNOT, et montrer que la phase obtenue est $e^{-i\theta s_is_j/2}$.
+\end{exercice}

@@ -1,0 +1,46 @@
+\chapter{Pistes d'amélioration, chapitre par chapitre}\label{annexe:pistes}
+\iterbanner{V1}
+
+Cette annexe rassemble, pour chaque partie du cours, ce qu'il serait utile d'approfondir ou d'ajouter au code. Les pistes sont classées de la plus utile à la moins utile pour le hackathon. Le cours compagnon \emph{Optimisation bi-objectif traînée / SER} met en œuvre une partie d'entre elles (QUBO bi-objectif avec contraintes, chaîne complète).
+
+\section*{Bases, qubit, algèbre, plusieurs qubits (ch.~\ref{ch:intro} à \ref{ch:multi})}
+\begin{itemize}
+\item Ajouter un petit carnet NumPy qui reproduit chaque exemple chiffré (sphère de Bloch, mesures dans trois bases, état de Bell) : vérifier soi-même les calculs est le meilleur exercice.
+\item Introduire la matrice densité, pour décrire le bruit et les mélanges statistiques : indispensable pour comprendre ce que donne une vraie machine.
+\end{itemize}
+
+\section*{Portes, circuits, hamiltoniens (ch.~\ref{ch:circuits} et \ref{ch:hamiltoniens})}
+\begin{itemize}
+\item Compiler le circuit QAOA de notre QUBO sur une topologie réelle (grille ou « heavy-hex » d'IBM) et compter les SWAP : c'est le vrai coût en portes à deux qubits.
+\item Mesurer l'erreur de Trotter sur l'exemple jouet, en comparant l'évolution exacte et l'évolution découpée.
+\end{itemize}
+
+\section*{QUBO et Ising (ch.~\ref{ch:qubo})}
+\begin{itemize}
+\item \iterbadge{V1}~\textbf{Fait dans la chaîne complète} : contraintes par réduction de Rosenberg (qubit auxiliaire) et par variables d'écart. Il reste à étudier l'effet du poids des pénalités sur la qualité des solutions de QAOA.
+\item Comparer les encodages binaire, one-hot et « unaire » (domain wall) sur la même grille, en qubits, en couplages et en qualité de solution.
+\end{itemize}
+
+\section*{Recuit (ch.~\ref{ch:recuit})}
+\begin{itemize}
+\item Valider notre recuit simulé contre celui d'Ocean : le paquet \texttt{dwave-neal} s'installe dans l'environnement du projet, \texttt{Code/.venv}.
+\item Étudier le plongement de notre graphe complet à 13 qubits sur la topologie Pegasus de D-Wave (\texttt{minorminer}) : longueur des chaînes, nombre de qubits physiques.
+\end{itemize}
+
+\section*{QAOA (ch.~\ref{ch:qaoa})}
+\begin{itemize}
+\item Réutiliser les angles optimaux d'une itération de la boucle à la suivante (le QUBO change peu) : on économiserait la plupart des évaluations de COBYLA.
+\item Tester les variantes « warm-start » (état initial tiré d'une solution classique) et le mélangeur XY qui conserve le nombre de 1, adapté aux encodages one-hot.
+\item Simuler l'effet du bruit (dépolarisation par porte à deux qubits) sur la probabilité de mesurer les bons profils.
+\end{itemize}
+
+\section*{Outils (ch.~\ref{ch:outils})}
+\begin{itemize}
+\item Installer Qiskit et Ocean dans \texttt{Code/.venv} et transformer les esquisses du chapitre en code testé, comparé à notre implémentation NumPy.
+\end{itemize}
+
+\section*{Chaîne du projet (ch.~\ref{ch:projet})}
+\begin{itemize}
+\item \iterbadge{V1}~\textbf{Fait} : la boucle bi-objectif traînée/SER, comparée à NSGA-II (cours d'optimisation). Résultat : avec le solveur exact, la boucle retrouve le front avec 1,6 à 3 fois moins de simulations que NSGA-II avec ses réglages par défaut (1,2 à 1,9 fois face à NSGA-II réglé).
+\item Comparer la boucle à une optimisation bayésienne multi-objectif classique (même modèle de substitution, choix des candidats par amélioration attendue de l'hypervolume), pour isoler ce qu'apporte la résolution du QUBO.
+\end{itemize}

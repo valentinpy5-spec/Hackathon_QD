@@ -1,0 +1,117 @@
+\chapter{V2 : le problème reformulé}\label{ch:v2}
+\iterbanner{V2}
+
+\begin{evolution}{V2}{pourquoi ce chapitre}La V1 (chapitres~\ref{ch:probleme} à \ref{ch:pistes}) a laissé trois conclusions : le compromis traînée/SER était dégénéré (tout le front à $t=t_{\min}$), le gain de la boucle venait du modèle de substitution et non du solveur, et le modèle aérodynamique rapide déplaçait l'optimum. La V2 s'écarte de la note d'intention pour corriger ces trois points ; ce chapitre en présente le problème et les résultats.\end{evolution}
+
+\section{Ce qui change}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+ & V1 & V2 \\
+\midrule
+géométrie & NACA 4 chiffres $(m,p,t)$, 512 profils, 9 bits & NACA 4 chiffres modifiée $(m,p,t,I)$, 1\,024 profils, 10 bits \\
+aérodynamique & modèle rapide, $\alpha=2^\circ$ imposé & XFOIL, $C_L=0{,}4$ imposé (croisière) \\
+contraintes & $t\ge8$~\%, $C_L\ge0{,}3$, validité & $t\ge8$~\%, $C_{L,\max}\ge1{,}2$ (manœuvre), convergence d'XFOIL \\
+SER & optique physique & méthode des moments TM (référence), optique physique en contrôle \\
+QUBO & 13 qubits & 14 qubits (10 + 1 auxiliaire + 3 d'écart) \\
+comparaison & arrêt au front exact & arrêt au front exact \emph{et} arrêt réaliste (stagnation de l'hypervolume) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le code est dans \code{optim/problem\_v2.py} (table XFOIL) et \code{optim/experiences\_v2.py} (comparaison). La boucle QUBO (\code{qubo\_loop.py}) a été généralisée à des variables de tailles différentes ; sa non-régression sur la V1 est vérifiée graine par graine.
+
+\section{Le front exact}
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_fronts}
+\caption{Les 702 profils faisables de la V2, colorés par l'indice de rayon de bord d'attaque $I$, et le front exact (SER par méthode des moments). Les étiquettes donnent l'épaisseur et $I$ des profils du front. Le point du front S2 à 319~counts (cambrure 7~\% très en avant, décollement d'intrados) est hors du cadre.}\label{fig:v2-fronts}
+\end{figure}
+
+Le front n'est plus confiné à une épaisseur. Dans S1, il compte 4 profils :
+\begin{center}
+\begin{tabular}{ccccccc}
+\toprule
+$m$ & $p$ & $t$ & $I$ & $C_D$ (counts) & SER (dBm) & $C_{L,\max}$ \\
+\midrule
+2~\% & 0,45 & 8~\% & 4 & 38,0 & $-17{,}31$ & 1,30 \\
+2~\% & 0,55 & 8~\% & 4 & 39,6 & $-17{,}31$ & 1,32 \\
+4~\% & 0,55 & 12~\% & 2 & 47,8 & $-17{,}46$ & 1,20 \\
+5~\% & 0,45 & 10~\% & 2 & 58,7 & $-18{,}15$ & 1,34 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le compromis a un sens physique clair. Le profil de traînée minimale est mince avec un nez modérément aigu ($I=4$). Pour gagner en SER, il faut passer au nez le plus aigu ($I=2$) ; mais un nez aussi aigu ne tient l'exigence de manœuvre qu'avec plus d'épaisseur et de cambrure, ce qui coûte de la traînée. Dans S2 (radar en contrebas), le front compte 10 profils et 3,4~dB d'écart de SER, contre 0,8~dB dans S1.
+
+\section{La comparaison des méthodes}
+Même protocole qu'au chapitre~\ref{ch:comparaison}, avec 20 graines (5 pour QAOA, plafonné à 150 simulations) et deux critères d'arrêt.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_convergence}
+\caption{V2 : fraction du front exact trouvée selon le nombre de simulations (médiane). NSGA-II progresse lentement et ne complète presque jamais le front dans le budget de 250 simulations.}\label{fig:v2-conv}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{S1 (4 profils)} & \multicolumn{2}{c}{S2 (10 profils)} \\
+ & front complet & réussite & front complet & réussite \\
+\midrule
+tirage aléatoire & 911 & 100~\% & 972 & 100~\% \\
+NSGA-II, $N=8$ & --- & 0~\% & --- & 0~\% \\
+NSGA-II, $N=16$ & --- & 5~\% & --- & 5~\% \\
+boucle, solveur exact & \textbf{75} & 100~\% & \textbf{142} & 100~\% \\
+boucle, recuit simulé & 97,5 & 100~\% & 235 & 55~\% \\
+boucle, QAOA $p=2$ & 105 & 100~\% & --- & 60~\%\textsuperscript{*} \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize Médianes en simulations distinctes ; « --- » : médiane non atteinte dans le budget (250, ou \textsuperscript{*}150 pour QAOA).}
+\end{center}
+
+\paragraph{Avec un critère d'arrêt réaliste.} Sur un vrai problème, on ne connaît pas le front exact : on s'arrête quand l'hypervolume ne progresse plus (5 générations pour NSGA-II, 3 itérations pour la boucle). Médianes au moment de l'arrêt :
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{S1} & \multicolumn{3}{c}{S2} \\
+ & simulations & front & HV & simulations & front & HV \\
+\midrule
+NSGA-II, $N=8$ & 78 & 50~\% & 0,937 & 91 & 65~\% & 0,975 \\
+NSGA-II, $N=16$ & 137 & 50~\% & 0,937 & 151 & 80~\% & 0,978 \\
+boucle, exact & 52 & 50~\% & 0,943 & 68 & 55~\% & 0,962 \\
+boucle, recuit & 55 & 62~\% & 0,949 & 82 & 45~\% & 0,989 \\
+boucle, QAOA & 75 & 50~\% & 0,937 & 105 & 80~\% & 1,000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Lecture}
+\paragraph{1. Sur un problème plus réaliste, la boucle domine nettement.} NSGA-II, qui retrouvait le front V1 en 65 à 106 simulations, ne le complète presque plus dans un budget de 250 : 30~\% des profils sont infaisables, et le front est coincé contre la contrainte de manœuvre, dans une petite région de l'espace. La boucle, elle, apprend la structure des deux objectifs et de la contrainte, et retrouve le front en 75 à 142 simulations.
+
+\paragraph{2. Le gain reste celui du modèle, pas du solveur.} Le solveur exact du QUBO reste le meilleur ; le recuit et QAOA, qui ne renvoient pas toujours l'optimum du QUBO, demandent plus d'itérations et échouent parfois dans le budget. À 14 qubits, le solveur quantique n'apporte rien que l'énumération ne fasse mieux.
+
+\paragraph{3. L'arrêt réaliste rapproche les méthodes.} Sans connaître le front exact, toutes s'arrêtent avec environ la moitié du front et 94 à 100~\% de l'hypervolume : on obtient un front presque aussi bon que le vrai, mais pas tous ses profils. La boucle s'arrête plus tôt ; QAOA s'arrête plus tard, avec un front plus complet dans S2. Ce critère est celui qu'il faudrait présenter pour un cas industriel.
+
+\begin{resultat}
+\begin{itemize}
+\item Le problème V2 contient un vrai compromis traînée/SER, porté par l'épaisseur, la cambrure et le rayon de bord d'attaque.
+\item La boucle quantique-classique y retrouve le front exact quand NSGA-II n'y parvient presque jamais dans 250 simulations.
+\item Le solveur exact du QUBO reste le meilleur : le gain vient du modèle de substitution.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Pourquoi le profil $(4~\%;\ 0{,}55;\ 12~\%;\ I=2)$ est-il sur le front de S1 alors que sa portance maximale (1,20) est juste à la limite de l'exigence ? Que deviendrait le front si l'on exigeait $C_{L,\max}\ge1{,}3$ ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Comparer la boucle à une optimisation bayésienne multi-objectif classique : c'est le vrai concurrent de même nature, et la seule façon d'isoler ce que la formulation QUBO apporte.
+\item Ajouter l'$\varepsilon$-contrainte pour viser directement les points non supportés.
+\item Étudier la sensibilité du front à l'exigence de manœuvre (1,1 à 1,4) : c'est le paramètre qui crée le compromis.
+\end{itemize}
+\end{pistes}

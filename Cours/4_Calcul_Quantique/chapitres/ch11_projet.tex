@@ -1,0 +1,122 @@
+\chapter{De bout en bout : la formulation quantique du hackathon}\label{ch:projet}
+\iterbanner{V0}
+\begin{evolution}{V1}{la boucle devient bi-objectif}Ce chapitre décrit la boucle de la V0, sur la seule traînée. En V1, elle a été étendue aux deux objectifs (traînée et SER), avec les contraintes codées dans le QUBO (13 qubits : réduction de Rosenberg et variables d'écart), et comparée à NSGA-II : voir le cours \emph{Optimisation bi-objectif traînée / SER}, chapitres 6 et 7.\end{evolution}
+
+\section{La chaîne complète}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=5mm and 6mm]
+\node[flow] (g) {Grille $8^3$\\ 9 bits};
+\node[flow,right=of g] (s1) {Phase 1\\ aéro : $C_D$};
+\node[flow,below=of s1] (s2) {Phase 2\\ SER};
+\node[flow,right=12mm of s1,yshift=-5mm] (m) {Modèles\\ quadratiques\\ $\widehat{C_D}$, $\widehat{\rm SER}$};
+\node[flow,right=of m,fill=corange!10] (qubo) {QUBO\\ $w\widehat{C_D}+(1-w)\widehat{\rm SER}$\\ (ch.~\ref{ch:qubo})};
+\node[flow,right=of qubo,fill=cblue!10] (solve) {QAOA /\\ recuit\\ (ch.~\ref{ch:recuit}, \ref{ch:qaoa})};
+\node[flow,below=12mm of qubo] (front) {front de Pareto\\ des profils \emph{simulés}};
+\draw[arr] (g) -- (s1); \draw[arr] (g) |- (s2);
+\draw[arr] (s1) -- (m); \draw[arr] (s2) -- (m);
+\draw[arr] (m) -- (qubo); \draw[arr] (qubo) -- (solve);
+\draw[arr] (solve) |- node[pos=0.25,right,font=\small] {candidats} (front);
+\draw[arr] (front) -| node[pos=0.75,left,font=\small,align=right] {simuler les\\ nouveaux} (s2.south);
+\end{tikzpicture}
+\caption{La formulation quantique de la note d'intention. Le front final ne contient que des profils réellement simulés : le modèle quadratique ne sert qu'à \emph{proposer} des candidats.}\label{fig:chaine}
+\end{figure}
+
+\section{La boucle itérative, et pourquoi elle est indispensable}
+\begin{tcolorbox}[coursbox,colback=white,colframe=cink,title={Algorithme (une seule fonction objectif, ici $C_D$).}]
+\begin{enumerate}
+\item Simuler $n_0$ profils (plan d'expériences initial).
+\item Ajuster le modèle quadratique (10 coefficients) sur tous les profils simulés.
+\item Construire le QUBO et le résoudre : QAOA, recuit, ou énumération quand $n$ est petit.
+\item Simuler les $k$ meilleurs candidats \emph{non encore simulés}.
+\item Recommencer jusqu'à stabilisation, ou épuisement du budget de simulations.
+\end{enumerate}
+\end{tcolorbox}
+On a vu au chapitre~\ref{ch:qubo} qu'un modèle ajusté \emph{une fois} sur toute la base désigne un profil seulement 38\textsuperscript{e} sur 512. La boucle corrige ce défaut, car elle raffine le modèle là où sont les bons candidats.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/boucle_convergence}
+\caption{Meilleur $C_D$ trouvé en fonction du nombre de profils simulés (médiane sur 50 tirages du plan initial : $n_0=10$ profils aléatoires, puis $k=3$ candidats par itération). Le QUBO est résolu ici par énumération, qui donne la même réponse qu'un QAOA ou un recuit parfaitement réussi. La boucle trouve le vrai minimum en \textbf{25 simulations} (médiane ; quartiles 22 et 34), contre 256 en moyenne pour un tirage au hasard sur 512 profils.}\label{fig:boucle}
+\end{figure}
+
+\begin{projet}[ : ce qu'il reste à construire]
+Ce résultat ne porte que sur $C_D$. Il faut encore :
+\begin{itemize}
+\item ajouter la SER (phase~2) ;
+\item traiter le bi-objectif (section suivante) ;
+\item remplacer l'énumération par QAOA et le recuit ;
+\item compter les simulations avec le même compteur que NSGA-II (\texttt{AeroSimulator}).
+\end{itemize}
+Les briques sont dans \texttt{Code/quantique/} : \texttt{qubo.py}, \texttt{qaoa.py}, \texttt{recuit.py}, \texttt{experiences.py}.
+\end{projet}
+
+\section{Deux objectifs, un seul QUBO}
+Un QUBO n'a qu'une énergie. Pour obtenir un front de Pareto $(C_D,\ {\rm SER})$ :
+\begin{itemize}
+\item \textbf{Somme pondérée} : minimiser $w\,\tilde C_D+(1-w)\,\widetilde{\rm SER}$ (objectifs normalisés) pour plusieurs $w\in[0,1]$. Elle reste quadratique, donc c'est un QUBO, mais elle ne trouve que les points de la \emph{partie convexe} du front.
+\item \textbf{$\varepsilon$-contrainte} : minimiser $\tilde C_D$ sous $\widetilde{\rm SER}\le\varepsilon$, avec des bits d'écart et une pénalité (ch.~\ref{ch:qubo}). Elle trouve tout le front, au prix de qubits supplémentaires, et la pénalité doit rester de degré 2.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.7\linewidth,height=5.6cm,axis lines=left,xmin=0,xmax=5,ymin=0,ymax=5,xtick=\empty,ytick=\empty,
+  xlabel={$\tilde C_D$},ylabel={$\widetilde{\rm SER}$}]
+\addplot[only marks,mark=*,cmuted,mark size=1.5pt] coordinates {(1.6,4.6)(2.4,4.1)(3.2,3.5)(2.7,2.9)(3.8,2.6)(4.3,1.9)(3.4,4.4)(4.6,3.6)(2.2,3.6)(4.0,4.0)};
+\addplot[cblue,thick,mark=*,mark size=2.2pt] coordinates {(0.6,4.4)(1.2,2.4)(2.9,1.1)(4.4,0.5)};
+\addplot[corange,only marks,mark=square*,mark size=2.6pt] coordinates {(2.3,2.0)};
+\draw[cblue,dashed] (axis cs:1.2,2.4) -- (axis cs:2.9,1.1);
+\node[corange,font=\small,anchor=west] at (axis cs:2.4,2.1) {non supporté};
+\node[cblue,font=\small,anchor=west] at (axis cs:0.65,4.6) {front de Pareto};
+\draw[-{Stealth},cmuted] (axis cs:4.4,4.6) -- (axis cs:3.9,4.1) node[pos=0,anchor=south,font=\small] {$w$ fixé : lignes de niveau};
+\end{axis}
+\end{tikzpicture}
+\caption{Le point orange est Pareto-optimal (aucun autre profil n'est meilleur sur les deux objectifs), mais il est situé \emph{au-dessus} du segment qui relie ses voisins : aucune pondération $w$ ne le rend minimal. La somme pondérée ne le trouvera jamais.}\label{fig:pareto}
+\end{figure}
+
+\section{La comparaison avec NSGA-II}
+Pour que la comparaison soit honnête :
+\begin{itemize}
+\item même grille de profils et même point de vol ;
+\item même \textbf{compteur de simulations uniques} ;
+\item même critère d'arrêt, fixé à l'avance : le front exact retrouvé, ou un pourcentage de son hypervolume ;
+\item plusieurs graines aléatoires, avec médiane et dispersion.
+\end{itemize}
+Le front exact est connu par énumération des 512 profils. C'est ce qui rend la démonstration rigoureuse.
+
+\section{Ressources et passage à l'échelle}
+Avec $d$ variables de forme codées sur $k$ bits chacune, en encodage binaire :
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+& notre cas ($d=3$, $k=3$) & $d=10$, $k=4$ & $d=50$, $k=4$\\
+\midrule
+qubits $n=dk$ & 9 & 40 & 200\\
+couplages (graphe complet) $\binom n2$ & 36 & 780 & 19\,900\\
+CNOT par couche QAOA ($2\binom n2$) & 72 & 1\,560 & 39\,800\\
+coefficients du modèle ($\binom{d+2}2$) & 10 & 66 & 1\,326\\
+simulation par vecteur d'état & triviale & $\approx16$~To & impossible\\
+\bottomrule
+\end{tabular}
+\end{center}
+Deux enseignements à présenter :
+\begin{itemize}
+\item le modèle quadratique en variables physiques demande peu de coefficients, donc peu de simulations, alors qu'un QUBO libre sur les bits en demanderait $\binom n2+n+1$ ;
+\item le graphe complet est le vrai obstacle matériel : profondeur QAOA en $O(n^2)$ par couche, et plongement coûteux sur un recuit quantique.
+\end{itemize}
+
+\section{Messages pour le jury}
+\begin{enumerate}
+\item La chaîne complète, de la physique au QUBO puis à QAOA et au recuit, est construite et \emph{vérifiée} sur un cas résolu exactement.
+\item La qualité se mesure en \textbf{nombre de simulations coûteuses} pour retrouver le front exact, et non en temps de calcul quantique.
+\item Le goulot d'étranglement est la \emph{fidélité du modèle quadratique}, pas la résolution du QUBO : la boucle itérative est essentielle.
+\item Les ressources quantiques croissent en $O(n^2)$ portes par couche pour un QUBO dense. C'est l'argument à confronter au matériel actuel (NISQ).
+\end{enumerate}
+
+\exercices
+\begin{exercice}
+Trois profils ont pour objectifs normalisés $A=(0,\,1)$, $B=(0{,}6,\,0{,}6)$, $C=(1,\,0)$. (a) Sont-ils tous Pareto-optimaux ? (b) Montrer qu'aucun $w\in[0,1]$ ne fait de $B$ le minimum de $w\,x+(1-w)\,y$. (c) Quelle méthode permet de trouver $B$ ?
+\end{exercice}
+\begin{exercice}
+Un cas industriel a 20 variables de forme à 16 niveaux chacune. Nombre de qubits en binaire ? Nombre de CNOT par couche de QAOA si le QUBO est dense ? Combien de simulations au minimum pour ajuster le modèle quadratique en variables physiques ? Et un QUBO libre sur les bits ?
+\end{exercice}

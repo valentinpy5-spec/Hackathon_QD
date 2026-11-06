@@ -1,0 +1,12 @@
+% figure générée par tools/make_figures.py : convergence
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.7cm},width=0.48\linewidth,height=5.4cm,
+  title style={font=\small},tick label style={font=\scriptsize},legend style={draw=none,font=\scriptsize}]
+\nextgroupplot[title={Facettage (secteur S1, 10~GHz)},xlabel={\texttt{n\_half}},ylabel={SER moyenne (dBm)},legend pos=south east]
+\addplot[cmuted,very thick,mark=*,mark size=1.3pt] coordinates {(25,-12.832) (50,-12.938) (100,-12.953) (150,-12.941) (200,-12.94) (300,-12.94) (400,-12.94)};\addlegendentry{NACA 0012}
+\addplot[cblue,very thick,mark=square*,mark size=1.3pt] coordinates {(25,-12.827) (50,-12.946) (100,-12.954) (150,-12.948) (200,-12.948) (300,-12.948) (400,-12.948)};\addlegendentry{NACA 2412}
+\nextgroupplot[title={Fréquence (NACA 2412, $\alpha=2^\circ$)},xlabel={fréquence (GHz)},xmode=log,
+  xtick={1,2,5,10,20,40},xticklabels={1,2,5,10,20,40}]
+\addplot[corange,very thick,mark=*,mark size=1.1pt] coordinates {(1,-12.898) (1.1356,-12.948) (1.2897,-12.964) (1.4646,-12.924) (1.6633,-13.041) (1.8889,-13.074) (2.1452,-13.05) (2.4362,-13.025) (2.7666,-13.021) (3.1419,-13.022) (3.5681,-12.996) (4.0521,-12.992) (4.6017,-12.983) (5.2259,-12.962) (5.9348,-12.981) (6.7399,-12.97) (7.6541,-12.955) (8.6924,-12.95) (9.8715,-12.943) (11.211,-12.937) (12.731,-12.94) (14.458,-12.934) (16.419,-12.931) (18.647,-12.926) (21.176,-12.925) (24.048,-12.927) (27.31,-12.923) (31.015,-12.928) (35.222,-12.928) (40,-12.92)};
+\end{groupplot}
+\end{tikzpicture}

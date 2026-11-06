@@ -1,0 +1,9 @@
+% figure générée par tools/make_figures.py : recuit_succes
+\begin{tikzpicture}
+\begin{semilogxaxis}[width=0.7\linewidth,height=5.2cm,axis lines=left,ymin=0,ymax=1.02,
+  xlabel={nombre de balayages (pas de température)},ylabel={fraction des 200 lectures},
+  legend style={draw=none,font=\small,at={(0.98,0.03)},anchor=south east}]
+\addplot[cblue,thick,mark=*] coordinates {(2,0.16) (5,0.33) (10,0.37) (20,0.51) (50,0.445) (100,0.49)};\addlegendentry{minimum exact du QUBO}
+\addplot[corange,thick,mark=square*] coordinates {(2,0.435) (5,0.79) (10,0.89) (20,0.94) (50,0.965) (100,0.98)};\addlegendentry{à moins de 0{,}1 count du minimum}
+\end{semilogxaxis}
+\end{tikzpicture}

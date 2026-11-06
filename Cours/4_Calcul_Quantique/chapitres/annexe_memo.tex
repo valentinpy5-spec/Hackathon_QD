@@ -1,0 +1,48 @@
+\chapter{Aide-mémoire}\label{annexe:memo}
+\iterbanner{V0}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.3cm}X}
+\toprule
+\textbf{État} & $\ket\psi=\sum_x\psi_x\ket x$, $\sum|\psi_x|^2=1$ ; phase globale sans effet\\
+\textbf{Mesure} & $P(x)=|\psi_x|^2$ ; $\expval A=\bra\psi A\ket\psi$ ; $N$ shots : erreur en $1/\sqrt N$\\
+\textbf{Évolution} & $U$ unitaire ; $e^{-iHt}$ ; $e^{-i\theta P}=\cos\theta\,\Id-i\sin\theta\,P$ pour $P$ de Pauli\\
+\textbf{Pauli} & $X=\begin{psmallmatrix}0&1\\1&0\end{psmallmatrix}$, $Z=\begin{psmallmatrix}1&0\\0&-1\end{psmallmatrix}$ ; $Z\ket b=(1-2b)\ket b$\\
+\textbf{Bits $\leftrightarrow$ spins} & $b=(1-s)/2$ ; opérateur $\hat b=(\Id-Z)/2$\\
+\textbf{Portes} & $H$ ; $R_P(\theta)=e^{-i\theta P/2}$ ; $R_{ZZ}(\theta)=\mathrm{CNOT}\,(\Id\otimes R_Z(\theta))\,\mathrm{CNOT}$\\
+\textbf{QUBO} & $\min_{\mathbf b}\mathbf b^\top Q\mathbf b+c$, $Q$ triangulaire supérieure, termes linéaires sur la diagonale\\
+\textbf{Ising} & $J_{ij}=Q_{ij}/4$ ; $h_i=-Q_{ii}/2-\tfrac14\sum_{j\neq i}Q_{ij}$ ; cte $=c+\tfrac12\sum Q_{ii}+\tfrac14\sum_{i<j}Q_{ij}$\\
+\textbf{Hamiltonien de coût} & $H_C=\sum h_iZ_i+\sum J_{ij}Z_iZ_j$ (diagonal) ; fondamental = solution\\
+\textbf{Pénalité} & égalité : $P\,g^2$ ; inégalité : bits d'écart ; $g$ doit être \emph{linéaire}\\
+\textbf{Recuit simulé} & accepter avec $\min(1,e^{-\Delta E/T})$ ; $T$ décroissante\\
+\textbf{Adiabatique} & $H(s)=(1-s)(-\sum X_k)+sH_C$ ; durée $\gg1/g_{\min}^2$\\
+\textbf{QAOA} & $\prod_k e^{-i\beta_kH_M}e^{-i\gamma_kH_C}\ket+^{\otimes n}$ ; minimiser $F_p=\expval{H_C}$ ; $2p$ angles\\
+\textbf{Ressources QAOA} & $n$ qubits ; par couche $n$ $R_Z$, $|E|$ $R_{ZZ}$ ($2|E|$ CNOT), $n$ $R_X$\\
+\textbf{Notre cas} & 9 qubits, 36 couplages, 72 CNOT/couche ; $P(\text{opt})$ : 0,018 ($p=1$) $\to$ 0,142 ($p=5$)\\
+\textbf{Boucle itérative} & vrai minimum de $C_D$ en 25 simulations (médiane) contre 256 au hasard\\
+\textbf{Pièges} & normaliser $E$ ; ordre des bits (Qiskit) ; dégénérescence $m=0$ ; pénalité de degré 4 ; somme pondérée = front convexe seulement\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Glossaire.}
+\begin{description}[style=nextline,leftmargin=2.5cm]
+\item[Amplitude] coefficient complexe d'une chaîne dans l'état ; son module au carré est une probabilité.
+\item[Shot] une exécution du circuit suivie d'une mesure : une chaîne de bits.
+\item[Fondamental] état d'énergie minimale d'un hamiltonien.
+\item[Gap] écart entre les deux niveaux d'énergie les plus bas.
+\item[Mélangeur] hamiltonien $\sum X_k$ qui fait passer l'amplitude d'une chaîne à ses voisines.
+\item[Plongement] représentation d'un graphe de couplages sur la connectivité limitée du matériel.
+\item[NISQ] \emph{Noisy Intermediate-Scale Quantum} : matériel actuel, bruité, de quelques dizaines à milliers de qubits.
+\end{description}
+
+\paragraph{Références.}
+\begin{itemize}
+\item M. A. Nielsen, I. L. Chuang, \emph{Quantum Computation and Quantum Information}, Cambridge UP, 2010, ch.~1, 2 et 4.
+\item E. Farhi, J. Goldstone, S. Gutmann, « A Quantum Approximate Optimization Algorithm », arXiv:1411.4028, 2014.
+\item A. Lucas, « Ising formulations of many NP problems », \emph{Frontiers in Physics} 2:5, 2014.
+\item T. Albash, D. A. Lidar, « Adiabatic quantum computation », \emph{Reviews of Modern Physics} 90, 015002, 2018.
+\item L. Zhou et al., « Quantum Approximate Optimization Algorithm: Performance, Mechanism, and Implementation on Near-Term Devices », \emph{Physical Review X} 10, 021067, 2020 (stratégie INTERP).
+\item H. Ni et al., « Airfoil shape optimization via coherent Ising machine », arXiv:2603.10518, 2026 (référence [3] de la note d'intention).
+\end{itemize}

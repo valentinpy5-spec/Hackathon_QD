@@ -1,0 +1,66 @@
+\chapter{V2 : le rayon de bord d'attaque comme variable}\label{ch:v2}
+\iterbanner{V2}
+
+\begin{evolution}{V2}{pourquoi ce chapitre}En V1, la SER de face d'un profil NACA dépendait presque uniquement de l'épaisseur, par le rayon de bord d'attaque $r_{BA}\propto t^2$ (chapitre~\ref{ch:naca}). En V2, la géométrie devient la série NACA modifiée (cours aéro, chapitre V2), où l'indice $I$ fixe le rayon indépendamment de l'épaisseur : $r_{BA}=1{,}1019\,(tI/6)^2$. Le modèle SER lui-même ne change pas.\end{evolution}
+
+\section{La SER de nez en fonction de $I$}
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_nez}
+\caption{SER dans l'axe de profils symétriques modifiés, selon l'indice $I$ (10~GHz). Traits pleins : optique physique ; tirets : loi $\pi r_{BA}$. Entre $I=8$ et $I=2$, l'écho de nez baisse d'environ 10~dB à épaisseur fixée.}\label{fig:v2-nez}
+\end{figure}
+
+À épaisseur fixée, le rayon varie comme $I^2$ : passer de $I=6$ (NACA standard) à $I=2$ divise le rayon par 9. La loi du point spéculaire prédit $-9{,}5$~dB ; l'optique physique donne $-7{,}5$~dB à toutes les épaisseurs (par exemple de $-13{,}1$ à $-20{,}6$~dBm à $t=12$~\%). Pour la première fois, la géométrie offre un levier sur la SER \emph{sans toucher à l'épaisseur}.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_carte}
+\caption{SER moyenne du secteur S1 sur la grille V2 (médiane sur la cambrure et sa position, à l'incidence de croisière). L'épaisseur et le rayon de bord d'attaque jouent désormais des rôles comparables (corrélations 0,71 et 0,67).}\label{fig:v2-carte}
+\end{figure}
+
+\section{Attention : les nez aigus sortent du régime optique}
+Le prix de ce levier est un problème de validité. Pour $I=2$, à 10~GHz :
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & $t=8$~\% & $t=12$~\% \\
+\midrule
+$r_{BA}$ & 0,8~mm & 1,8~mm \\
+$k\,r_{BA}$ & 0,16 & 0,37 \\
+écart Mie / PO pour un cylindre (TM) & $+4{,}6$~dB & $+2{,}5$~dB \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le nez est alors bien plus petit que la longueur d'onde : on n'est plus en régime optique, mais dans la zone de résonance, voire de Rayleigh. La solution exacte du cylindre montre qu'en polarisation TM, l'écho réel est \emph{plus fort} que $\pi a$, de 2,5 à 4,6~dB. Le gain de SER d'un nez aigu prédit par l'optique physique est donc probablement surestimé, peut-être de moitié en TM ; en TE, l'écart est de signe opposé.
+
+\section{La réponse exacte : méthode des moments}
+\begin{evolution}{V2}{section ajoutée après le premier calcul de la V2}Pour lever le doute, on a écrit une méthode des moments 2D en polarisation TM (\texttt{Code/ser/mom2d.py}), c'est-à-dire la résolution exacte de l'équation intégrale du champ électrique sur le contour. Elle reproduit la série de Mie du cylindre à 0,02~dB près, de $ka=0{,}5$ à $ka=31$, et ses résultats sur les profils sont convergés en maillage ($\lambda/15$, raffiné à $r_{BA}/4$ au nez) à 0,02~dB.\end{evolution}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_mom}
+\caption{SER moyenne du secteur S1 de profils symétriques : méthode des moments (traits pleins) et optique physique (tirets). Les deux méthodes coïncident pour les nez ronds ; pour les nez aigus, l'optique physique sous-estime l'écho de 2,5 à 4,3~dB.}\label{fig:v2-mom}
+\end{figure}
+
+\paragraph{Ce que change la méthode exacte.}
+\begin{itemize}
+\item Le \textbf{gain d'un nez aigu existe}, mais il est plus faible : de $I=6$ à $I=2$, $-5{,}1$~dB à $t=12$~\% (au lieu de $-7{,}3$~dB) et $-4{,}0$~dB à $t=8$~\% (au lieu de $-7{,}4$~dB).
+\item Sur les 1\,024 profils, l'optique physique sous-estime la SER de 1,05~dB en moyenne (écart-type 1,3~dB), mais le \textbf{classement} est presque identique : corrélation de rang 0,999.
+\item Les \textbf{fronts de Pareto} sont robustes : 3 profils communs sur 4 dans S1, 9 sur 10 dans S2. Seul l'écart de SER le long du front diminue : de 1,8 à 0,8~dB dans S1, de 5,3 à 3,4~dB dans S2.
+\end{itemize}
+
+\begin{projet}
+La méthode des moments devient la SER de référence de la V2 (\code{with\_objective(..., source="MoM")}) ; l'optique physique reste l'outil rapide. Le compromis traînée/SER de la V2 survit à la méthode exacte, avec un bénéfice radar plus modeste. Il reste à vérifier la polarisation TE et le passage en 3D, ce que le solveur du groupe SER, ou \texttt{bempp-cl} sur le STL, pourra faire.
+\end{projet}
+
+\exercices
+\begin{exercice}
+À quelle fréquence le nez d'un profil $t=12$~\%, $I=2$ (corde 1~m) atteindrait-il $k\,r_{BA}=3$, où l'optique physique est à 0,3~dB près ? Quelle est la longueur d'onde correspondante ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item \iterbadge{V2}~\textbf{Fait} : méthode des moments 2D en TM. Reste la polarisation TE (équation intégrale du champ magnétique), plus délicate.
+\item Calculer la SER dans les deux polarisations et retenir la pire, ce qui est l'usage pour une menace de polarisation inconnue.
+\end{itemize}
+\end{pistes}

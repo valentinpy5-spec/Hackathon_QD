@@ -1,0 +1,144 @@
+\chapter{Les bases : outils mathématiques et physique quantique sans prérequis}\label{ch:bases}
+\iterbanner{V0}
+
+Ce chapitre ne suppose \emph{aucune} connaissance de physique quantique. Il rassemble les outils mathématiques (nombres complexes, vecteurs et matrices complexes), puis les expériences qui obligent à abandonner la description classique. Il se termine par la liste des quatre postulats que les chapitres suivants détaillent un par un.
+
+\section{Boîte à outils : les nombres complexes}
+La mécanique quantique utilise des nombres complexes partout. Voici tout ce qui est nécessaire.
+\begin{itemize}
+\item $z=a+ib$ avec $i^2=-1$ ; \textbf{conjugué} $\bar z=a-ib$ ; \textbf{module} $|z|=\sqrt{a^2+b^2}$, et $|z|^2=z\bar z$.
+\item \textbf{Forme polaire} : $z=r\,e^{i\varphi}$ avec $r=|z|$ et $\varphi$ l'\emph{argument} ou \emph{phase}, où $e^{i\varphi}=\cos\varphi+i\sin\varphi$ (formule d'Euler).
+\item Multiplier par $e^{i\varphi}$, c'est \textbf{tourner} d'un angle $\varphi$ dans le plan complexe sans changer le module : $|e^{i\varphi}z|=|z|$.
+\item $e^{i\alpha}e^{i\beta}=e^{i(\alpha+\beta)}$ : les phases s'\emph{additionnent} quand on multiplie.
+\item Deux nombres de même module mais de phases opposées peuvent s'annuler : $e^{i0}+e^{i\pi}=1-1=0$. C'est l'interférence destructive du chapitre~\ref{ch:intro}.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.6,>={Stealth[length=2mm]}]
+\draw[->,cmuted] (-1.3,0) -- (1.4,0) node[right,cink,font=\small] {Re};
+\draw[->,cmuted] (0,-1.2) -- (0,1.3) node[above,cink,font=\small] {Im};
+\draw[cmuted,dashed] (0,0) circle (1);
+\draw[->,cblue,very thick] (0,0) -- (40:1) node[anchor=south west,font=\small] {$e^{i\varphi}$};
+\draw[corange,thick] (0.3,0) arc (0:40:0.3); \node[corange,font=\small] at (20:0.45) {$\varphi$};
+\draw[->,corange,very thick] (0,0) -- (220:1) node[anchor=north east,font=\small] {$e^{i(\varphi+\pi)}=-e^{i\varphi}$};
+\fill (1,0) circle (1pt) node[below right,font=\small] {$1$};
+\fill (0,1) circle (1pt) node[above left,font=\small] {$i$};
+\end{tikzpicture}
+\caption{Le cercle unité. Une \emph{phase} est un point de ce cercle ; deux phases opposées se compensent quand on les additionne.}
+\end{figure}
+
+\section{Boîte à outils : vecteurs et matrices complexes}
+\begin{itemize}
+\item Un \textbf{vecteur} de $\C^N$ est une colonne de $N$ nombres complexes. Le \textbf{produit hermitien} de $u$ et $v$ vaut $\sum_k\bar u_kv_k$ (on conjugue le premier) ; la norme est $\|v\|^2=\sum_k|v_k|^2$.
+\item La \textbf{transposée conjuguée} d'une matrice, notée $A^\dagger$ (« A dague »), est la transposée dont on conjugue chaque coefficient.
+\item $A$ est \textbf{hermitienne} si $A^\dagger=A$. C'est la version complexe d'une matrice symétrique : ses valeurs propres sont \emph{réelles} et ses vecteurs propres forment une base orthonormée (théorème spectral).
+\item $U$ est \textbf{unitaire} si $U^\dagger U=\Id$. C'est la version complexe d'une matrice de rotation : elle conserve les normes et les produits hermitiens.
+\item \textbf{Valeur propre} : $Av=\lambda v$ avec $v\neq0$. Pour une matrice diagonale, les valeurs propres sont les coefficients diagonaux et les vecteurs propres les vecteurs de la base canonique.
+\end{itemize}
+Retenir l'analogie : \emph{hermitienne} $\leftrightarrow$ quelque chose qu'on mesure (valeurs réelles) ; \emph{unitaire} $\leftrightarrow$ quelque chose qu'on fait subir à l'état (une rotation).
+
+\section{Une expérience qui casse l'intuition classique : la polarisation}
+La lumière a une \textbf{polarisation} : la direction dans laquelle oscille le champ électrique. Un \textbf{polariseur} orienté à l'angle $\theta$ ne laisse passer que la composante du champ selon $\theta$.
+
+\paragraph{En lumière intense (classique).} Une lumière polarisée à $0^\circ$ traversant un polariseur à $\theta$ voit son intensité multipliée par $\cos^2\theta$ (loi de Malus) : rien n'est surprenant, on projette un vecteur.
+
+\paragraph{Photon par photon (quantique).} En baissant l'intensité jusqu'à n'envoyer qu'\emph{un photon à la fois}, on observe que chaque photon passe \emph{entièrement} ou est \emph{entièrement} absorbé : il n'y a jamais de « fraction de photon ». La loi de Malus devient une loi de \textbf{probabilité} : le photon passe avec probabilité $\cos^2\theta$. Et s'il passe, il ressort polarisé selon $\theta$, et non plus selon $0^\circ$ : la mesure a \emph{changé} l'état.
+
+\paragraph{Le paradoxe des trois polariseurs.} Deux polariseurs croisés à $0^\circ$ puis $90^\circ$ ne laissent rien passer ($\cos^290^\circ=0$). Insérons un troisième polariseur à $45^\circ$ \emph{entre les deux} : de la lumière ressort ! La fraction transmise vaut $\cos^245^\circ\times\cos^245^\circ=\tfrac12\cdot\tfrac12=\tfrac14$ de ce qui sort du premier. Ajouter un filtre \emph{augmente} la transmission. Classiquement, c'est absurde ; quantiquement, c'est naturel : le polariseur à $45^\circ$ \emph{mesure} le photon et le \emph{prépare} dans un nouvel état, qui a une composante non nulle selon $90^\circ$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\tikzset{pol/.style={draw=cink,fill=cmuted!10,minimum width=4mm,minimum height=16mm}}
+\foreach \y/\lab/\mid in {1.4/{sans filtre central}/0,-1.0/{avec filtre à $45^\circ$}/1}{
+  \node[font=\small,anchor=east] at (-0.3,\y) {\lab};
+  \draw[corange,very thick,->] (0,\y) -- (1.1,\y);
+  \node[pol] at (1.4,\y) {}; \draw[cink,thick] (1.4,\y-0.6) -- (1.4,\y+0.6);
+  \node[font=\scriptsize,below] at (1.4,\y-0.85) {$0^\circ$};
+}
+% sans filtre
+\draw[corange,very thick,->] (1.7,1.4) -- (4.6,1.4);
+\node[pol] at (4.9,1.4) {}; \draw[cink,thick] (4.6,1.4) -- (5.2,1.4);
+\node[font=\scriptsize,below] at (4.9,0.55) {$90^\circ$};
+\node[font=\small,anchor=west] at (5.5,1.4) {rien ne passe};
+% avec filtre
+\draw[corange,very thick,->] (1.7,-1.0) -- (2.85,-1.0);
+\node[pol] at (3.15,-1.0) {}; \draw[cink,thick] (2.8,-1.35) -- (3.5,-0.65);
+\node[font=\scriptsize,below] at (3.15,-1.85) {$45^\circ$};
+\draw[corange,thick,->] (3.45,-1.0) -- (4.6,-1.0);
+\node[pol] at (4.9,-1.0) {}; \draw[cink,thick] (4.6,-1.0) -- (5.2,-1.0);
+\node[font=\scriptsize,below] at (4.9,-1.85) {$90^\circ$};
+\draw[corange,thin,->] (5.2,-1.0) -- (5.9,-1.0);
+\node[font=\small,anchor=west] at (6.0,-1.0) {$\tfrac14$ passe};
+\end{tikzpicture}
+\caption{Le paradoxe des trois polariseurs. Le filtre central ne « bloque » pas : il mesure et re-prépare l'état du photon.}\label{fig:polariseurs}
+\end{figure}
+
+\paragraph{La description qui marche.} On représente la polarisation d'un photon par un \textbf{vecteur unitaire} $\ket\psi=\cos\phi\,\ket{0^\circ}+\sin\phi\,\ket{90^\circ}$. Un polariseur à $\theta$ :
+\begin{enumerate}
+\item laisse passer avec probabilité $|\langle\theta|\psi\rangle|^2=\cos^2(\theta-\phi)$, le carré de la projection ;
+\item laisse le photon transmis dans l'état $\ket\theta$.
+\end{enumerate}
+\emph{Ce sont exactement les règles du qubit} : la polarisation d'un photon \emph{est} un qubit, avec $\ket0=\ket{0^\circ}$ et $\ket1=\ket{90^\circ}$. L'état $\ket{45^\circ}=\tfrac1{\sqrt2}(\ket0+\ket1)$ sera noté $\ket+$ au chapitre suivant.
+
+\section{Ce que veut dire « superposition »}
+Un photon polarisé à $45^\circ$ est dans la \textbf{superposition} $\tfrac1{\sqrt2}(\ket{0^\circ}+\ket{90^\circ})$. Trois contresens fréquents :
+\begin{itemize}
+\item \emph{« Il est à $0^\circ$ et à $90^\circ$ en même temps. »} Non : il est dans un état précis, $45^\circ$, qui passe à coup sûr un polariseur à $45^\circ$. « Superposé » est relatif à une base : $\ket{45^\circ}$ est superposé dans la base $\{0^\circ,90^\circ\}$, mais c'est un état de base dans la base $\{45^\circ,135^\circ\}$.
+\item \emph{« Il est en réalité à $0^\circ$ ou à $90^\circ$, on ne sait juste pas lequel. »} Non : un tel mélange statistique, 50~\% de photons à $0^\circ$ et 50~\% à $90^\circ$, ne passerait le polariseur à $45^\circ$ qu'une fois sur deux. L'état superposé passe toujours. Les \emph{amplitudes} ne sont pas de l'ignorance.
+\item \emph{« La mesure révèle une valeur préexistante. »} Non : elle \emph{produit} un résultat aléatoire et \emph{modifie} l'état (troisième polariseur).
+\end{itemize}
+
+\section{Le spin et l'expérience de Stern et Gerlach}
+Un autre système à deux états, historiquement fondateur, est le \textbf{spin} d'un électron ou d'un atome d'argent : un petit moment magnétique. Envoyé dans un champ magnétique inhomogène orienté selon $z$ (appareil de Stern-Gerlach), un faisceau d'atomes se sépare en \emph{deux} taches seulement : « spin haut » ($+1$) et « spin bas » ($-1$). Classiquement, on attendrait un continuum. Les mêmes phénomènes réapparaissent :
+\begin{itemize}
+\item on trie les atomes « haut selon $z$ », puis on mesure selon $x$ : on obtient 50/50 ;
+\item on remesure selon $z$ : on obtient de nouveau 50/50. La mesure selon $x$ a effacé l'information sur $z$.
+\end{itemize}
+C'est l'origine du vocabulaire « spin » ($s=\pm1$) utilisé pour le modèle d'Ising au chapitre~\ref{ch:qubo}. Les valeurs $\pm1$ y sont celles de l'observable $Z$.
+
+\section{Énergie et niveaux discrets}
+Le mot « quantique » vient de ce que l'énergie d'un système lié (atome, circuit supraconducteur) ne prend que des valeurs \emph{discrètes} : les \textbf{niveaux d'énergie}. Le plus bas est l'\textbf{état fondamental}. Un système en contact avec un environnement froid tend à y descendre.
+\begin{resultat}
+Toute l'idée de l'optimisation quantique tient en une phrase : \emph{construire un système dont les niveaux d'énergie sont les valeurs de notre fonction de coût}, puis l'amener dans son état fondamental. Le lire, c'est lire la solution. Les chapitres~\ref{ch:hamiltoniens} à \ref{ch:qaoa} réalisent ce programme.
+\end{resultat}
+
+\section{Qu'est-ce qu'un qubit physique ?}
+N'importe quel système à deux niveaux bien isolé et contrôlable :
+\begin{center}
+\begin{tabular}{p{4.2cm}p{5.2cm}p{4.6cm}}
+\toprule
+Technologie & $\ket0$ / $\ket1$ & Exemples\\
+\midrule
+Circuits supraconducteurs & deux niveaux d'énergie d'un circuit LC non linéaire (transmon), à $\sim10$~mK & IBM, Google ; \textbf{D-Wave} (qubits de flux, recuit)\\
+Ions piégés & deux niveaux d'un ion & Quantinuum, IonQ\\
+Atomes neutres & niveaux d'atomes tenus par lasers & Pasqal (France)\\
+Photons & polarisation ou chemin & Quandela (France)\\
+Spins dans le silicium & spin d'un électron & Quobly (France)\\
+\bottomrule
+\end{tabular}
+\end{center}
+Pour ce cours, la technologie n'importe pas : on manipule des qubits abstraits, simulés sur ordinateur classique.
+
+\section{Les quatre postulats, en une page}
+Tout le calcul quantique repose sur quatre règles. Les chapitres suivants les déroulent.
+\begin{center}
+\begin{tabular}{p{2.6cm}p{6.6cm}p{4.3cm}}
+\toprule
+Postulat & Énoncé & Chapitre\\
+\midrule
+1. \textbf{État} & un vecteur unitaire d'un espace $\C^N$ (à une phase globale près) & ch.~\ref{ch:qubit}\\
+2. \textbf{Mesure} & résultat $k$ avec probabilité $|\langle u_k|\psi\rangle|^2$, puis l'état devient $\ket{u_k}$ & ch.~\ref{ch:qubit}, \ref{ch:algebre}\\
+3. \textbf{Évolution} & $\ket\psi\mapsto U\ket\psi$ avec $U$ unitaire, $U=e^{-iHt}$ pour un hamiltonien $H$ & ch.~\ref{ch:algebre}, \ref{ch:hamiltoniens}\\
+4. \textbf{Composition} & $n$ qubits : produit tensoriel, espace de dimension $2^n$ & ch.~\ref{ch:multi}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\exercices
+\begin{exercice}[nombres complexes]
+Soit $z_1=\tfrac1{\sqrt2}e^{i\pi/4}$ et $z_2=\tfrac1{\sqrt2}e^{i5\pi/4}$. Calculer $|z_1|^2$, $|z_2|^2$, $|z_1+z_2|^2$ et $|z_1|^2+|z_2|^2$. Lequel des deux derniers est une « somme d'amplitudes », lequel une « somme de probabilités » ?
+\end{exercice}
+\begin{exercice}[trois polariseurs]
+Un photon sort d'un polariseur à $0^\circ$. Il traverse ensuite un polariseur à $30^\circ$, puis un polariseur à $90^\circ$. Quelle est la probabilité qu'il sorte du dernier ? Et sans le polariseur à $30^\circ$ ?
+\end{exercice}

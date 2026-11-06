@@ -1,0 +1,78 @@
+% Préambule commun (repris du cours sur le modèle aéro)
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+\fi
+\usepackage[french]{babel}
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,shapes.geometric,decorations.pathreplacing,decorations.markings,patterns,babel}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\usepackage{tabularx,booktabs,array}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\usepackage{listings}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[raggedright]{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+\definecolor{cblue}{HTML}{2A78D6}
+\definecolor{corange}{HTML}{EB6834}
+\definecolor{cgreen}{HTML}{1BAF7A}
+\definecolor{cink}{HTML}{1F2328}
+\definecolor{cmuted}{HTML}{6B6F76}
+
+% ---------------------------------------------------------------- notations
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\Ue}{U_e}
+\renewcommand{\Re}{\mathit{Re}}
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% ---------------------------------------------------------------- encadrés
+\tcbset{coursbox/.style={enhanced,breakable,boxrule=0pt,leftrule=2.5pt,arc=0pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,fonttitle=\bfseries\small,coltitle=cink,
+  attach title to upper={\ }}}
+\newtcolorbox{definition}[1][]{coursbox,colback=cblue!5,colframe=cblue,title={Définition#1.}}
+\newtcolorbox{resultat}[1][]{coursbox,colback=cgreen!6,colframe=cgreen,title={À retenir#1.}}
+\newtcolorbox{projet}[1][]{coursbox,colback=corange!6,colframe=corange,title={Dans notre projet#1.}}
+\newtcolorbox{piege}[1][]{coursbox,colback=cmuted!7,colframe=cmuted,title={Piège#1.}}
+\newtcolorbox{codebox}[1][]{coursbox,colback=cmuted!3,colframe=cblue!60,title={Dans le code#1.}}
+
+% ---------------------------------------------------------------- exercices
+\newcounter{exo}[chapter]
+\renewcommand{\theexo}{\thechapter.\arabic{exo}}
+\newenvironment{exercice}[1][]{\refstepcounter{exo}\par\medskip\noindent
+  \textbf{\color{cblue}Exercice~\theexo}\if\relax\detokenize{#1}\relax\else\ (#1)\fi.\ }{\par}
+\newcommand{\exercices}{\section*{Exercices}\addcontentsline{toc}{section}{Exercices}
+  \noindent\textit{Corrigés en annexe~\ref{annexe:corriges}. Chercher d'abord sans les regarder.}}
+
+\tikzset{
+  flow/.style={draw=cink,rounded corners=2pt,fill=white,align=center,font=\small,inner sep=4pt},
+  arr/.style={-{Stealth[length=2.2mm]},cink,thick},
+}
+
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,frame=single,rulecolor=\color{cmuted!50},
+  backgroundcolor=\color{cmuted!6},keywordstyle=\color{cblue}\bfseries,commentstyle=\color{cmuted}\itshape,
+  stringstyle=\color{corange},showstringspaces=false,language=Python,
+  literate={é}{\'e}1{è}{\`e}1{à}{\`a}1{ê}{\^e}1{ç}{\c c}1{ô}{\^o}1{î}{\^i}1{ù}{\`u}1{É}{\'E}1{→}{$\to$}1}
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{1}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+\setlength{\parskip}{0.45em}
+
+
+\definecolor{cviolet}{HTML}{7A4FB3}
+\newtcolorbox{pistes}[1][]{coursbox,colback=cviolet!6,colframe=cviolet,title={Pistes d'amélioration#1.}}
+\newcommand{\dB}{\,\mathrm{dB}}

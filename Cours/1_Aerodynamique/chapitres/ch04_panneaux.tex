@@ -1,0 +1,213 @@
+\chapter{La méthode des panneaux de Hess-Smith}\label{ch:panneaux}
+\iterbanner{V0}
+
+\section{Le principe}
+On remplace le contour par $N$ segments rectilignes, les \textbf{panneaux}. Sur chacun, on pose :
+\begin{itemize}
+\item une nappe de sources d'intensité \textbf{constante} $\sigma_j$, propre au panneau $j$ ;
+\item une nappe tourbillonnaire d'intensité $\gamma$, constante, et \textbf{la même sur tous les panneaux}.
+\end{itemize}
+Cela fait $N+1$ inconnues : $\sigma_1,\dots,\sigma_N$ et $\gamma$. On écrit $N+1$ équations :
+\begin{itemize}
+\item la non-pénétration $\vect V\cdot\vect n_i=0$ au milieu de chaque panneau, appelé \textbf{point de collocation} : $N$ équations ;
+\item la condition de Kutta : 1 équation.
+\end{itemize}
+
+\paragraph{Pourquoi des sources et un seul tourbillon ?} Les sources seules ont une circulation totale nulle, donc ne portent pas (Kutta-Joukowski). Il faut de la circulation, mais un tourbillon libre par panneau donnerait $2N$ inconnues pour $N+1$ équations : le problème serait sous-déterminé. Hess et Smith (1967) prennent le minimum : une seule intensité tourbillonnaire uniforme, que la condition de Kutta fixe. C'est la formulation la plus simple qui donne une solution unique avec portance.
+
+\section{Géométrie des panneaux}
+Le panneau $j$ va du point $(x_j,y_j)$ au point $(x_{j+1},y_{j+1})$ du contour. On en tire (figure~\ref{fig:panneau}) :
+\[
+L_j=\sqrt{(x_{j+1}-x_j)^2+(y_{j+1}-y_j)^2},\qquad
+\vect t_j=\frac{(x_{j+1}-x_j,\ y_{j+1}-y_j)}{L_j},\qquad
+\vect n_j=(t_{y,j},\,-t_{x,j}),
+\]
+et le point de collocation $(\bar x_j,\bar y_j)$ au milieu. Comme le contour est parcouru dans le sens trigonométrique, $\vect n_j$ (à droite de $\vect t_j$) pointe vers l'extérieur, c'est-à-dire vers le fluide.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.1]
+% panneau
+\draw[cink,very thick] (0,0) -- (4,0);
+\fill[cink] (0,0) circle (1.6pt) node[below left,font=\small] {début $(x_j,y_j)$};
+\fill[cink] (4,0) circle (1.6pt) node[below right,font=\small] {fin $(x_{j+1},y_{j+1})$};
+\fill[cgreen] (2,0) circle (1.8pt) node[below left=3pt and 1pt,font=\small,cgreen] {collocation};
+\draw[arr,cblue] (2,0) -- (3,0) node[above,font=\small,cblue] {$\vect t_j$};
+\draw[arr,cblue] (2,0) -- (2,-0.9) node[right,font=\small,cblue] {$\vect n_j$ (vers le fluide)};
+\draw[arr,cmuted] (2,0) -- (2,0.7) node[left,font=\small,cmuted] {$\vect e_\eta$};
+% repère local
+\draw[arr,cmuted] (0,0) -- (0.9,0) ; \node[cmuted,font=\small] at (0.8,0.2) {$\xi$};
+% point P
+\coordinate (P) at (2.9,2.2);
+\fill[corange] (P) circle (1.8pt) node[above right,font=\small,corange] {$P=(\xi,\eta)$};
+\draw[corange,thin] (0,0) -- (P) node[pos=0.5,above left,font=\small] {$r_1$};
+\draw[corange,thin] (4,0) -- (P) node[pos=0.5,right,font=\small] {$r_2$};
+\draw[corange] (0.7,0) arc (0:37.2:0.7); \node[corange,font=\small] at (0.95,0.32) {$\theta_1$};
+\draw[corange] (4.5,0) arc (0:116.6:0.5); \node[corange,font=\small] at (4.55,0.62) {$\theta_2$};
+\draw[cmuted,dashed] (4,0) -- (4.7,0);
+\node[font=\small,cmuted,align=left] at (-1.5,1.3) {intérieur du profil\\ (côté $\eta>0$)};
+\node[font=\small,cmuted] at (-1.2,-1.0) {fluide ($\eta<0$)};
+\end{tikzpicture}
+\caption{Un panneau et son repère local. $\xi$ suit la tangente, $\eta$ la normale gauche, qui pointe vers l'intérieur du profil. Les angles $\theta_1$, $\theta_2$ sont ceux sous lesquels les extrémités voient le point $P$.}\label{fig:panneau}
+\end{figure}
+
+\section{La vitesse induite par un panneau}
+Plaçons le panneau sur l'axe $\xi\in[0,L]$, $\eta=0$, et calculons la vitesse qu'il induit en un point $P=(\xi,\eta)$.
+
+\paragraph{Source.} Un élément $\dd\xi'$ en $(\xi',0)$ est une source de débit $\sigma\,\dd\xi'$. Sa vitesse en $P$ est radiale :
+\[
+\dd\vect V=\frac{\sigma\,\dd\xi'}{2\pi}\,\frac{(\xi-\xi',\ \eta)}{(\xi-\xi')^2+\eta^2}.
+\]
+En intégrant :
+\[
+u_\sigma=\frac{\sigma}{2\pi}\int_0^L\frac{\xi-\xi'}{(\xi-\xi')^2+\eta^2}\,\dd\xi'
+=\frac{\sigma}{4\pi}\Big[-\ln\big((\xi-\xi')^2+\eta^2\big)\Big]_0^L
+=\frac{\sigma}{2\pi}\ln\frac{r_1}{r_2},
+\]
+\[
+v_\sigma=\frac{\sigma}{2\pi}\int_0^L\frac{\eta}{(\xi-\xi')^2+\eta^2}\,\dd\xi'=\frac{\sigma}{2\pi}\big(\theta_2-\theta_1\big),
+\qquad \theta_k=\operatorname{atan2}(\eta,\ \xi-\xi_k).
+\]
+La composante tangentielle dépend du rapport des distances aux extrémités, la composante normale de l'angle sous lequel on voit le panneau.
+
+\paragraph{Tourbillon.} La vitesse d'un tourbillon est celle d'une source tournée de $+90^\circ$ : $(u,v)\to(-v,u)$. On obtient sans nouveau calcul
+\[
+u_\gamma=-\frac{\gamma}{2\pi}\big(\theta_2-\theta_1\big),\qquad v_\gamma=\frac{\gamma}{2\pi}\ln\frac{r_1}{r_2}.
+\]
+
+\paragraph{Auto-influence.} Quand $P$ est le point de collocation du panneau lui-même, $r_1=r_2$ donc $\ln(r_1/r_2)=0$. Pour l'angle, il faut savoir de quel côté on s'approche. Le fluide est du côté $\eta<0$. En faisant $\eta\to0^-$ avec $0<\xi<L$, on a $\theta_1\to0$ et $\theta_2\to-\pi$, donc $\theta_2-\theta_1=-\pi$. On retrouve les demi-sauts du chapitre précédent :
+\begin{itemize}
+\item la source induit sur elle-même $v_\sigma=-\sigma/2$ selon $\vect e_\eta$, soit $+\sigma/2$ selon la normale sortante : une source positive « souffle » vers le fluide ;
+\item le tourbillon induit $u_\gamma=+\gamma/2$ selon la tangente.
+\end{itemize}
+
+\paragraph{Retour au repère global.} Avec $\vect e_\xi=\vect t_j=(t_x,t_y)$ et $\vect e_\eta=(-t_y,t_x)$, une vitesse locale $(u,v)$ vaut $(u\,t_x-v\,t_y,\ u\,t_y+v\,t_x)$ dans le repère global.
+
+\begin{codebox}[ : \code{panel.influence\_matrices}]
+Tout est vectorisé : on calcule d'un coup les $N\times N$ couples (collocation $i$, panneau $j$).
+\begin{lstlisting}
+dx = P.xc[:, None] - P.xs[None, :]          # collocation i - debut du panneau j
+dy = P.yc[:, None] - P.ys[None, :]
+xi  =  dx * tx + dy * ty                    # coordonnees locales du panneau j
+eta = -dx * ty + dy * tx
+r1, r2 = np.hypot(xi, eta), np.hypot(xi - L, eta)
+lnr = np.log(r1 / r2)
+dth = np.arctan2(eta, xi - L) - np.arctan2(eta, xi)    # theta2 - theta1
+idx = np.arange(P.n)
+lnr[idx, idx] = 0.0                         # auto-influence, cote fluide
+dth[idx, idx] = -np.pi
+us_l, vs_l = lnr / (2*np.pi), dth / (2*np.pi)      # source unitaire
+uv_l, vv_l = -dth / (2*np.pi), lnr / (2*np.pi)     # tourbillon unitaire
+\end{lstlisting}
+Les quatre matrices renvoyées (\code{usx, usy, uvx, uvy}) contiennent les composantes globales de la vitesse induite en $i$ par une source unitaire et par un tourbillon unitaire posés sur le panneau $j$. Elles ne dépendent que de la géométrie, pas de l'incidence.
+\end{codebox}
+
+\section{Le système linéaire}
+Notons $A^n_{ij}$ et $A^t_{ij}$ les composantes normale ($\cdot\,\vect n_i$) et tangentielle ($\cdot\,\vect t_i$) de la vitesse induite en $i$ par une source unitaire sur le panneau $j$, et $B^n_{ij}$, $B^t_{ij}$ les mêmes pour un tourbillon unitaire. La vitesse au point de collocation $i$ s'écrit
+\[
+\vect V_i=\vect U_\infty+\sum_j\sigma_j\,(\text{vitesse de la source }j)+\gamma\sum_j(\text{vitesse du tourbillon }j),
+\qquad \vect U_\infty=(\cos\alpha,\ \sin\alpha).
+\]
+
+\paragraph{Non-pénétration.} Pour $i=1,\dots,N$ :
+\[
+\sum_{j=1}^N A^n_{ij}\,\sigma_j+\Big(\sum_{j=1}^N B^n_{ij}\Big)\gamma=-\vect U_\infty\cdot\vect n_i .
+\]
+
+\paragraph{Kutta discrète.} Les deux panneaux qui touchent le bord de fuite sont le premier (extrados, $\vect t_1$ dirigé vers l'amont) et le dernier (intrados, $\vect t_N$ dirigé vers l'aval). Leurs tangentes sont donc presque opposées. L'écoulement réel quitte le bord de fuite vers l'aval des deux côtés : $V_{t,1}<0$ et $V_{t,N}>0$. Demander des vitesses de même norme revient à
+\begin{gather*}
+V_{t,1}+V_{t,N}=0\\
+\Longleftrightarrow\quad
+\sum_j\big(A^t_{1j}+A^t_{Nj}\big)\sigma_j+\Big(\sum_jB^t_{1j}+\sum_jB^t_{Nj}\Big)\gamma=-\vect U_\infty\cdot(\vect t_1+\vect t_N).
+\end{gather*}
+
+\paragraph{Forme matricielle.}
+\[
+\begin{pmatrix}
+A^n & B^n\vect 1\\[2pt]
+A^t_{1\cdot}+A^t_{N\cdot} & \vect 1^\top\big(B^t_{1\cdot}+B^t_{N\cdot}\big)^\top
+\end{pmatrix}
+\begin{pmatrix}\boldsymbol\sigma\\ \gamma\end{pmatrix}
+=-\begin{pmatrix}\big(\vect U_\infty\cdot\vect n_i\big)_{i}\\ \vect U_\infty\cdot(\vect t_1+\vect t_N)\end{pmatrix}.
+\]
+C'est un système \textbf{dense} de taille $N+1=201$. La matrice ne dépend que de la géométrie ; seul le second membre dépend de $\alpha$.
+
+\begin{piege}
+Écrire $V_{t,1}=V_{t,N}$ au lieu de $V_{t,1}+V_{t,N}=0$ est l'erreur classique : avec des tangentes opposées, cela imposerait des vitesses physiques \emph{opposées} au bord de fuite. Le symptôme est un $C_L$ faux et un $C_{L,C_p}$ très différent de $C_{L,KJ}$.
+\end{piege}
+
+\begin{codebox}[ : \code{panel.solve}]
+\begin{lstlisting}
+A = np.zeros((N + 1, N + 1))
+A[:N, :N] = Asn                          # sources -> vitesse normale
+A[:N, N]  = Avn.sum(axis=1)              # tourbillon uniforme -> vitesse normale
+A[N, :N]  = Ast[0] + Ast[-1]             # Kutta : Vt_1 + Vt_N = 0
+A[N, N]   = Avt[0].sum() + Avt[-1].sum()
+lu = np.linalg.inv(A)                    # reutilisable pour toute incidence
+b[:N] = -(Uinf[0] * P.nx + Uinf[1] * P.ny)
+b[N]  = -(Uinf[0] * (P.tx[0] + P.tx[-1]) + Uinf[1] * (P.ty[0] + P.ty[-1]))
+q = lu @ b;  sigma, gamma = q[:N], q[N]
+\end{lstlisting}
+Le dictionnaire optionnel \code{cache} conserve les panneaux, les matrices d'influence et l'inverse. Changer d'incidence ne coûte alors qu'un produit matrice-vecteur, ce que \code{alpha\_for\_cl} exploite (ch.~\ref{ch:modele}). L'inverse explicite est acceptable ici : $201\times201$, une fois par profil.
+\end{codebox}
+
+\section{Ce qu'on tire de la solution}
+\paragraph{Vitesse tangentielle et pression.} Aux points de collocation,
+\[
+V_{t,i}=\vect U_\infty\cdot\vect t_i+\sum_jA^t_{ij}\sigma_j+\gamma\sum_jB^t_{ij},\qquad C_{p,i}=1-V_{t,i}^2 .
+\]
+$V_{t,i}$ est \emph{signée} selon $\vect t_i$ : elle est négative sur l'extrados (l'écoulement va du bord d'attaque vers le bord de fuite, à l'opposé du sens de parcours) et positive sur l'intrados. Le changement de signe repère le point d'arrêt (ch.~\ref{ch:cl}).
+
+\paragraph{Efforts.} La force de pression sur le panneau $i$ vaut $-C_{p,i}\,\vect n_i\,L_i$ (en unités de $\tfrac12\rho U_\infty^2c$). On somme, puis on projette :
+\[
+\vect F=-\sum_iC_{p,i}\,\vect n_i\,L_i,\qquad
+C_L=F_y\cos\alpha-F_x\sin\alpha,\qquad C_{D,p}=F_x\cos\alpha+F_y\sin\alpha,
+\]
+\[
+C_{M,c/4}=-\sum_i\Big[(\bar x_i-\tfrac14)\,f_{y,i}-\bar y_i\,f_{x,i}\Big]\qquad\text{(positif à cabrer).}
+\]
+
+\paragraph{Deux contrôles gratuits.} La circulation totale de la nappe tourbillonnaire vaut $\gamma$ fois le périmètre, comptée dans le sens trigonométrique. La portance correspond à une circulation horaire $\Gamma=-\gamma\,\ell_{tot}$, d'où $C_{L,KJ}=-2\gamma\,\ell_{tot}$ par Kutta-Joukowski. On doit avoir $C_{L,KJ}\approx C_{L,C_p}$, et $C_{D,p}\to0$ (d'Alembert). Les deux écarts mesurent l'erreur de discrétisation.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/cp}
+\caption{Distributions de $C_p$ calculées par \code{panel.solve} (200 panneaux). Bleu : extrados ; orange : intrados. Axe vertical inversé, convention usuelle. Le pic d'aspiration du NACA 0012 passe de $C_p=-0{,}41$ à $\alpha=0$ à $-2{,}06$ à $\alpha=5^\circ$.}\label{fig:cp}
+\end{figure}
+
+\section{Vérifications}
+\paragraph{Convergence.} La figure~\ref{fig:convergence} montre, pour le NACA 0012 à $5^\circ$, que les trois indicateurs décroissent à peu près en $1/N$ (pentes mesurées $-1{,}17$ pour $C_L$ et $-1{,}24$ pour $C_{D,p}$). C'est l'ordre attendu pour des panneaux plans à singularités constantes avec collocation au milieu. À 200 panneaux, $C_L$ est à $0{,}06$~\% de sa valeur limite.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/convergence}
+\caption{Convergence en maillage sur le NACA 0012 à $\alpha=5^\circ$. La référence $C_L^\infty$ est calculée avec 2\,400 panneaux.}\label{fig:convergence}
+\end{figure}
+
+\paragraph{Pente et angle de portance nulle.} La figure~\ref{fig:cl-alpha} compare les panneaux à la théorie des profils minces. Les pentes mesurées valent $6{,}88$ à $6{,}89$~/rad, contre $2\pi(1+0{,}77\times0{,}12)=6{,}86$ attendu avec la correction d'épaisseur. Les angles de portance nulle valent $-2{,}13^\circ$ (2412) et $-4{,}26^\circ$ (4412), contre $-2{,}08^\circ$ et $-4{,}15^\circ$ en profil mince.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/cl_alpha}
+\caption{$C_L(\alpha)$ non visqueux de trois profils (traits pleins) et théorie des profils minces (tirets), avec l'angle $\alpha_{L0}$ calculé par l'intégrale du chapitre~\ref{ch:potentiel}. L'écart de pente vient de l'épaisseur.}\label{fig:cl-alpha}
+\end{figure}
+
+\begin{resultat}
+\begin{itemize}
+\item $N$ sources constantes, un tourbillon uniforme, $N$ conditions de glissement et une condition de Kutta : un système dense $(N+1)\times(N+1)$, inversé une fois par géométrie.
+\item Sorties : $V_t$ signée, $C_p$, $C_L$, $C_M$, et deux contrôles ($C_{L,KJ}$, $C_{D,p}$).
+\item Précision : $1/N$, soit moins de 0,1~\% sur $C_L$ à 200 panneaux.
+\end{itemize}
+\end{resultat}
+
+\begin{projet}
+Côté optimisation, deux propriétés de ce bloc comptent. D'abord, il est \emph{exactement} linéaire en $\alpha$ pour une géométrie donnée, ce qui rend $C_L$ quasi affine en $(m,\alpha)$ : un modèle quadratique représente $C_L$ avec $R^2=0{,}9998$. Ensuite, c'est une méthode d'éléments de frontière, comme la méthode des moments qu'utilisent beaucoup de solveurs de SER : on discrétise la surface et on résout un système dense. C'est aussi le type de système que visent les algorithmes quantiques de résolution linéaire cités dans la note d'intention.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Vérifier le calcul de $v_\sigma$ : montrer que $\int_0^L\frac{\eta\,\dd\xi'}{(\xi-\xi')^2+\eta^2}=\theta_2-\theta_1$, avec $\theta_k=\operatorname{atan2}(\eta,\xi-\xi_k)$. Que vaut cette intégrale très loin du panneau ? Interpréter.
+\end{exercice}
+\begin{exercice}
+(a) Quel est le coût, en ordre de grandeur, de l'inversion d'une matrice $201\times201$, puis d'une résolution pour une nouvelle incidence une fois l'inverse connue ? (b) En déduire pourquoi \code{alpha\_for\_cl}, qui appelle \code{solve} 5 à 8 fois, ne coûte presque rien de plus qu'un seul calcul.
+\end{exercice}

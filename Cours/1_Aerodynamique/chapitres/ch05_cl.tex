@@ -1,0 +1,93 @@
+\chapter{La couche limite intégrale : principe et mise en place}\label{ch:cl}
+\iterbanner{V0}
+
+\section{Pourquoi une méthode intégrale}
+Les équations de Prandtl sont des EDP paraboliques en $(s,y)$. Les résoudre sur chaque face demanderait un maillage dans l'épaisseur, une loi de paroi ou un modèle de turbulence, et des centaines de stations. Les \textbf{méthodes intégrales} font un pari plus modeste : intégrer les équations dans l'épaisseur, ne suivre que quelques grandeurs globales du profil de vitesse, et fermer le système par des corrélations empiriques. On passe d'une EDP à une ou deux \textbf{EDO en $s$}, résolues en quelques millisecondes.
+
+\section{Rappels : grandeurs intégrales et équation de von Kármán}
+Pour un profil de vitesse $u(s,y)$ qui tend vers $U_e(s)$ en bord de couche :
+\[
+\delta^*=\int_0^\infty\Big(1-\frac{u}{U_e}\Big)\dd y,\qquad
+\theta=\int_0^\infty\frac{u}{U_e}\Big(1-\frac{u}{U_e}\Big)\dd y,\qquad
+H=\frac{\delta^*}{\theta},\qquad c_f=\frac{\tau_w}{\tfrac12\rho U_e^2}.
+\]
+$\delta^*$ est le déplacement des lignes de courant extérieures, $\theta$ mesure le déficit de quantité de mouvement, et $H$ est un indicateur de la \emph{forme} du profil : environ 2,6 pour un profil laminaire de Blasius, 1,3 à 1,4 pour un profil turbulent plein, et au-delà de 3,5 (laminaire) ou de 2 à 2,8 (turbulent) près du décollement.
+
+L'intégration de l'équation de quantité de mouvement de Prandtl dans l'épaisseur donne l'\textbf{équation intégrale de von Kármán}, valable en laminaire comme en turbulent :
+\[
+\boxed{\ \frac{\dd\theta}{\dd s}+\big(2+H\big)\frac{\theta}{U_e}\frac{\dd U_e}{\dd s}=\frac{c_f}{2}\ }
+\]
+Elle se lit comme un bilan : le déficit de quantité de mouvement croît par frottement ($c_f/2$), et un gradient de pression adverse ($U_e'<0$) l'amplifie d'autant plus que le profil est creusé ($H$ grand). Une équation, trois inconnues ($\theta$, $H$, $c_f$) : toutes les méthodes intégrales sont des façons de fermer ce système.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{lllX}
+\toprule
+Régime & Méthode & Inconnues & Fermeture \\
+\midrule
+laminaire & Thwaites (ch.~\ref{ch:thwaites}) & $\theta$ & $H$ et $c_f$ fonctions de $\lambda=\theta^2U_e'/\nu$ \\
+transition & Michel (ch.~\ref{ch:transition}) & --- & seuil sur $\Re_\theta$ \\
+turbulent & Head (ch.~\ref{ch:head}) & $\theta$, $H$ & équation d'entraînement, $H_1(H)$, $c_f$ de Ludwieg-Tillmann \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{De la solution de panneaux aux deux faces}
+La couche limite démarre au \textbf{point d'arrêt} et se développe séparément sur l'extrados et sur l'intrados. Il faut donc trouver ce point, puis réorganiser les données de chaque face dans le sens de l'écoulement.
+
+\paragraph{Le point d'arrêt.} En parcourant le contour depuis le bord de fuite extrados, la vitesse tangentielle signée $V_t$ est d'abord négative (l'écoulement remonte le sens de parcours), s'annule au point d'arrêt, puis devient positive sur l'intrados. On cherche l'unique indice $k$ tel que $V_{t,k}<0\le V_{t,k+1}$, et on interpole linéairement le zéro :
+\[
+s_{\text{arrêt}}=\ell_k+w\,(\ell_{k+1}-\ell_k),\qquad w=\frac{V_{t,k}}{V_{t,k}-V_{t,k+1}},
+\]
+où $\ell_k$ est l'abscisse curviligne cumulée du point de collocation $k$ le long du contour.
+
+\paragraph{Les deux faces.} Chaque face reçoit ensuite trois tableaux, orientés du point d'arrêt vers le bord de fuite :
+\begin{itemize}
+\item l'abscisse curviligne $s$ mesurée depuis le point d'arrêt (donc $s>0$) ;
+\item l'abscisse $x/c$ des stations, pour repérer la transition et la coupure en $x_{stop}$ ;
+\item la vitesse extérieure $U_e=|V_t|$ : $-V_t$ sur l'extrados, $+V_t$ sur l'intrados.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/vt_contour}
+\caption{NACA 2412, $\alpha=2^\circ$. À gauche, la vitesse tangentielle signée le long du contour, parcouru depuis le bord de fuite extrados. Elle s'annule au point d'arrêt, situé ici en $x/c\approx0{,}001$ sur l'intrados. À droite, les vitesses extérieures que reçoit chaque face.}\label{fig:vt}
+\end{figure}
+
+\begin{codebox}[ : \code{boundary\_layer.split\_at\_stagnation}]
+\begin{lstlisting}
+k = np.nonzero((Vt[:-1] < 0) & (Vt[1:] >= 0))[0]    # changement de signe - -> +
+if k.size != 1: raise RuntimeError("point d'arret ambigu")
+s_nodes = np.concatenate([[0.0], np.cumsum(P.L)])
+s_c = 0.5 * (s_nodes[:-1] + s_nodes[1:])          # abscisse des collocations
+w = Vt[k] / (Vt[k] - Vt[k + 1])
+s_stag = s_c[k] + w * (s_c[k + 1] - s_c[k])
+up = np.arange(k, -1, -1)       # du point d'arret vers le BF extrados
+lo = np.arange(k + 1, P.n)      # du point d'arret vers le BF intrados
+upper = (s_stag - s_c[up], P.xc[up], -Vt[up], up)
+lower = (s_c[lo] - s_stag, P.xc[lo],  Vt[lo], lo)
+\end{lstlisting}
+Si le signe change plusieurs fois (forme pathologique, très forte incidence), l'exception est rattrapée par \code{evaluate}, qui renvoie un résultat marqué invalide au lieu de planter.
+\end{codebox}
+
+\section{L'organisation de la marche sur une face}
+La fonction \code{march\_surface(s, x, Ue, Re, ...)} traite une face en cinq temps :
+\begin{enumerate}
+\item couper la face en $x_{stop}=0{,}985$ (ch.~\ref{ch:trainee} explique pourquoi) ;
+\item calculer la solution laminaire de Thwaites sur \emph{toute} la face, ce qui ne coûte qu'une somme cumulée ;
+\item chercher la première station où un critère de transition est franchi, et interpoler sa position ;
+\item intégrer les équations de Head de la transition jusqu'au bout ;
+\item renvoyer un objet \code{SurfaceBL} avec $s$, $x$, $U_e$, $\theta$, $H$, $c_f$, un masque turbulent, $x_{tr}$, le mode de transition, $x_{sep}$ et des drapeaux.
+\end{enumerate}
+Les valeurs au bout de la face, $\theta_{TE}$, $H_{TE}$ et $U_{e,TE}$, alimentent Squire-Young.
+
+\begin{piege}
+$U_e$ est mis à $\max(U_e,10^{-6})$ avant tout calcul. La première station est très proche du point d'arrêt, où $U_e\to0$, et plusieurs formules divisent par $U_e$ ou par $U_e^6$. Le seuil évite une division par zéro sans changer le résultat.
+\end{piege}
+
+\exercices
+\begin{exercice}
+Calculer $\delta^*/\delta$, $\theta/\delta$ et $H$ pour le profil linéaire $u/U_e=y/\delta$ ($0\le y\le\delta$), puis pour le profil en puissance $u/U_e=(y/\delta)^{1/7}$. Lequel ressemble à un profil laminaire, lequel à un profil turbulent ?
+\end{exercice}
+\begin{exercice}
+Pourquoi le point d'arrêt d'un profil cambré à incidence positive est-il sur l'intrados, légèrement en aval du bord d'attaque géométrique ? Dans quel sens se déplace-t-il quand $\alpha$ augmente ?
+\end{exercice}

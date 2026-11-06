@@ -1,0 +1,68 @@
+\chapter{Le problème d'optimisation}\label{ch:probleme}
+\iterbanner{V1}
+
+\section{Formulation}
+La note d'intention pose « un problème bi-objectif sous contraintes de portance et d'épaisseur minimales ». Sur la grille discrète partagée par toutes les méthodes, il s'écrit :
+\[
+\min_{(i_m,i_p,i_t)\in\{0,\dots,7\}^3}\ \Big(C_D(m,p,t),\ \mathrm{SER}(m,p,t,\alpha)\Big)
+\quad\text{sous}\quad
+\begin{cases}
+t\ge t_{\min}=8~\%,\\
+C_L\ge C_{L,\min}=0{,}3\quad(\text{à }\alpha=2^\circ\text{ imposé}),\\
+\text{modèle aérodynamique valide}.
+\end{cases}
+\]
+\begin{itemize}
+\item Les \textbf{variables} sont trois indices entiers de 0 à 7 : $m\in\{0,\dots,7\}$~\%, $p\in\{0{,}20,\dots,0{,}55\}$, $t\in\{6,\dots,20\}$~\%. Cela fait 512 profils, codés sur 9 bits.
+\item Le \textbf{premier objectif} est la traînée de profil (en counts) du modèle panneaux + couche limite, à $\Re=3\cdot10^6$ et $\alpha=2^\circ$.
+\item Le \textbf{second objectif} est la SER moyenne (en dBm) sur un secteur d'élévations, calculée par le modèle d'optique physique à 10~GHz, à l'attitude donnée par l'aérodynamique.
+\item Les \textbf{contraintes} viennent de la note d'intention (portance, épaisseur) et du domaine de validité du modèle aérodynamique.
+\end{itemize}
+
+\section{Deux scénarios}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+ & S1 : approche de face & S2 : radar en contrebas \\
+\midrule
+secteur d'élévation & $[-20^\circ,20^\circ]$ & $[-60^\circ,0^\circ]$ \\
+origine & note d'intention & cas d'étude supplémentaire \\
+rôle & référence du hackathon & front plus riche, pour éprouver les méthodes \\
+\bottomrule
+\end{tabular}
+\end{center}
+S2 a été ajouté après avoir constaté que S1 donne un front très court en SER (chapitre~\ref{ch:exact}). Les deux scénarios partagent tout le reste : grille, point de vol, contraintes, modèles.
+
+\section{Une simulation, un compteur}
+Une « simulation » est l'évaluation d'un profil par les deux modèles, aérodynamique puis SER. C'est l'unité de coût du hackathon : la note d'intention compare les méthodes en \emph{nombre de simulations nécessaires pour atteindre le front exact}. Toutes les méthodes passent donc par un même objet, \code{CountedProblem}, qui ne compte chaque profil distinct qu'une fois.
+
+\begin{codebox}[ : \code{optim/problem.py}]
+\begin{lstlisting}
+class CountedProblem:
+    def __call__(self, idx):
+        idx = tuple(int(i) for i in idx)
+        if idx not in self._set:          # premiere fois : une simulation de plus
+            self._set.add(idx)
+            self.seen.append(idx)
+        return self.table[idx]
+
+    def F(self, idx):                     # objectifs et violation de contraintes
+        r = self(idx)
+        return np.array([r["CD_counts"], r["SER_db"]]), r["cv"]
+\end{lstlisting}
+Pour pouvoir répéter les expériences sur des dizaines de graines aléatoires, les 512 profils sont évalués une fois (\code{build\_table}), puis chaque méthode lit cette table \emph{à travers le compteur}. C'est strictement équivalent à appeler les modèles, qui sont déterministes, et c'est ce qui permet de mesurer précisément le nombre de simulations.
+\end{codebox}
+
+\paragraph{La violation de contraintes.} Chaque contrainte s'écrit $g_i\le0$ ; la violation totale est $\mathrm{CV}=\sum_i\max(0,g_i)$. Un profil est faisable si $\mathrm{CV}=0$. Sur la grille, 392 profils sur 512 sont faisables : les 120 autres ont $t=6$~\% ou $m=0$ (portance insuffisante à $2^\circ$).
+
+\exercices
+\begin{exercice}
+Pourquoi ne pas simplement additionner $C_D$ (en counts) et SER (en dBm) pour se ramener à un seul objectif ? Donner deux raisons.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter le mode « portance imposée » ($C_L=0{,}4$) comme troisième scénario : l'incidence devient une sortie de l'aéro, et le couplage avec la SER par l'attitude devient réel.
+\item Remplacer la table pré-calculée par un vrai appel aux modèles dès que la SER du groupe SER sera disponible : l'interface est la même, seul le coût change.
+\end{itemize}
+\end{pistes}

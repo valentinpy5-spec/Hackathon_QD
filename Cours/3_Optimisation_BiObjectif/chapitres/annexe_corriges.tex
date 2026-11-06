@@ -1,0 +1,31 @@
+\chapter{Corrigés des exercices}\label{annexe:corriges}
+\iterbanner{V1}
+
+\section*{Chapitre~\ref{ch:probleme}}
+\textbf{Ex.~1.1.} (1) Les unités et les échelles sont arbitraires : un count de traînée et un décibel de SER n'ont aucune équivalence naturelle, et le résultat dépendrait entièrement de ce choix. (2) Une somme donne \emph{un} profil, alors que la question posée est l'ensemble des compromis : le choix entre eux appartient au concepteur. On pourrait ajouter que la SER en dB est une échelle logarithmique, que l'on mélangerait avec une échelle linéaire.
+
+\section*{Chapitre~\ref{ch:pareto}}
+\textbf{Ex.~2.1.} $B$ a moins de traînée que $A$ mais plus de SER : ni l'un ni l'autre ne domine. $A$ domine $C$ ($60<62$ et $-16{,}3<-16{,}1$). Non dominés : $A$ et $B$. Hypervolume, après tri selon $f_1$ : $B$ donne $(65-58)\times(-16-(-16{,}2))=1{,}4$, puis $A$ donne $(65-60)\times(-16{,}2-(-16{,}3))=0{,}5$, soit $1{,}9$ (counts$\cdot$dB).
+
+\textbf{Ex.~2.2.} Soit $x^\star$ un minimum de $g=w\tilde f_1+(1-w)\tilde f_2$ avec $0<w<1$. Si un point $y$ dominait $x^\star$, on aurait $\tilde f_k(y)\le\tilde f_k(x^\star)$ pour les deux objectifs, dont une inégalité stricte, multipliée par un poids strictement positif. Donc $g(y)<g(x^\star)$, ce qui contredit la minimalité.
+
+\section*{Chapitre~\ref{ch:exact}}
+\textbf{Ex.~3.1.} Le premier a moins de traînée (58,87 contre 59,22), le second moins de SER ($-16{,}409$ contre $-16{,}393$) : aucun ne domine l'autre. Mais l'écart de SER, 0,016~dB, est très en dessous de toute précision de modèle ou de mesure. Un concepteur garderait le premier : c'est l'argument de l'$\varepsilon$-dominance.
+
+\section*{Chapitre~\ref{ch:nsga}}
+\textbf{Ex.~4.1.} Selon $f_1$, le point du milieu a pour voisins 0 et 1 : contribution $(1-0)/1=1$. Selon $f_2$, de même : 1. Sa distance vaut 2 ; les extrémités valent $+\infty$. C'est donc le point du milieu qui serait éliminé. Les extrémités reçoivent $+\infty$ pour que la population conserve toute l'étendue du front : sans elles, l'algorithme pourrait perdre les meilleurs profils pour chaque objectif pris isolément.
+
+\textbf{Ex.~4.2.} La moyenne vaut 3,5 et la demi-distance 1,5 : l'enfant $3{,}5-1{,}5\beta$ s'arrondit à 3 si $\beta\le\frac23$. Pour $u\le\frac12$, $\beta=(2u)^{1/16}\le\frac23$ exige $u\le\frac12(\frac23)^{16}\approx7{,}6\cdot10^{-4}$. Avec la probabilité $\frac12$ de croiser cette variable, cela arrive environ 4 fois sur 10\,000.
+
+\section*{Chapitre~\ref{ch:nsga-res}}
+\textbf{Ex.~5.1.} $48/512\approx9{,}4$~\% de l'espace dès l'initialisation. Après $g$ générations, au plus $48(g+1)$ simulations : il faut $g\ge3$ pour dépasser 180. La médiane observée, 180,5, correspond donc à environ quatre « paquets » de 48 : avec une grande population, on paie par paquets, même quand le dernier profil manquant est trouvé au début du paquet.
+
+\section*{Chapitre~\ref{ch:boucle}}
+\textbf{Ex.~6.1.} $x_1=x_2=1$ : pour $y=0$, le crochet vaut $x_1x_2=1$, pénalité $2P$ ; pour $y=1$, il vaut $1-2-2+3=0$, pénalité $P(1-b_0)$. Le minimum est $P(1-b_0)$, puisque $2P>P(1-b_0)$. $x_1=1$, $x_2=0$ : pour $y=0$, tout est nul ; pour $y=1$, le crochet vaut $-2+3=1$, pénalité $2P+P(1-b_0)$. Le minimum est 0, comme $P(1-b_0)x_1x_2$.
+
+\textbf{Ex.~6.2.} Il faudrait écrire $i_t-1-s=0$ avec $s\in\{0,\dots,6\}$, codé sur 3 bits : 3 qubits au lieu d'un, et davantage de couplages. La réduction de Rosenberg est exacte et ne coûte qu'un qubit, car la contrainte n'exclut qu'une seule valeur.
+
+\input{chapitres/corriges_ch07}
+
+\section*{Chapitre~\ref{ch:v2} \iterbadge{V2}}
+\textbf{Ex.~9.1.} Il est sur le front parce qu'aucun profil faisable n'a à la fois moins de traînée et moins de SER : son nez très aigu ($I=2$) lui donne une SER plus faible que tous les profils plus minces, et l'épaisseur de 12~\% lui permet tout juste de tenir l'exigence de manœuvre. Avec $C_{L,\max}\ge1{,}3$, il deviendrait infaisable ; le front perdrait ce compromis intermédiaire, et les profils à $I=2$ restants devraient être encore plus épais ou plus cambrés, donc plus traînants. L'exigence de manœuvre pilote directement la forme du front : c'est pourquoi sa sensibilité est une piste prioritaire.

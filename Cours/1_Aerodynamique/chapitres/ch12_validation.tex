@@ -1,0 +1,126 @@
+\chapter{Validation, limites et pistes}\label{ch:validation}
+\iterbanner{V0}
+
+\section{Ce qui a été vérifié}
+\code{validation.py} enchaîne cinq tests. Les quatre premiers sont des vérifications du code contre des solutions connues ; le cinquième est une validation contre XFOIL, réalisée en V1 (§\ref{sec:v5}).
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lXXl}
+\toprule
+Test & Grandeur & Référence & Résultat \\
+\midrule
+V1 & $C_L$, NACA 0012, $5^\circ$ & convergence en $N$ & 0,6026 à 200 panneaux, 0,06~\% de la limite \\
+V1 & $C_{L,C_p}$ contre $C_{L,KJ}$ & égalité théorique & écart $<0{,}4$~\% à 200 panneaux, en $1/N$ \\
+V1 & $C_{D,p}$ & 0 (d'Alembert) & $2\cdot10^{-4}$ à 200 panneaux, en $1/N$ \\
+V1 & pente $\dd C_L/\dd\alpha$ & $2\pi(1+0{,}77t)=6{,}86$~/rad & 6,89 (0012), 6,88 (2412) \\
+V1 & $C_{M,c/4}$, NACA 2412 & $\approx-0{,}053$ (profil mince) & $-0{,}055$ \\
+V2 & $\theta$ laminaire, plaque plane & Blasius & 1,0~\% ; $H=2{,}61$ (Blasius 2,59) \\
+V3 & $\theta$ turbulent, plaque plane & loi en $1/7$ & $<5$~\% ; $H\to1{,}34$ \\
+V4 & $C_D$ selon \code{n\_half} & --- & $\pm0{,}1$~\% de 60 à 200 \\
+V4 & $C_D$ selon \code{x\_stop} & --- & au plus $\pm1{,}5$~\% de 0,97 à 0,99 \\
+V5 & $C_D$, $C_L$ sur les 512 profils & XFOIL, $N_{crit}=9$ & rang 0,91 ($C_D$), 0,94 ($C_L$) ; voir §\ref{sec:v5} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le test V5 : XFOIL sur toute la grille\texorpdfstring{\ \protect\iterbadge{V1}}{ (V1)}}\label{sec:v5}
+\begin{evolution}{V1}{section ajoutée}Le test V5 était « à faire » en V0, faute d'XFOIL. Il a été réalisé en V1 sur toute la grille ; ses conclusions motivent l'itération V2 (XFOIL comme simulateur de référence, voir la fiche projet).\end{evolution}
+XFOIL est installé localement (paquet Debian extrait dans \code{Code/.tools/}, sans droits administrateur). Cette compilation ne résout le visqueux que si son affichage est actif : \code{xfoil\_runner.py} démarre donc un écran virtuel Xvfb quand aucun écran n'est disponible. Le script \code{validation\_xfoil\_grille.py} calcule les 512 profils à $\alpha=2^\circ$, $\Re=3\cdot10^6$, $N_{crit}=9$, en une dizaine de minutes sur 8 cœurs.
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & $C_D$ & $C_L$ \\
+\midrule
+profils où XFOIL converge & \multicolumn{2}{c}{498 / 512} \\
+écart moyen (notre modèle / XFOIL $-1$) & $+27$~\% & $+25$~\% \\
+corrélation de rang de Spearman & 0,91 & 0,94 \\
+NACA 2412 & 69 contre 50 counts & 0,498 contre 0,436 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Lecture.} Les deux biais vont dans le sens prévu, mais ils sont plus forts qu'estimé :
+\begin{itemize}
+\item la \textbf{traînée} est surestimée de 27~\% en moyenne, parce que Michel fait transitionner trop tôt. Sur le NACA 2412, la transition de l'extrados est en $x/c=0{,}28$ chez nous et $0{,}43$ dans XFOIL ;
+\item la \textbf{portance} est surestimée de 25~\% en moyenne, et non de 5 à 10~\% : à $\alpha=2^\circ$, le décambrage visqueux pèse lourd, surtout pour les profils très cambrés vers l'arrière. La contrainte $C_L\ge0{,}3$ est donc trop optimiste dans notre modèle (359 profils faisables avec XFOIL, contre 392).
+\end{itemize}
+Le classement est en revanche bien conservé (rang 0,91 et 0,94), ce qui est l'essentiel pour l'optimisation.
+
+\paragraph{Et le front de Pareto ?} En combinant la traînée d'XFOIL avec la même SER, on obtient le front « de référence ». Deux conclusions :
+\begin{itemize}
+\item \textbf{tous les profils du front restent à $t=8$~\%} : le résultat structurant (compromis dégénéré en épaisseur) ne dépend pas du modèle aérodynamique ;
+\item \textbf{la position de cambrure optimale, elle, change.} XFOIL préfère des cambrures plus en arrière ($p=0{,}40$ à $0{,}45$) pour les profils de faible traînée, parce que sa transition tardive récompense les écoulements laminaires étendus. Dans le scénario S1, un seul profil sur 5 est commun aux deux fronts ; dans S2, 13 sur 18.
+\end{itemize}
+C'est la piste d'amélioration prioritaire : caler la transition sur XFOIL (facteur sur le seuil de Michel, ou critère dépendant du gradient), puis refaire la comparaison des fronts.
+
+\section{Couplage faible contre couplage fort}
+Notre modèle et XFOIL résolvent la même physique, mais pas de la même façon. Dans le \textbf{couplage faible}, on calcule l'écoulement extérieur une fois, puis la couche limite sur la vitesse obtenue, sans retour. Dans le \textbf{couplage fort}, l'écoulement extérieur est déplacé par l'épaisseur $\delta^*$ et tout est résolu simultanément par une méthode de Newton.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+Effet & Notre modèle (faible) & XFOIL (fort) \\
+\midrule
+Décambrage visqueux, $C_L$ réel plus bas & absent : $C_L$ surestimé de 5 à 10~\% & capturé \\
+Point d'arrêt du bord de fuite fermé & artefact, contourné par \code{x\_stop} & effacé par $\delta^*$ et le sillage \\
+Décollement, bulbe laminaire & seulement détecté (mode direct singulier) & traité en mode inverse \\
+Transition & Michel (corrélation) & $e^N$ (amplification des ondes) \\
+Sillage & absent (Squire-Young au bord de fuite) & calculé \\
+Robustesse & jamais de divergence & échecs possibles, silencieux \\
+Coût & environ 8~ms & 0,1 à 1~s par incidence \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Pourquoi le mode direct est singulier au décollement.} En mode direct, on impose $U_e(s)$ et on calcule $\theta$ et $H$. Près de $c_f=0$, l'équation intégrale fait apparaître $\dd H/\dd s\to\infty$ : c'est la singularité de Goldstein. En mode inverse, on impose $\delta^*$ ou $H$ et on en déduit $U_e$, et le problème redevient régulier. XFOIL passe de l'un à l'autre automatiquement en résolvant tout ensemble. Notre modèle ne peut que détecter le décollement, et c'est pourquoi il le signale au lieu de le calculer.
+
+\paragraph{Une amélioration intermédiaire : la vitesse de transpiration.} On peut faire « sentir » la couche limite à l'écoulement extérieur sans changer la géométrie, en remplaçant la condition de glissement par une vitesse normale de soufflage
+\[
+V_n=\frac{\dd(U_e\,\delta^*)}{\dd s},
+\]
+puis en recalculant les panneaux et la couche limite, et en itérant. Cela converge tant qu'il n'y a pas de décollement, et cela corrigerait l'essentiel du décambrage visqueux de $C_L$. Ce n'est pas implémenté.
+
+\section{Le biais connu, et comment le mesurer}
+Sur le NACA 0012 à $\alpha=0$ et $\Re=10^6$, le modèle donne $C_D=75$~counts avec une transition en $x/c=0{,}46$. XFOIL est couramment cité vers 54~counts, valeur à reconfirmer. Le test à transition imposée isole la cause : en imposant la transition au décollement laminaire ($x\approx0{,}62$), on obtient 62~counts. L'essentiel de l'écart vient donc de Michel, trop précoce à ce Reynolds ; l'écart restant, environ 14~\%, vient de la couche limite et de Squire-Young. À $\Re=3\cdot10^6$, Michel est plus réaliste et l'écart se réduit.
+
+\paragraph{Le protocole V5.} Il est écrit dans \code{validation.py} et s'exécute dès qu'XFOIL est dans le \code{PATH} :
+\begin{enumerate}
+\item comparer $C_L$, $C_D$ et $x_{tr}$ en transition libre, sur une polaire de trois profils ;
+\item recalculer notre $C_D$ avec la transition \emph{imposée aux $x_{tr}$ d'XFOIL} (\code{free\_transition=False}). L'écart restant mesure l'erreur « couche limite + Squire-Young » seule, séparée de l'erreur de transition.
+\end{enumerate}
+
+\begin{resultat}
+Pour l'optimisation, ce qui compte est moins l'erreur absolue que la \textbf{conservation du classement} des profils. La métrique de validation à présenter au jury est la corrélation de rang de Spearman entre notre $C_D$ et celui d'XFOIL sur un échantillon de la grille, en plus de l'erreur relative. Le test qui compte vraiment est : les deux modèles donnent-ils le même front de Pareto aérodynamique ?
+\end{resultat}
+
+\section{Ce que le modèle ne fait pas}
+\begin{itemize}
+\item \textbf{Pas de correction visqueuse de $C_L$} : le $C_L$ réel est 5 à 10~\% plus bas. Cela compte pour la contrainte $C_L\ge C_{L,min}$, et les profils à cambrure arrière sont les plus surestimés.
+\item \textbf{Pas de décrochage} : la portance reste linéaire. Au-delà de 8 à $10^\circ$, le modèle sort de son domaine, ce que les drapeaux signalent.
+\item \textbf{Incompressible} : pas d'effet de Mach. Une correction de Prandtl-Glauert ou de Kármán-Tsien sur $C_p$ serait possible en dessous du Mach critique.
+\item \textbf{Transition par Michel} et non par $e^N$ : trop précoce à bas Reynolds.
+\item \textbf{Bulbe laminaire} réduit à une transition instantanée.
+\item \textbf{Méthode de Head} d'équilibre, sans effet de retard.
+\end{itemize}
+
+\section{Pistes, par rapport utilité / effort}
+\begin{enumerate}
+\item \textbf{Fait} : XFOIL installé, V5 lancé sur toute la grille (§\ref{sec:v5}). Prochaine étape : caler la transition sur XFOIL, la cause principale des écarts.
+\item \textbf{Caler la transition} sur XFOIL (facteur sur le seuil de Michel, ou critère d'Arnal ou de Granville qui tient compte du gradient), ou proposer une option « transition forcée à 5~\% » : cas tout turbulent, plus régulier, donc plus favorable au modèle quadratique.
+\item \textbf{Corriger $C_L$} par la vitesse de transpiration, une ou deux itérations.
+\item \textbf{Kármán-Tsien} pour montrer l'effet de $M=0{,}5$ à $0{,}6$.
+\end{enumerate}
+
+\begin{projet}
+Le message à porter devant le jury tient en trois phrases. Le modèle est volontairement basse fidélité, parce que le hackathon compare des méthodes d'optimisation en nombre de simulations, et que le front exact doit être calculable. Ses tendances sont physiques et ses erreurs sont identifiées et chiffrées, la principale étant la transition. Pour un cas industriel, seul le simulateur change : l'interface \code{AeroSimulator}, la grille, l'encodage et la boucle restent les mêmes.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Deux modèles de traînée A et B sont comparés à XFOIL sur 30 profils. A a une erreur relative moyenne de 25~\%, mais une corrélation de rang de 0,97. B a une erreur moyenne de 8~\%, mais une corrélation de rang de 0,75. Lequel préférer pour l'optimisation du hackathon, et pourquoi ?
+\end{exercice}
+\begin{exercice}
+Expliquer qualitativement pourquoi la vitesse de transpiration $V_n=\dd(U_e\delta^*)/\dd s$ diminue la portance calculée d'un profil cambré, en raisonnant sur l'épaisseur de déplacement de l'extrados et de l'intrados près du bord de fuite.
+\end{exercice}

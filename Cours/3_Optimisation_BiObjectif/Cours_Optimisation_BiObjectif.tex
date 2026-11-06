@@ -1,0 +1,47 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_Optimisation_BiObjectif.tex
+% Figures à données : python3 tools/make_figures.py (lit Code/resultats/, produit par python3 -m optim.experiences_pipeline)
+\input{preambule}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{Optimisation bi-objectif traînée / SER}\\[0.4em]\large Front de Pareto exact, NSGA-II et boucle QUBO :\\ implémentation, résultats et analyse de la chaîne complète du hackathon quantique}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 4 novembre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Objet.} Ce cours ferme la boucle du hackathon. Les cours précédents ont construit le modèle aérodynamique (phase~1), un modèle SER simplifié (phase~2) et les outils quantiques (QUBO, recuit, QAOA). Ici, on assemble tout : on pose le problème bi-objectif, on calcule son front de Pareto exact par énumération, on le résout par NSGA-II (l'optimisation classique de référence de la note d'intention), puis par la boucle itérative « modèle quadratique $\to$ QUBO $\to$ solveur », et on compare les méthodes en nombre de simulations, ce qui est la question posée par le hackathon.
+
+\paragraph{Ce qu'on suppose connu.} Le contenu des trois autres cours, en particulier les chapitres QUBO, recuit et QAOA du cours quantique. Les notions d'optimisation multi-objectif et d'algorithmes évolutionnaires sont posées depuis le début.
+
+\paragraph{Fil conducteur.} Le problème (ch.~\ref{ch:probleme}) $\to$ dominance et front de Pareto (ch.~\ref{ch:pareto}) $\to$ le front exact par énumération (ch.~\ref{ch:exact}) $\to$ NSGA-II : principe et implémentation (ch.~\ref{ch:nsga}), puis résultats (ch.~\ref{ch:nsga-res}) $\to$ la boucle QUBO bi-objectif (ch.~\ref{ch:boucle}) $\to$ la comparaison de toute la chaîne (ch.~\ref{ch:comparaison}) $\to$ limites et pistes (ch.~\ref{ch:pistes}).
+
+\paragraph{Figures et chiffres.} Toutes les courbes sont calculées par le code du projet (\texttt{Code/optim/}) via \texttt{tools/make\_figures.py}, à partir des tables exhaustives et du fichier \texttt{resultats/pipeline.json} produit par \texttt{python3 -m optim.experiences\_pipeline}. Chaque chapitre se termine par des exercices (corrigés en annexe~\ref{annexe:corriges}) et des \textbf{pistes d'amélioration}.
+
+\paragraph{Itérations du projet.} Le projet avance par itérations, chacune avec sa couleur dans tous les cours et dans la fiche projet (dossier \texttt{Fiche\_Projet/} du projet). Chaque chapitre commence par un bandeau qui indique l'itération de son contenu ; un ajout ou une révision faite lors d'une itération ultérieure apparaît dans un encadré « Évolution » de la couleur correspondante.
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_probleme}
+\input{chapitres/ch02_pareto}
+\input{chapitres/ch03_exact}
+\input{chapitres/ch04_nsga}
+\input{chapitres/ch05_nsga_res}
+\input{chapitres/ch06_boucle}
+\input{chapitres/ch07_comparaison}
+\input{chapitres/ch08_pistes}
+\input{chapitres/ch09_v2}
+
+\appendix
+\input{chapitres/annexe_corriges}
+
+\end{document}

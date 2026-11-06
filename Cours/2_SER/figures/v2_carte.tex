@@ -1,0 +1,9 @@
+% figure générée par tools/make_figures_v2.py : v2_carte
+\begin{tikzpicture}
+\begin{axis}[width=0.5\linewidth,height=6cm,xlabel={indice $I$},ylabel={épaisseur $t$ (\%)},
+  xtick={0,1,2,3},xticklabels={2,4,6,8},ytick={6,8,...,20},enlargelimits=false,axis on top,
+  colormap={bl}{color=(white) color=(cblue!45) color=(cblue!85!black)},colorbar,
+  colorbar style={ylabel={SER S1 (dBm)},width=2.5mm,tick label style={font=\scriptsize}},tick label style={font=\scriptsize}]
+\addplot[matrix plot*,mesh/cols=4,point meta=explicit] coordinates {(0,6) [-26.108] (1,6) [-21.571] (2,6) [-18.655] (3,6) [-16.578] (0,8) [-23.454] (1,8) [-19.088] (2,8) [-16.222] (3,8) [-14.169] (0,10) [-21.462] (1,10) [-17.102] (2,10) [-14.306] (3,10) [-12.353] (0,12) [-19.794] (1,12) [-15.477] (2,12) [-12.764] (3,12) [-10.865] (0,14) [-18.364] (1,14) [-14.096] (2,14) [-11.470] (3,14) [-9.641] (0,16) [-17.106] (1,16) [-12.896] (2,16) [-10.362] (3,16) [-8.624] (0,18) [-16.010] (1,18) [-11.856] (2,18) [-9.396] (3,18) [-7.712] (0,20) [-15.023] (1,20) [-10.930] (2,20) [-8.512] (3,20) [-6.897]};
+\end{axis}
+\end{tikzpicture}

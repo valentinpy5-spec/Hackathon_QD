@@ -1,0 +1,95 @@
+\chapter{Simuler un ordinateur quantique : méthodes et outils}\label{ch:outils}
+\iterbanner{V0}
+
+\section{Trois niveaux de simulation}
+\begin{center}
+\begin{tabular}{p{3.2cm}p{5.6cm}p{5.2cm}}
+\toprule
+Niveau & Ce qu'on calcule & Usage\\
+\midrule
+\textbf{Vecteur d'état exact} & les $2^n$ amplitudes ; probabilités et $\expval{H_C}$ exactes & mise au point, petits $n$ ($\lesssim30$) ; \emph{notre cas}\\
+\textbf{Échantillonnage} (shots) & $N$ chaînes tirées selon $|\psi_x|^2$ ; estimateurs bruités & reproduit le comportement statistique d'une vraie machine\\
+\textbf{Simulation bruitée} & matrice densité ou trajectoires, avec modèles d'erreur des portes & prévoir la dégradation sur matériel réel\\
+\bottomrule
+\end{tabular}
+\end{center}
+Le premier niveau est le plus simple et le plus instructif. Pour un QUBO, il est même trivial, car le coût est diagonal.
+
+\section{Notre implémentation (NumPy, \texttt{quantique/qaoa.py})}
+Toute la mécanique de QAOA tient en une vingtaine de lignes :
+\begin{lstlisting}
+def apply_mixer(psi, beta, n):
+    """exp(-i beta sum_k X_k) |psi> : une rotation R_X(2 beta) par qubit."""
+    psi = psi.reshape((2,) * n)                 # un axe par qubit
+    c, s = np.cos(beta), -1j * np.sin(beta)
+    for ax in range(n):
+        psi = c * psi + s * np.flip(psi, axis=ax)   # X échange 0 et 1 sur cet axe
+    return psi.reshape(-1)
+
+def qaoa_state(gammas, betas, E, n):
+    psi = np.full(2**n, 2 ** (-n / 2), dtype=complex)   # |+>^n
+    for g, b in zip(gammas, betas):
+        psi = psi * np.exp(-1j * g * E)          # coût : H_C diagonal -> phases
+        psi = apply_mixer(psi, b, n)             # mélangeur
+    return psi
+
+def expectation(params, E, n):                    # F_p = <psi| H_C |psi>
+    p = len(params) // 2
+    psi = qaoa_state(params[:p], params[p:], E, n)
+    return float(np.real(np.vdot(psi, E * psi)))
+\end{lstlisting}
+Ici \texttt{E} est le vecteur des $2^n$ énergies du QUBO, calculé une fois pour toutes (\texttt{brute\_force}). L'optimisation des angles est confiée à \texttt{scipy.optimize.minimize(method="COBYLA")}. Le script \texttt{quantique/experiences.py} produit tous les résultats chiffrés de ce cours.
+
+\section{Les bibliothèques prévues par la note d'intention}
+Les extraits suivants sont des \textbf{esquisses non testées} : ces bibliothèques ne sont pas installées sur la machine de rédaction, et leurs API évoluent vite. Il faut les valider sur notre QUBO en comparant au résultat NumPy, qui sert de référence.
+
+\paragraph{D-Wave Ocean (recuit simulé, ou matériel réel).}
+\begin{lstlisting}
+import dimod
+from dwave.samplers import SimulatedAnnealingSampler   # ancien paquet : neal
+bqm = dimod.BinaryQuadraticModel.from_qubo(
+    {(i, j): Q[i, j] for i in range(9) for j in range(i, 9) if Q[i, j] != 0}, offset=c)
+res = SimulatedAnnealingSampler().sample(bqm, num_reads=200)
+print(res.first.sample, res.first.energy)
+# matériel : from dwave.system import DWaveSampler, EmbeddingComposite
+#            EmbeddingComposite(DWaveSampler()).sample(bqm, num_reads=1000)  (plongement automatique)
+\end{lstlisting}
+
+\paragraph{Qiskit Optimization (QAOA).}
+\begin{lstlisting}
+from qiskit_optimization import QuadraticProgram
+from qiskit_optimization.algorithms import MinimumEigenOptimizer
+from qiskit_algorithms import QAOA
+from qiskit_algorithms.optimizers import COBYLA
+from qiskit.primitives import Sampler          # selon la version : StatevectorSampler (V2)
+qp = QuadraticProgram()
+for i in range(9):
+    qp.binary_var(f"b{i}")
+qp.minimize(constant=c, linear=[Q[i, i] for i in range(9)],
+            quadratic={(f"b{i}", f"b{j}"): Q[i, j] for i in range(9) for j in range(i + 1, 9)})
+H_C, offset = qp.to_ising()                    # hamiltonien d'Ising (SparsePauliOp)
+qaoa = QAOA(sampler=Sampler(), optimizer=COBYLA(), reps=3)
+print(MinimumEigenOptimizer(qaoa).solve(qp))
+\end{lstlisting}
+
+\paragraph{PennyLane.} Le module \texttt{qml.qaoa} fournit \texttt{cost\_layer} et \texttt{mixer\_layer}, avec une différentiation automatique des angles. Il est utile pour essayer des optimiseurs à gradient.
+
+\section{Pièges pratiques}\label{sec:pieges-outils}
+\begin{itemize}
+\item \textbf{Ordre des bits} : Qiskit affiche $q_{n-1}\cdots q_0$. Une chaîne « \texttt{000010000} » ne se lit pas dans le même sens que notre \texttt{encode}. Il faut tester sur un profil connu.
+\item \textbf{Conventions de signe et de facteur} : $e^{-i\beta X}$ ou $e^{-i\beta X/2}$, mélangeur $\sum X_k$ ou $-\sum X_k$. Les angles optimaux changent de signe ou de facteur 2 d'une bibliothèque à l'autre, mais la qualité de la solution ne change pas.
+\item \textbf{Normalisation} de l'énergie avant QAOA (ch.~\ref{ch:qaoa}).
+\item \textbf{Périodicité} : $\gamma$ n'est périodique que si les énergies sont commensurables. Il ne faut pas restreindre arbitrairement la recherche à $[0,\pi]$.
+\item \textbf{Graines aléatoires} : l'optimiseur et l'échantillonnage sont stochastiques. On répète les expériences et on rapporte médiane et dispersion.
+\end{itemize}
+
+\section{Le matériel réel : bruit et ère NISQ}
+Un qubit physique perd son information en un temps fini (\textbf{décohérence}), et chaque porte a une probabilité d'erreur non nulle. Ordres de grandeur actuels : quelques dixièmes de pourcent d'erreur par porte à deux qubits. Un circuit de quelques centaines de CNOT donne déjà un résultat fortement dégradé : nos 216 CNOT à $p=3$ sont à la limite. Des techniques d'\emph{atténuation d'erreurs} existent ; la \emph{correction} d'erreurs complète demande beaucoup plus de qubits qu'aujourd'hui. C'est pourquoi la note d'intention vise des \textbf{simulateurs} et une \textbf{analyse des ressources} plutôt qu'une exécution matérielle.
+
+\exercices
+\begin{exercice}
+Quelle mémoire faut-il pour simuler exactement 30 qubits ? 40 qubits ? Un balayage de QAOA coûte $O(n\,2^n)$ opérations par couche : comparer le coût pour $n=9$ et $n=30$.
+\end{exercice}
+\begin{exercice}
+On estime $F_p=\expval{H_C}$ avec $N$ shots. L'énergie normalisée a un écart-type $\sigma_E\approx1$ sur les shots. Combien de shots faut-il pour connaître $F_p$ à $\pm0{,}01$ (un écart-type) ? Pourquoi cela compte-t-il pour l'optimiseur classique ?
+\end{exercice}

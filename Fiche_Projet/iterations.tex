@@ -1,0 +1,57 @@
+% ============================================================================
+% Itérations du projet HackathonQuantique : couleurs et marqueurs communs.
+% Inclus par tous les cours et par la fiche projet, pour qu'une itération ait
+% la même couleur partout. Pour ajouter une itération : une couleur, un nom,
+% une date, une ligne dans \legendeiterations.
+% ============================================================================
+\definecolor{itV0}{HTML}{8D6E63}   % brun   : V0, modèle de la note d'intention
+\definecolor{itV1}{HTML}{C2185B}   % framboise : V1, chaîne complète conforme à la note
+\definecolor{itV2}{HTML}{00838F}   % cyan foncé : V2, problème reformulé
+\definecolor{itV3}{HTML}{E09A00}   % ambre  : V3, concurrent équitable et problème plus grand
+\definecolor{itV4}{HTML}{5E35B1}   % indigo : V4, réservé
+
+\makeatletter
+\newcommand{\itername}[1]{\@nameuse{itname@#1}}
+\newcommand{\iterdate}[1]{\@nameuse{itdate@#1}}
+\newcommand{\defiter}[3]{\@namedef{itname@#1}{#2}\@namedef{itdate@#1}{#3}}
+\makeatother
+\defiter{V0}{Modèle de la note d'intention}{24--30 oct. 2026}
+\defiter{V1}{Chaîne complète conforme à la note}{4--5 nov. 2026}
+\defiter{V2}{Problème reformulé}{5--6 nov. 2026}
+\defiter{V3}{Concurrent équitable, problème plus grand}{à partir du 6 nov. 2026}
+
+% Pastille : \iterbadge{V1}
+\newcommand{\iterbadge}[1]{\tikz[baseline=(b.base)]\node[fill=it#1,text=white,rounded corners=2pt,
+  inner xsep=3pt,inner ysep=1.5pt,font=\sffamily\bfseries\scriptsize] (b) {#1};}
+
+% Bandeau de début de chapitre : \iterbanner{V0}
+\newcommand{\iterbanner}[1]{\par\noindent\begin{tikzpicture}
+  \node[fill=it#1!12,draw=it#1,line width=0.6pt,rounded corners=2pt,text width=\dimexpr\linewidth-12pt\relax,
+    inner sep=4pt,anchor=west,font=\small] at (0,0)
+    {\iterbadge{#1}\ \textbf{\color{it#1}Itération #1} --- \itername{#1} \hfill{\color{it#1}\iterdate{#1}}};
+  \end{tikzpicture}\par\medskip}
+
+% Encadré d'évolution : \begin{evolution}{V1}{titre} ... \end{evolution}
+\newtcolorbox{evolution}[2]{enhanced,breakable,boxrule=0pt,leftrule=3pt,arc=0pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,colback=it#1!7,colframe=it#1,
+  fonttitle=\bfseries\small,coltitle=it#1,attach title to upper={\ },
+  title={\iterbadge{#1}\ Évolution #1 : #2.}}
+
+% Légende des itérations, pour les avant-propos
+\newcommand{\legendeiterations}{%
+\begin{center}\small
+\begin{tabular}{lll}
+\iterbadge{V0} & \itername{V0} & \iterdate{V0}\\
+\iterbadge{V1} & \itername{V1} & \iterdate{V1}\\
+\iterbadge{V2} & \itername{V2} & \iterdate{V2}\\
+\iterbadge{V3} & \itername{V3} & \iterdate{V3}\\
+\end{tabular}
+\end{center}}
+
+% Encadré « pistes d'amélioration » : défini ici s'il manque (cours V0 sans cet encadré)
+\providecolor{cviolet}{HTML}{7A4FB3}
+\ifcsname pistes\endcsname\else
+\newtcolorbox{pistes}[1][]{enhanced,breakable,boxrule=0pt,leftrule=2.5pt,arc=0pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,fonttitle=\bfseries\small,coltitle=cink,attach title to upper={\ },
+  colback=cviolet!6,colframe=cviolet,title={Pistes d'amélioration#1.}}
+\fi

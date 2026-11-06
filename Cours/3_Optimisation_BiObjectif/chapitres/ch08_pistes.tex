@@ -1,0 +1,42 @@
+\chapter{Limites et pistes}\label{ch:pistes}
+\iterbanner{V1}
+
+\section{Ce que ces résultats ne disent pas}
+\begin{itemize}
+\item \textbf{Le cas est petit.} 512 profils et 3 variables : un modèle quadratique global y est presque suffisant, ce qui avantage la boucle. Sur un cas industriel (dizaines de variables, front inconnu), le modèle quadratique sera moins fidèle et la boucle devra être locale.
+\item \textbf{Le front est presque dégénéré.} Tous les profils optimaux ont la même épaisseur ; le problème effectif se joue sur 64 profils (cambrure, position). C'est une conséquence physique des modèles (cours SER), pas un défaut des méthodes, mais cela rend la comparaison moins discriminante.
+\item \textbf{La SER est provisoire.} Le modèle d'optique physique est lisse ; un vrai solveur peut introduire des discontinuités qui dégraderont le modèle quadratique, et donc la boucle, plus que NSGA-II.
+\item \textbf{Le critère d'arrêt utilise le front exact.} C'est légitime pour mesurer, impossible en pratique : sur un cas réel, il faut un critère de stagnation, et le nombre de simulations « utiles » sera plus grand.
+\item \textbf{QAOA est simulé exactement.} Sans bruit, sans limite de profondeur, avec 512 tirs : c'est le meilleur cas possible pour QAOA.
+\end{itemize}
+
+\section{Passage à l'échelle}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+ & Cas du hackathon & Cas industriel \\
+\midrule
+variables & 3 variables à 8 niveaux, 9 bits & 20 à 50 paramètres de forme, 60 à 300 bits \\
+qubits du QUBO & 13 (9 + 1 auxiliaire + 3 d'écart) & 100 à 500 \\
+modèle quadratique & 10 coefficients, $O(d^2)$ & 200 à 1\,300 coefficients : autant de simulations au minimum \\
+front exact & 512 évaluations & inaccessible \\
+simulateur & 10~ms & minutes à heures (RANS, MoM 3D) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le message de la note d'intention reste valable : seuls le simulateur et le nombre de variables changent. Mais le coût d'ajustement du modèle croît comme le carré du nombre de variables physiques, et devient vite le facteur limitant de la boucle, bien avant la taille du QUBO.
+
+\section{Pistes, par rapport utilité / effort}
+\begin{enumerate}
+\item \textbf{Comparer à une optimisation bayésienne multi-objectif classique} (même modèle de substitution, candidats choisis par amélioration attendue de l'hypervolume, résolue par énumération ou par un algorithme génétique) : c'est le vrai concurrent de la boucle QUBO, et la seule façon d'isoler ce qu'apporte la résolution quantique du QUBO.
+\item \textbf{$\varepsilon$-contrainte} dans le QUBO, pour viser les points non supportés.
+\item \textbf{Modèle local} (moindres carrés pondérés autour du front courant).
+\item \textbf{Réutiliser les angles de QAOA} d'une itération à l'autre, et ajouter du bruit pour estimer la dégradation sur machine réelle.
+\item \textbf{NSGA-II à variables entières ou binaires natives}, et réglage systématique (taille de population, taux de mutation).
+\item \textbf{Paramétrisation plus riche} (rayon de bord d'attaque indépendant) pour obtenir un vrai compromis traînée/SER.
+\end{enumerate}
+
+\begin{projet}
+Pour le jury, trois messages. La chaîne complète fonctionne, de la géométrie aux deux fronts de Pareto, et chaque méthode est mesurée par le même compteur. Sur ce cas réduit, la boucle quantique-classique retrouve le front exact avec moins de simulations que NSGA-II, mais l'essentiel du gain vient du modèle de substitution, pas du solveur quantique. Enfin, la physique des modèles (épaisseur dominante) est un résultat en soi, qui guide le choix de la paramétrisation pour la suite.
+\end{projet}

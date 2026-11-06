@@ -1,0 +1,62 @@
+\chapter{Le front exact par énumération}\label{ch:exact}
+\iterbanner{V1}
+
+\section{Pourquoi on peut, et pourquoi c'est précieux}
+512 profils à environ 10~ms chacun (aéro + SER) : l'énumération exhaustive prend quelques secondes. Elle donne le front de Pareto \emph{exact}, ce qui change la nature de la comparaison : on ne se demande plus quelle méthode trouve le meilleur front, mais combien de simulations chacune dépense pour retrouver un front connu. C'est exactement la question de la note d'intention, et elle n'a de sens que sur un cas réduit.
+
+\paragraph{L'algorithme.} On évalue tous les profils, on garde les faisables, on applique le tri non dominé et on conserve le premier front. Le tri de Deb compare toutes les paires : $O(MN^2)$ comparaisons pour $N$ points et $M$ objectifs, soit environ $1{,}5\cdot10^5$ comparaisons ici, négligeable.
+
+\section{Les deux fronts}
+\begin{figure}[htbp]
+\centering
+\input{figures/objectifs}
+\caption{Espace des objectifs pour les 512 profils. Points bleus : profils faisables à $t=8$~\% ; gris : autres épaisseurs faisables ; croix orange : infaisables. Ligne noire : front de Pareto exact. La SER est ordonnée par l'épaisseur, en bandes horizontales.}\label{fig:objectifs}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fronts}
+\caption{Zoom sur les fronts exacts, tous à $t=8$~\%. Les étiquettes donnent $(m~\%;\ p)$. Points bleus pleins : points supportés, atteignables par une somme pondérée (4 sur 7 dans S1, 5 sur 15 dans S2).}\label{fig:fronts}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & S1 : approche de face & S2 : radar en contrebas \\
+\midrule
+profils faisables & 392 & 392 \\
+profils sur le front & 7 & 15 \\
+dont supportés (somme pondérée) & 4 & 5 \\
+épaisseur des profils du front & 8~\% & 8~\% \\
+plage de $C_D$ sur le front & 55,1 à 62,0 counts & 55,1 à 90,4 counts \\
+plage de SER sur le front & 0,13~dB & 1,67~dB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Lecture physique}
+\paragraph{Les deux objectifs veulent la même épaisseur.} Tous les profils du front ont $t=t_{\min}=8$~\%. La traînée croît avec $t$ (survitesses, gradient adverse) et la SER aussi, par le rayon de bord d'attaque $r_{BA}\propto t^2$ (cours SER). Il n'y a donc aucun compromis sur l'épaisseur : la contrainte $t\ge8$~\% est active pour tous les profils optimaux.
+
+\paragraph{Le compromis se joue sur la cambrure.}
+\begin{itemize}
+\item Dans \textbf{S1}, le profil de traînée minimale est $(4~\%;\ 0{,}35)$ ; diminuer la cambrure réduit très légèrement la SER (0,13~dB au total) mais augmente la traînée. Le front est réel mais très court en SER : pour un concepteur, il se résume à « le profil de traînée minimale ».
+\item Dans \textbf{S2}, le radar voit l'intrados. Une cambrure plus forte, plus en avant, aplatit l'intrados sous le nez et \emph{diminue} la SER de 1,7~dB, au prix de 35~counts de traînée. Le front est plus long, et c'est un vrai compromis.
+\end{itemize}
+
+\paragraph{Peu de points supportés.} Seuls 4 points sur 7 (S1) et 5 sur 15 (S2) sont sur l'enveloppe convexe du front. Une méthode fondée sur la somme pondérée, comme notre QUBO, ne peut viser directement que ces points. Les autres devront être trouvés autrement (chapitre~\ref{ch:boucle}).
+
+\begin{projet}
+C'est un résultat de la chaîne complète à porter devant l'équipe : avec la paramétrisation NACA à 4 chiffres et une SER d'approche de face, le compromis traînée/SER est \emph{dégénéré en épaisseur}. Si le vrai solveur SER confirme la tendance, il faudra enrichir la paramétrisation (rayon de bord d'attaque indépendant, par exemple) ou le scénario radar pour obtenir un problème plus intéressant.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Dans S1, le profil $(2~\%;\ 0{,}25;\ 8~\%)$ a $C_D=58{,}87$~counts et SER $=-16{,}393$~dBm, et le profil $(2~\%;\ 0{,}30;\ 8~\%)$ a $C_D=59{,}22$ et SER $=-16{,}409$. Les deux sont sur le front. Pourquoi ? Un concepteur ferait-il vraiment la différence ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter une \textbf{tolérance} dans la dominance ($\varepsilon$-dominance) : deux profils dont les SER diffèrent de moins de 0,05~dB sont considérés comme égaux. Le front de S1 se réduirait à un ou deux profils, ce qui est la vraie réponse d'ingénierie.
+\item Vérifier la robustesse du front aux paramètres des modèles (critère de transition, $x_{stop}$, fréquence, secteur) : un point qui reste sur le front quels que soient ces paramètres est une conclusion solide.
+\end{itemize}
+\end{pistes}

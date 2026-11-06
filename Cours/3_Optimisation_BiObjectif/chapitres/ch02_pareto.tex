@@ -1,0 +1,102 @@
+\chapter{Dominance et front de Pareto}\label{ch:pareto}
+\iterbanner{V1}
+
+\section{Dominance}
+Avec deux objectifs à minimiser, deux profils ne sont pas toujours comparables : l'un peut traîner moins et être plus visible. On compare donc composante par composante.
+\begin{definition}[ (dominance de Pareto)]
+Le profil $a$ \textbf{domine} le profil $b$ si $f_k(a)\le f_k(b)$ pour tous les objectifs $k$, avec au moins une inégalité stricte. Un profil faisable qu'aucun autre profil faisable ne domine est \textbf{non dominé}, ou Pareto-optimal. Leur ensemble est le \textbf{front de Pareto}.
+\end{definition}
+Le front est la réponse complète d'un problème bi-objectif : il contient tous les compromis rationnels, et le choix entre eux appartient au concepteur, pas à l'algorithme.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.1]
+\draw[arr,cmuted] (0,0) -- (7,0) node[below,font=\small,cink] {$f_1$ (traînée)};
+\draw[arr,cmuted] (0,0) -- (0,5) node[left,font=\small,cink] {$f_2$ (SER)};
+\fill[cblue!8] (3,1.6) rectangle (6.8,4.8);
+\node[cblue,font=\small] at (5.2,4.3) {région dominée par $a$};
+\foreach \x/\y in {1/4.2,1.6/3,2.3/2.3,3/1.6,4.2/1.05,5.6/0.7}{\fill[cink] (\x,\y) circle (2pt);}
+\draw[cink,thick] (1,4.2) -- (1.6,3) -- (2.3,2.3) -- (3,1.6) -- (4.2,1.05) -- (5.6,0.7);
+\node[font=\small,anchor=south west] at (3,1.6) {$a$};
+\foreach \x/\y in {3.8,3.1/2.7,5/2.4,4.5/3.7,6/1.9,2.6/3.9}{}
+\foreach \x/\y in {3.8/3.1,5/2.4,4.5/3.7,6/1.9,2.6/3.9,1.9/4.5}{\fill[cmuted] (\x,\y) circle (1.6pt);}
+\node[font=\small,align=center] at (1.6,0.7) {front de\\ Pareto};
+\draw[-{Stealth[length=2mm]},cink] (1.6,1.05) -- (2.2,2.1);
+\fill[corange] (0.85,0.6) circle (2pt) node[below right,font=\small,corange] {idéal};
+\end{tikzpicture}
+\caption{Dominance. Les points noirs forment le front : aucun n'est battu sur les deux objectifs à la fois. Le point idéal (meilleure valeur de chaque objectif) n'est en général pas atteignable.}\label{fig:dominance}
+\end{figure}
+
+\section{Ramener le problème à un seul objectif : scalarisation}
+Beaucoup de solveurs (et tout QUBO) ne savent minimiser qu'\emph{une} fonction. Deux façons classiques de s'y ramener :
+\begin{itemize}
+\item la \textbf{somme pondérée} $\min\ w\,\tilde f_1+(1-w)\,\tilde f_2$, avec des objectifs normalisés $\tilde f_k\in[0,1]$, et un balayage de $w\in[0,1]$. Chaque $w$ donne un point du front. Mais seuls les points sur l'\emph{enveloppe convexe} du front, dits \textbf{supportés}, peuvent être obtenus ainsi : un point dans un creux du front n'est le minimum d'aucune somme pondérée ;
+\item l'\textbf{$\varepsilon$-contrainte} $\min f_1$ sous $f_2\le\varepsilon$, avec un balayage de $\varepsilon$. Elle atteint tous les points du front, convexes ou non, mais ajoute une contrainte d'inégalité, donc des qubits d'écart dans un QUBO.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.1]
+\draw[arr,cmuted] (0,0) -- (6,0) node[below,font=\small,cink] {$\tilde f_1$};
+\draw[arr,cmuted] (0,0) -- (0,4.5) node[left,font=\small,cink] {$\tilde f_2$};
+\foreach \x/\y in {0.5/4,1.2/2.4,2.4/2.0,3.3/1.6,4.8/0.5}{\fill[cink] (\x,\y) circle (2pt);}
+\draw[cink,thin] (0.5,4) -- (1.2,2.4) -- (2.4,2.0) -- (3.3,1.6) -- (4.8,0.5);
+\draw[cblue,thick,dashed] (0.5,4) -- (1.2,2.4) -- (4.8,0.5);
+\node[corange,font=\small,anchor=south west] at (2.4,2.0) {non supporté};
+\fill[corange] (2.4,2.0) circle (2.4pt); \fill[corange] (3.3,1.6) circle (2.4pt);
+\draw[cgreen!60!black,thick] (0.2,2.9) -- (3.2,0.85);
+\node[cgreen!60!black,font=\small,anchor=north] at (3.6,0.8) {droite $w\tilde f_1+(1-w)\tilde f_2=\text{cte}$};
+\node[cblue,font=\small] at (4.2,2.6) {enveloppe convexe};
+\end{tikzpicture}
+\caption{La somme pondérée ne trouve que les points de l'enveloppe convexe du front. Les points orange, dans un creux, ne sont le minimum d'aucune combinaison $w\tilde f_1+(1-w)\tilde f_2$.}\label{fig:convexe}
+\end{figure}
+
+\section{Mesurer la qualité d'un front approché}
+Pour comparer des méthodes, il faut chiffrer la distance entre un front trouvé et le front exact.
+\begin{itemize}
+\item La \textbf{fraction du front exact trouvée} : proportion des profils Pareto-optimaux qui ont été simulés. C'est le critère le plus strict, et celui de la note d'intention (« atteindre le front exact »).
+\item L'\textbf{hypervolume} (HV) : l'aire de la région dominée par le front trouvé et bornée par un point de référence $\vect r$ (figure~\ref{fig:hv}). Plus il est grand, mieux c'est ; il est maximal pour le front exact. On rapporte l'hypervolume trouvé à celui du front exact, sur des objectifs normalisés, avec $\vect r=(1{,}1;\,1{,}1)$.
+\item L'\textbf{IGD} (distance générationnelle inversée) : la distance moyenne de chaque point du front exact au point trouvé le plus proche.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.1]
+\draw[arr,cmuted] (0,0) -- (6,0) node[below,font=\small,cink] {$\tilde f_1$};
+\draw[arr,cmuted] (0,0) -- (0,4.5) node[left,font=\small,cink] {$\tilde f_2$};
+\fill[cblue!15] (0.6,4) -- (0.6,3.8) -- (1.4,3.8) -- (1.4,2.2) -- (2.6,2.2) -- (2.6,1.4) -- (4.2,1.4) -- (4.2,0.6) -- (5.4,0.6) -- (5.4,4) -- cycle;
+\foreach \x/\y in {0.6/3.8,1.4/2.2,2.6/1.4,4.2/0.6}{\fill[cblue] (\x,\y) circle (2pt);}
+\fill[corange] (5.4,4) circle (2.4pt) node[above right,font=\small,corange] {référence $\vect r$};
+\node[cblue!70!black,font=\small] at (3.8,2.8) {hypervolume};
+\end{tikzpicture}
+\caption{L'hypervolume est l'aire dominée par le front et bornée par le point de référence. En 2D, c'est une somme de rectangles, après tri selon $f_1$.}\label{fig:hv}
+\end{figure}
+
+\begin{codebox}[ : \code{optim/pareto.py}]
+\begin{lstlisting}
+def hypervolume_2d(F, ref):
+    F = F[np.all(F < ref, axis=1)]          # points qui dominent la reference
+    F = F[pareto_front(F)]
+    F = F[np.argsort(F[:, 0])]              # tri selon f1, f2 decroissant
+    hv, prev = 0.0, ref[1]
+    for f1, f2 in F:
+        hv += (ref[0] - f1) * (prev - f2)   # un rectangle par point
+        prev = f2
+    return hv
+\end{lstlisting}
+\end{codebox}
+
+\exercices
+\begin{exercice}
+Trois profils ont pour objectifs $A=(60;\,-16{,}3)$, $B=(58;\,-16{,}2)$ et $C=(62;\,-16{,}1)$. Lesquels sont non dominés ? Calculer l'hypervolume de $\{A,B\}$ par rapport à $\vect r=(65;\,-16)$.
+\end{exercice}
+\begin{exercice}
+Montrer qu'un point minimisant $w\tilde f_1+(1-w)\tilde f_2$ pour un $w\in\,]0,1[$ est forcément Pareto-optimal.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter la scalarisation de Tchebycheff, $\min\max_k w_k|\tilde f_k-z_k^\star|$ : elle atteint les points non supportés sans ajouter de contrainte, mais elle n'est pas quadratique (le max), donc pas directement un QUBO.
+\item Utiliser un troisième objectif (le moment de tangage, ou la SER à une autre fréquence) : le tri non dominé et l'hypervolume se généralisent, la visualisation devient plus difficile.
+\end{itemize}
+\end{pistes}

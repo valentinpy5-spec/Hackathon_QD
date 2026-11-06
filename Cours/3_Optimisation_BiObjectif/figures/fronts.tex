@@ -1,0 +1,30 @@
+% figure générée par tools/make_figures.py : fronts
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.6cm},width=0.5\linewidth,height=6cm,
+  xlabel={$C_D$ (counts)},ylabel={SER (dBm)},title style={font=\small},tick label style={font=\scriptsize},
+  yticklabel style={/pgf/number format/fixed,/pgf/number format/precision=2}]
+\nextgroupplot[title={S1 : approche de face : front ($t=8$~\%)}]
+\addplot[only marks,mark=*,mark size=1pt,cmuted!60] coordinates {(60.79,-16.431) (60.917,-16.436) (61.962,-16.438) (63.278,-16.438) (64.605,-16.437) (65.884,-16.436) (67.043,-16.436) (67.826,-16.435) (59.658,-16.357) (58.869,-16.393) (59.216,-16.409) (61.088,-16.418) (63.923,-16.424) (67.026,-16.427) (60.942,-16.19) (58.802,-16.296) (57.23,-16.349) (58.99,-16.378) (62.852,-16.394) (67.662,-16.405) (57.002,-16.245) (55.104,-16.306) (67.099,-16.344)};
+\addplot[cink,thick,mark=*,mark size=1.8pt,mark options={fill=white}] coordinates {(55.104,-16.306) (57.23,-16.349) (58.869,-16.393) (59.216,-16.409) (60.79,-16.431) (60.917,-16.436) (61.962,-16.438)};
+\addplot[only marks,mark=*,mark size=1.8pt,cblue] coordinates {(55.104,-16.306) (59.216,-16.409) (60.917,-16.436) (61.962,-16.438)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:55.104,-16.3062) {(4; 0.35)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:57.230,-16.3488) {(3; 0.30)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:58.869,-16.3927) {(2; 0.25)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:59.216,-16.4092) {(2; 0.30)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:60.790,-16.4314) {(1; 0.20)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:60.917,-16.4359) {(1; 0.25)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:61.962,-16.4377) {(1; 0.30)};
+\nextgroupplot[title={S2 : radar en contrebas : front ($t=8$~\%)}]
+\addplot[only marks,mark=*,mark size=1pt,cmuted!60] coordinates {(60.79,-13.957) (60.917,-13.785) (61.962,-13.663) (63.278,-13.572) (64.605,-13.502) (65.884,-13.446) (67.043,-13.4) (67.826,-13.361) (59.658,-14.749) (58.869,-14.461) (59.216,-14.253) (61.088,-14.094) (63.923,-13.969) (67.026,-13.867) (69.628,-13.782) (71.141,-13.71) (60.942,-15.37) (58.802,-15.02) (57.23,-14.753) (58.99,-14.545) (62.852,-14.377) (67.662,-14.239) (71.326,-14.122) (74.056,-14.02) (80.146,-15.851) (76.133,-15.471) (57.002,-15.172) (55.104,-14.93) (67.099,-14.732) (68.715,-14.564) (71.779,-14.42) (76.089,-14.292) (83.295,-16.199) (79.471,-15.832) (75.699,-15.517) (71.865,-15.256) (68.91,-15.036) (68.905,-14.846) (71.475,-14.678) (76.857,-14.526) (86.66,-16.454) (82.68,-16.106) (78.99,-15.798) (75.276,-15.527) (71.273,-15.292) (69.599,-15.083) (71.113,-14.895) (76.523,-14.718) (90.41,-16.601) (86.431,-16.316) (82.536,-16.016) (78.845,-15.746) (74.911,-15.502) (71.101,-15.279) (71.126,-15.07) (75.61,-14.865)};
+\addplot[cink,thick,mark=*,mark size=1.8pt,mark options={fill=white}] coordinates {(55.104,-14.93) (57.002,-15.172) (60.942,-15.37) (74.911,-15.502) (75.276,-15.527) (78.845,-15.746) (78.99,-15.798) (79.471,-15.832) (80.146,-15.851) (82.536,-16.016) (82.68,-16.106) (83.295,-16.199) (86.431,-16.316) (86.66,-16.454) (90.41,-16.601)};
+\addplot[only marks,mark=*,mark size=1.8pt,cblue] coordinates {(55.104,-14.93) (57.002,-15.172) (60.942,-15.37) (86.66,-16.454) (90.41,-16.601)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:55.104,-14.9302) {(4; 0.35)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:60.942,-15.3700) {(3; 0.20)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:75.276,-15.5267) {(6; 0.35)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:78.990,-15.7977) {(6; 0.30)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:80.146,-15.8507) {(4; 0.20)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:82.680,-16.1058) {(6; 0.25)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:86.431,-16.3155) {(7; 0.25)};
+\node[font=\tiny,anchor=south west,inner sep=1pt] at (axis cs:90.410,-16.6011) {(7; 0.20)};
+\end{groupplot}
+\end{tikzpicture}

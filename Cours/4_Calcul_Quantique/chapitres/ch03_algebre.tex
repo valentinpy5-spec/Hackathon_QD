@@ -1,0 +1,286 @@
+\chapter{Observables et évolution : l'algèbre linéaire du quantique}\label{ch:algebre}
+\iterbanner{V0}
+
+Toute la mécanique quantique de ce cours se joue en dimension finie ($\C^{2^n}$). Il n'y a pas d'analyse fonctionnelle, seulement des matrices.
+
+\section{Espace de Hilbert, adjoint, bases}
+L'expression « espace de Hilbert » fait peur, mais ici elle désigne simplement $\C^N$, avec $N=2^n$ pour $n$ qubits, muni d'un produit scalaire adapté aux nombres complexes. Cette section rassemble les quatre outils d'algèbre linéaire dont tout le reste du cours a besoin.
+
+\paragraph{1. Le produit hermitien.} Pour deux vecteurs $\ket\phi$ et $\ket\psi$ de composantes $\phi_k$ et $\psi_k$,
+\[
+\braket\phi\psi=\sum_k\overline{\phi_k}\,\psi_k .
+\]
+On conjugue les composantes de gauche pour que la norme soit un réel positif : $\braket\psi\psi=\sum_k\overline{\psi_k}\psi_k=\sum_k|\psi_k|^2\ge0$. Sans conjugaison, le vecteur $(1,i)$ aurait une « norme au carré » $1+i^2=0$, ce qui n'a pas de sens. Contrepartie : l'ordre compte, $\braket\psi\phi=\overline{\braket\phi\psi}$. Deux vecteurs sont \textbf{orthogonaux} si $\braket\phi\psi=0$, et une base $(\ket{e_k})$ est \textbf{orthonormée} si $\braket{e_j}{e_k}=\delta_{jk}$.
+
+\paragraph{2. Composantes et projecteurs.} Dans une base orthonormée, la composante de $\ket\psi$ selon $\ket{e_k}$ est $\braket{e_k}\psi$, exactement comme la composante d'une vitesse selon un axe est $\mathbf u\cdot\mathbf e_k$. La matrice
+\[
+P_k=\ket{e_k}\bra{e_k}
+\]
+est le \textbf{projecteur} sur $\ket{e_k}$ : $P_k\ket\psi=\ket{e_k}\,\braket{e_k}\psi$ garde la composante selon $\ket{e_k}$ et efface les autres. Projeter deux fois revient à projeter une fois ($P_k^2=P_k$). Avec ce langage, la règle de Born s'écrit
+\[
+P(k)=|\braket{e_k}\psi|^2=\bra\psi P_k\ket\psi .
+\]
+
+\paragraph{Pourquoi le \emph{carré} de la composante ?} Prenons un état à amplitudes réelles, $\ket\psi=\cos\theta\,\ket{e_0}+\sin\theta\,\ket{e_1}$ : un vecteur unitaire du plan, à l'angle $\theta$ de l'axe $\ket{e_0}$ (figure~\ref{fig:pythagore}). Ses composantes $\cos\theta$ et $\sin\theta$ ne peuvent pas être des probabilités : elles peuvent être négatives, et leur somme n'est pas 1 (elle vaut $\sqrt2$ à $45^\circ$). Leurs \emph{carrés}, eux, sont positifs et somment toujours à 1 : c'est le théorème de Pythagore, $\cos^2\theta+\sin^2\theta=1$. La règle de Born exploite exactement cela. Un vecteur d'état est de longueur 1, la mesure choisit des axes orthogonaux, et le carré de la projection sur chaque axe donne la part de probabilité de ce résultat. Avec des composantes complexes, on remplace le carré par le module au carré.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=2.6]
+\draw[cmuted,thin] (0,0) -- (1.2,0);
+\draw[cmuted,thin] (0,0) -- (0,1.15);
+\draw[cmuted,thin,dashed] (0:1) arc (0:90:1);
+\draw[arr] (0,0) -- (1,0) node[below,font=\small] {$\ket{e_0}$};
+\draw[arr] (0,0) -- (0,1) node[left,font=\small] {$\ket{e_1}$};
+\draw[cblue,very thick,-{Stealth[length=2.5mm]}] (0,0) -- (35:1) node[above right,font=\small] {$\ket\psi$};
+\draw[corange,dashed] (35:1) -- ({cos(35)},0);
+\draw[corange,dashed] (35:1) -- (0,{sin(35)});
+\draw[corange,line width=2pt] (0,0) -- ({cos(35)},0);
+\draw[cgreen,line width=2pt] (0,0) -- (0,{sin(35)});
+\node[corange,font=\small,below] at ({cos(35)/2},-0.02) {$\braket{e_0}\psi=\cos\theta$};
+\node[cgreen,font=\small,left] at (-0.02,{sin(35)/2}) {$\braket{e_1}\psi=\sin\theta$};
+\draw[cink] (0.3,0) arc (0:35:0.3); \node[font=\small] at (17:0.4) {$\theta$};
+\node[font=\small,align=left,anchor=west] at (1.35,0.55) {longueur de $\ket\psi$ : $1$\\[2pt]
+  $P(0)=\cos^2\theta$, $\ P(1)=\sin^2\theta$\\[2pt]
+  Pythagore : $P(0)+P(1)=1$};
+\end{tikzpicture}
+\caption{La règle de Born est le théorème de Pythagore. Les probabilités sont les carrés des projections du vecteur d'état, de longueur 1, sur les axes de la base de mesure.}\label{fig:pythagore}
+\end{figure}
+
+\paragraph{3. La relation de fermeture.} La somme des projecteurs sur tous les vecteurs d'une base orthonormée redonne l'identité :
+\[
+\sum_k\ket{e_k}\bra{e_k}=\Id .
+\]
+Appliquée à $\ket\psi$, elle dit $\ket\psi=\sum_k\ket{e_k}\braket{e_k}\psi$ : un vecteur est la somme de ses composantes, comme $\mathbf u=\sum_k(\mathbf u\cdot\mathbf e_k)\,\mathbf e_k$. Son intérêt pratique est qu'on peut \emph{insérer} $\Id$ n'importe où dans un calcul pour changer de base. Deux exemples :
+\begin{itemize}
+\item les probabilités somment à 1 : $\sum_kP(k)=\sum_k\bra\psi\big(\ket{e_k}\bra{e_k}\big)\ket\psi=\bra\psi\Id\ket\psi=1$ ;
+\item écrire $\ket0$ dans la base $\{\ket\pm\}$ : $\ket0=\ket+\braket+0+\ket-\braket-0=\tfrac1{\sqrt2}(\ket++\ket-)$.
+\end{itemize}
+
+\paragraph{4. L'adjoint.} L'\textbf{adjoint} d'une matrice est sa transposée conjuguée, $A^\dagger=\overline{A}^\top$. C'est l'analogue complexe de la transposée, et il vérifie
+\[
+\braket{\phi}{A\psi}=\braket{A^\dagger\phi}{\psi}.
+\]
+On l'utilise sans cesse pour passer d'un ket à un bra : $(\ket\psi)^\dagger=\bra\psi$, $(A\ket\psi)^\dagger=\bra\psi A^\dagger$, et $(AB)^\dagger=B^\dagger A^\dagger$ (l'ordre s'inverse, comme pour la transposée). Exemple :
+\[
+A=\begin{pmatrix}1&2i\\3&4\end{pmatrix}\quad\Longrightarrow\quad A^\dagger=\begin{pmatrix}1&3\\-2i&4\end{pmatrix}.
+\]
+Deux familles de matrices, définies par l'adjoint, structurent toute la mécanique quantique :
+\begin{center}
+\begin{tabularx}{\linewidth}{llXX}
+\toprule
+Famille & Définition & Propriété clé & Rôle physique \\
+\midrule
+hermitienne & $A^\dagger=A$ & valeurs propres réelles, vecteurs propres orthonormés & grandeur mesurable (§\ref{sec:observables}) \\
+unitaire & $U^\dagger U=\Id$ & conserve les produits scalaires et la norme & évolution, porte (§\ref{sec:unitaires}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Observables : opérateurs hermitiens}\label{sec:observables}
+\paragraph{Le problème.} En physique classique, une grandeur mesurable (énergie, position) est un nombre, fonction de l'état. En quantique, une même mesure peut donner plusieurs résultats, avec des probabilités. Il faut donc un objet qui contienne à la fois :
+\begin{enumerate}
+\item la \emph{question} posée, c'est-à-dire la base de mesure $(\ket{u_k})$, autrement dit l'orientation de l'appareil (§\ref{sec:autre-base}) ;
+\item la \emph{valeur} affichée par l'appareil pour chaque réponse : un nombre réel $a_k$, par exemple $+1$ ou $-1$ pour un spin, une énergie en joules, ou un $C_D$.
+\end{enumerate}
+La matrice $A=\sum_ka_k\ket{u_k}\bra{u_k}$ fait exactement cela : ses vecteurs propres sont les états de la base, et ses valeurs propres sont les valeurs affichées. Une observable n'est rien d'autre que cet emballage.
+
+\paragraph{Pourquoi cette forme, et pas une autre ?} On cherche une matrice qui \emph{encode} l'appareil : appliquée à l'état $\ket{u_k}$, pour lequel l'appareil affiche $a_k$ à coup sûr, elle doit simplement le multiplier par $a_k$. On impose donc $A\ket{u_k}=a_k\ket{u_k}$ pour tout $k$. Une application linéaire est entièrement déterminée par son action sur une base, donc cette condition fixe $A$ de façon unique. Pour l'écrire, on insère la relation de fermeture $\Id=\sum_k\ket{u_k}\bra{u_k}$ :
+\[
+A=A\,\Id=\sum_kA\ket{u_k}\bra{u_k}=\sum_ka_k\ket{u_k}\bra{u_k}.
+\]
+Inversement, on vérifie que cette matrice convient. Par orthonormalité, $\braket{u_k}{u_j}=\delta_{kj}$, donc $A\ket{u_j}=\sum_ka_k\ket{u_k}\braket{u_k}{u_j}=a_j\ket{u_j}$. La formule se lit comme une recette en trois temps :
+\begin{enumerate}
+\item projeter l'état sur chaque axe de mesure ($\bra{u_k}\cdot$) ;
+\item multiplier chaque composante par la valeur affichée $a_k$ ;
+\item recombiner ($\ket{u_k}\cdot$).
+\end{enumerate}
+C'est exactement une matrice diagonale $\mathrm{diag}(a_0,a_1,\dots)$, écrite dans la base de l'appareil plutôt que dans la base de calcul. Si l'appareil mesure en base de calcul ($\ket{u_k}=\ket k$), on retrouve littéralement $A=\mathrm{diag}(a_0,a_1,\dots)$. Pour $a_0=1$ et $a_1=-1$, c'est $Z$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\node[font=\small] (psi) at (0,0) {$\ket\psi$};
+\node[flow,minimum width=2.6cm,minimum height=1.5cm] (app) at (2.8,0) {appareil orienté\\ selon la base $(\ket{u_k})$};
+\draw[arr] (psi) -- (app);
+\node[font=\small,anchor=west] (r0) at (5.3,0.55) {affiche $a_0$, avec probabilité $|\braket{u_0}\psi|^2$};
+\node[font=\small,anchor=west] (r1) at (5.3,-0.55) {affiche $a_1$, avec probabilité $|\braket{u_1}\psi|^2$};
+\draw[arr] (app.east) ++(0,0.2) -- (r0.west);
+\draw[arr] (app.east) ++(0,-0.2) -- (r1.west);
+\node[cblue,font=\small] at (2.8,-1.35) {$A=a_0\ket{u_0}\bra{u_0}+a_1\ket{u_1}\bra{u_1}$};
+\end{tikzpicture}
+\caption{Une observable regroupe une base de mesure (l'orientation de l'appareil) et les valeurs affichées pour chaque résultat.}\label{fig:observable}
+\end{figure}
+
+\paragraph{Pourquoi hermitienne ?} Le théorème spectral dit qu'une matrice est hermitienne si et seulement si elle s'écrit $\sum_ka_k\ket{u_k}\bra{u_k}$ avec des $a_k$ \emph{réels} et des $\ket{u_k}$ \emph{orthonormés}. Ce sont exactement les deux exigences physiques : un appareil affiche des nombres réels, et ses différentes réponses doivent correspondre à des états parfaitement distinguables, donc orthogonaux.
+
+\begin{definition}[ (postulat des observables)]
+Une grandeur mesurable est représentée par une matrice \textbf{hermitienne} $A=A^\dagger=\sum_k a_k\ket{u_k}\bra{u_k}$. Mesurer $A$ sur $\ket\psi$ donne la valeur $a_k$ avec probabilité $|\braket{u_k}\psi|^2$, et laisse le système dans $\ket{u_k}$. La \textbf{valeur moyenne} sur de nombreux shots vaut
+\[\expval{A}_\psi=\bra\psi A\ket\psi=\sum_k a_k\,|\braket{u_k}\psi|^2 .\]
+\end{definition}
+\paragraph{Intuition.} Une \emph{observable} est une « question » qu'on pose au système. Ses valeurs propres sont les \emph{réponses possibles} ; ses vecteurs propres sont les états pour lesquels la réponse est certaine. Si l'état n'est pas un vecteur propre, la réponse est aléatoire, et l'on ne peut prédire que sa loi de probabilité, en particulier sa moyenne.
+
+\subsection*{Valeur affichée et probabilité : deux choses à ne pas mélanger}
+Une observable $A=\sum_ka_k\ket{u_k}\bra{u_k}$ contient deux ingrédients qui jouent des rôles \emph{complètement séparés} :
+\begin{itemize}
+\item la \textbf{base} $(\ket{u_k})$ décide \emph{quels} résultats sont possibles et \emph{avec quelle probabilité} ils sortent : $P(k)=|\braket{u_k}\psi|^2$. Les $a_k$ n'y apparaissent pas ;
+\item les \textbf{valeurs} $a_k$ sont seulement les nombres que l'appareil \emph{inscrit} pour chaque résultat. Elles n'interviennent que lorsqu'on calcule une moyenne (ou une variance) : $\expval A=\sum_ka_k\,P(k)$.
+\end{itemize}
+
+\paragraph{L'analogie du dé.} Un dé équilibré tombe sur chaque face avec probabilité $\tfrac16$. Les nombres peints sur les faces sont les « valeurs affichées ». Si l'on repeint les faces avec 10, 20, \dots, 60, ou avec des 0 et des 1, aucune probabilité ne change : le dé roule exactement pareil. Seule la moyenne change. Il en va de même ici : la physique (l'état et l'orientation de l'appareil) fixe les probabilités, et les $a_k$ ne sont qu'une étiquette écrite sur le cadran.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.9cm]
+\node[flow] (psi) {état\\ $\ket\psi$};
+\node[flow,right=of psi] (amp) {amplitudes\\ $\braket{u_k}\psi\in\C$};
+\node[flow,right=of amp] (prob) {probabilités\\ $P(k)=|\braket{u_k}\psi|^2$};
+\node[flow,right=of prob] (moy) {moyenne\\ $\expval A=\sum_ka_kP(k)$};
+\draw[arr] (psi) -- node[above,font=\scriptsize] {base} (amp);
+\draw[arr] (amp) -- node[above,font=\scriptsize] {$|\cdot|^2$} (prob);
+\draw[arr] (prob) -- node[above,font=\scriptsize] {$\times a_k$} (moy);
+\draw[decorate,decoration={brace,amplitude=5pt,mirror},cblue] ([yshift=-3mm]psi.south west) -- ([yshift=-3mm]prob.south east)
+  node[midway,below=6pt,font=\small,cblue] {physique : état et orientation de l'appareil};
+\draw[decorate,decoration={brace,amplitude=5pt,mirror},corange] ([yshift=-3mm]moy.south west) -- ([yshift=-3mm]moy.south east)
+  node[midway,below=6pt,font=\small,corange,align=center] {étiquettes $a_k$};
+\end{tikzpicture}
+\caption{Les valeurs $a_k$ n'entrent qu'à la dernière étape. Elles ne modifient jamais les probabilités.}\label{fig:chaine-mesure}
+\end{figure}
+
+\paragraph{Exemple : un même appareil, trois cadrans.} On mesure $\ket\psi=\tfrac35\ket0+\tfrac{4i}5\ket1$ en base de calcul avec trois cadrans différents :
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+Cadran & $a_0$ & $a_1$ & $P(0)$, $P(1)$ & moyenne & formule fausse $|a_k\braket{u_k}\psi|^2$ \\
+\midrule
+spin, observable $Z$ & $+1$ & $-1$ & $0{,}36$ ; $0{,}64$ & $-0{,}28$ & $0{,}36$ ; $0{,}64$ (par chance) \\
+bit, observable $\hat b=\ket1\bra1$ & $0$ & $1$ & $0{,}36$ ; $0{,}64$ & $0{,}64$ & $0$ ; $0{,}64$ (somme $\neq1$) \\
+énergie en unités arbitraires & $10$ & $20$ & $0{,}36$ ; $0{,}64$ & $16{,}4$ & $36$ ; $256$ (absurde) \\
+\bottomrule
+\end{tabular}
+\end{center}
+Les probabilités sont les mêmes sur les trois lignes : c'est le même appareil, seul le cadran change. La formule $|a_k\braket{u_k}\psi|^2$ échoue de trois façons :
+\begin{itemize}
+\item elle dépend du choix d'unités ;
+\item elle ne somme pas à 1 ;
+\item elle donne une probabilité nulle à tout résultat affiché « 0 », alors qu'un polariseur qui affiche 0 quand le photon est absorbé voit bien des photons absorbés.
+\end{itemize}
+Avec $Z$, elle donne le bon résultat uniquement parce que $a_k^2=1$, ce qui peut tromper.
+
+\begin{piege}[ : $A\ket\psi$ n'est ni l'état après la mesure, ni un vecteur de probabilités]
+La quantité $a_k\braket{u_k}\psi$ existe bien : c'est la composante du vecteur $A\ket\psi$ selon $\ket{u_k}$, car $\braket{u_k}{A\psi}=a_k\braket{u_k}\psi$. Mais $A\ket\psi$ n'a pas de sens physique direct :
+\begin{itemize}
+\item ce n'est pas l'état après la mesure, qui est $\ket{u_k}$ ;
+\item il n'est même pas normé. Sa norme au carré vaut $\|A\ket\psi\|^2=\sum_ka_k^2\,|\braket{u_k}\psi|^2=\expval{A^2}$, le moment d'ordre 2 de la mesure.
+\end{itemize}
+Les nombres $|a_k\braket{u_k}\psi|^2$ sont donc les termes de $\expval{A^2}$, pas des probabilités. Appliquer une observable à un état est un outil de calcul, pour obtenir $\bra\psi A\ket\psi$ ou $\expval{A^2}$. Ce n'est pas ce que fait l'appareil au système.
+\end{piege}
+
+\paragraph{D'où vient la formule de la moyenne ?} On remplace $A$ par sa décomposition spectrale :
+\[
+\bra\psi A\ket\psi=\sum_ka_k\,\braket\psi{u_k}\braket{u_k}\psi=\sum_ka_k\,\overline{\braket{u_k}\psi}\,\braket{u_k}\psi=\sum_ka_k\,|\braket{u_k}\psi|^2 .
+\]
+C'est la définition usuelle d'une espérance, $\sum(\text{valeur})\times(\text{probabilité})$. L'intérêt de la forme $\bra\psi A\ket\psi$ est qu'elle se calcule par un simple produit matriciel, \emph{sans} diagonaliser $A$.
+
+\paragraph{Exemple : construire une observable à partir d'un appareil.} Un aimant de Stern-Gerlach orienté selon $x$ distingue les états $\ket+$ (déviés vers le haut, valeur $+1$) et $\ket-$ (vers le bas, valeur $-1$). L'observable correspondante est
+\[
+\ket+\bra+-\ket-\bra-=\frac12\begin{pmatrix}1&1\\1&1\end{pmatrix}-\frac12\begin{pmatrix}1&-1\\-1&1\end{pmatrix}=\begin{pmatrix}0&1\\1&0\end{pmatrix}=X .
+\]
+De même, l'aimant orienté selon $z$ donne $\ket0\bra0-\ket1\bra1=Z$. Les matrices de Pauli ci-dessous ne sont donc pas des objets abstraits : ce sont les observables « spin selon $x$, $y$, $z$ ». Un polariseur qui affiche 1 si le photon passe et 0 sinon correspond, lui, au projecteur $\ket{u_0}\bra{u_0}$.
+
+\paragraph{Exemple chiffré.} Reprenons $\ket\psi=\tfrac35\ket0+\tfrac{4i}5\ket1$ et l'observable $Z=\mathrm{diag}(1,-1)$. Le résultat est $+1$ avec probabilité $\tfrac9{25}$ et $-1$ avec probabilité $\tfrac{16}{25}$, d'où une moyenne $\tfrac9{25}-\tfrac{16}{25}=-\tfrac7{25}$. Par le calcul matriciel : $Z\ket\psi=\tfrac35\ket0-\tfrac{4i}5\ket1$, et $\bra\psi Z\ket\psi=\tfrac35\cdot\tfrac35+\big(-\tfrac{4i}5\big)\big(-\tfrac{4i}5\big)=\tfrac9{25}+\tfrac{16i^2}{25}=-\tfrac7{25}$. Les deux calculs coïncident.
+
+Le même calcul avec $X$ et $Y$ donne
+\[
+X\ket\psi=\tfrac{4i}5\ket0+\tfrac35\ket1\ \Rightarrow\ \expval X=\tfrac35\cdot\tfrac{4i}5+\big(-\tfrac{4i}5\big)\tfrac35=0,\qquad
+Y\ket\psi=\tfrac45\ket0+\tfrac{3i}5\ket1\ \Rightarrow\ \expval Y=\tfrac{12}{25}+\tfrac{12}{25}=\tfrac{24}{25}.
+\]
+On retrouve les coordonnées $(0;\ 0{,}96;\ -0{,}28)$ du point de Bloch obtenues au §\ref{sec:autre-base} par les trois mesures.
+
+\paragraph{La dispersion, et le nombre de shots.} Une moyenne ne suffit pas : il faut savoir à quel point les résultats fluctuent autour d'elle. L'écart-type de la mesure est
+\[
+\Delta A=\sqrt{\expval{A^2}-\expval{A}^2}.
+\]
+Il est nul si et seulement si $\ket\psi$ est un vecteur propre de $A$ (réponse certaine). Pour notre exemple, $Z^2=\Id$, donc $\expval{Z^2}=1$ et $\Delta Z=\sqrt{1-0{,}28^2}=0{,}96$ : les résultats $\pm1$ fluctuent beaucoup (figure~\ref{fig:histo-Z}). Avec $N$ shots, la moyenne empirique a une erreur de l'ordre de $\Delta A/\sqrt N$ : il faut environ $1\,000$ shots pour connaître $\expval Z$ à $\pm0{,}03$ près. C'est le coût de toute estimation sur machine réelle, et en particulier de chaque évaluation de la fonction de coût de QAOA.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=9cm,height=5.4cm,ybar,bar width=1.1cm,ymin=0,ymax=0.9,xmin=-1.8,xmax=1.8,
+  enlargelimits=false,clip=false,
+  xtick={-1,1},xticklabels={$-1$ (état $\ket1$),$+1$ (état $\ket0$)},ylabel={probabilité},
+  ytick={0,0.2,0.4,0.6,0.8},yticklabel style={/pgf/number format/use comma},
+  tick label style={font=\small},nodes near coords,
+  nodes near coords style={font=\small,/pgf/number format/use comma}]
+\addplot[fill=cblue!35,draw=cblue] coordinates {(-1,0.64) (1,0.36)};
+\draw[corange,very thick] (axis cs:-0.28,0) -- (axis cs:-0.28,0.78);
+\node[corange,font=\small,anchor=south] at (axis cs:-0.28,0.78) {$\expval Z=-0{,}28$};
+\draw[corange,thick,{Stealth[length=2mm]}-{Stealth[length=2mm]}] (axis cs:-1.24,0.5) -- (axis cs:0.68,0.5);
+\node[corange,font=\small,anchor=south west] at (axis cs:-0.2,0.51) {$\pm\Delta Z=\pm0{,}96$};
+\end{axis}
+\end{tikzpicture}
+\caption{Loi des résultats de la mesure de $Z$ sur $\tfrac35\ket0+\tfrac{4i}5\ket1$. Chaque shot donne $+1$ ou $-1$, jamais $-0{,}28$ : la moyenne n'est pas un résultat possible, seulement la limite de la moyenne empirique sur de nombreux shots.}\label{fig:histo-Z}
+\end{figure}
+
+\paragraph{Le cas qui nous intéresse : les observables diagonales.} Toute fonction $f$ des chaînes de bits définit une observable diagonale dans la base de calcul :
+\[
+D_f=\sum_xf(x)\,\ket x\bra x=\mathrm{diag}\big(f(0),f(1),\dots,f(2^n-1)\big).
+\]
+La mesurer, c'est mesurer en base de calcul, lire la chaîne $x$ obtenue et afficher $f(x)$. Sa moyenne est
+\[
+\expval{D_f}_\psi=\sum_xf(x)\,|\braket x\psi|^2,
+\]
+c'est-à-dire \emph{la valeur moyenne de $f$ sur les chaînes tirées selon la règle de Born}. Pour notre projet, $f(x)$ est le $C_D$ prédit pour le profil $x$, et $D_f$ est l'hamiltonien de coût $H_C$ (ch.~\ref{ch:hamiltoniens}).
+
+\paragraph{Minimiser une moyenne, c'est résoudre le problème.} Pour une observable hermitienne, $\bra\psi A\ket\psi$ est la forme quadratique de $A$, et sur les vecteurs normés c'est le quotient de Rayleigh. Son minimum sur tous les états vaut la plus petite valeur propre $a_{\min}$, atteinte au vecteur propre correspondant : c'est le \emph{principe variationnel}. La preuve tient en une ligne : $\bra\psi A\ket\psi=\sum_ka_k|\braket{u_k}\psi|^2\ge a_{\min}\sum_k|\braket{u_k}\psi|^2=a_{\min}$.
+
+Pour $D_f$, les valeurs propres sont les $f(x)$ et les vecteurs propres sont les chaînes $\ket x$. Chercher l'état $\ket\psi$ qui minimise $\expval{H_C}$ revient donc exactement à chercher le profil $x^\star$ de $C_D$ minimal, et l'état optimal est $\ket{x^\star}$ lui-même. Toute l'idée de QAOA est là : remplacer une recherche discrète parmi $2^n$ chaînes par la minimisation continue d'une moyenne $\expval{H_C}$, sur une famille d'états paramétrés.
+
+\paragraph{Matrices de Pauli.} Ce sont les briques de tout le cours :
+\[
+X=\begin{pmatrix}0&1\\1&0\end{pmatrix},\quad Y=\begin{pmatrix}0&-i\\i&0\end{pmatrix},\quad Z=\begin{pmatrix}1&0\\0&-1\end{pmatrix}.
+\]
+Elles sont hermitiennes, unitaires, de carré $\Id$, de valeurs propres $\pm1$.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Observable & vecteur propre $+1$ & vecteur propre $-1$\\
+\midrule
+$Z$ & $\ket0$ & $\ket1$\\
+$X$ & $\ket+$ & $\ket-$\\
+$Y$ & $\ket{+i}$ & $\ket{-i}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Sur la sphère de Bloch, $\expval X,\expval Y,\expval Z$ sont exactement les coordonnées $(x,y,z)$ du point représentant l'état.
+
+\begin{resultat}
+$Z\ket b=(1-2b)\ket b$ pour $b\in\{0,1\}$ : la valeur propre de $Z$ est le \textbf{spin} $s=1-2b\in\{+1,-1\}$. Par conséquent, l'opérateur
+\[\hat b=\frac{\Id-Z}{2}=\ket1\bra1\]
+a pour valeur propre le bit $b$ lui-même. C'est le pont entre une variable binaire d'optimisation et un opérateur quantique (ch.~\ref{ch:qubo}).
+\end{resultat}
+
+\section{Évolution : opérateurs unitaires}\label{sec:unitaires}
+\begin{definition}[ (postulat d'évolution)]
+Un système isolé évolue par une matrice \textbf{unitaire} $U$ ($U^\dagger U=\Id$) : $\ket\psi\mapsto U\ket\psi$. L'unitarité garantit la conservation de la norme, donc la somme des probabilités égale à 1. Toute évolution est \emph{réversible} ($U^{-1}=U^\dagger$) ; seule la mesure ne l'est pas.
+\end{definition}
+
+\paragraph{Exponentielle de matrice et rotations.} Pour $P\in\{X,Y,Z\}$, $P^2=\Id$, donc la série de l'exponentielle se sépare en termes pairs et impairs :
+\[
+e^{-i\theta P}=\cos\theta\,\Id-i\sin\theta\,P .
+\]
+Les \textbf{rotations} $R_P(\theta)=e^{-i\theta P/2}$ font tourner la sphère de Bloch d'un angle $\theta$ autour de l'axe $P$ (le facteur $1/2$ vient de ce que l'état est paramétré par $\theta/2$). Par exemple, $R_Z(\theta)=\mathrm{diag}(e^{-i\theta/2},e^{i\theta/2})$ ne change que la phase relative : rotation autour de $z$, probabilités inchangées.
+
+\section{Non-commutation}
+$XZ=-ZX$ : les Pauli \emph{anticommutent}. Deux observables qui ne commutent pas n'ont pas de base propre commune, et on ne peut pas leur attribuer simultanément une valeur précise. Pour l'optimisation, la conséquence est directe :
+\begin{itemize}
+\item un hamiltonien de coût construit avec des $Z$ seulement est \emph{diagonal}. Son évolution $e^{-i\gamma H_C}$ ne fait que déphaser les états de la base de calcul, sans jamais changer les probabilités de mesure ;
+\item pour déplacer de la probabilité d'un profil vers un autre, il faut un opérateur qui \emph{ne commute pas} avec $H_C$ : c'est le rôle du \textbf{mélangeur} $\sum_kX_k$ dans QAOA et du champ transverse dans le recuit quantique.
+\end{itemize}
+
+\exercices
+\begin{exercice}
+(a) Vérifier que $\ket\pm$ sont vecteurs propres de $X$, de valeurs propres $\pm1$. (b) Calculer $\bra+Z\ket+$ et $\bra+X\ket+$, et interpréter sur la sphère de Bloch.
+\end{exercice}
+\begin{exercice}
+(a) Vérifier que $H$ est unitaire et hermitienne. (b) Montrer que $HZH=X$ et $HXH=Z$ ; en déduire que $H$ échange les bases $\{\ket0,\ket1\}$ et $\{\ket+,\ket-\}$. (c) Établir $e^{-i\theta X}=\cos\theta\,\Id-i\sin\theta\,X$.
+\end{exercice}

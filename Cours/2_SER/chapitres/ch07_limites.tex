@@ -1,0 +1,44 @@
+\chapter{Limites du modèle et feuille de route}\label{ch:limites}
+\iterbanner{V1}
+
+\section{Ce que le modèle ne fait pas}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lXl}
+\toprule
+Limite & Effet attendu & Gravité ici \\
+\midrule
+2D (section infinie) & pas d'effet d'envergure, de flèche ni d'extrémité d'aile & faible pour comparer des profils \\
+Optique physique & bord d'attaque des profils minces à la limite ($kr\approx0{,}8$) : environ 1~dB d'erreur & moyenne \\
+Pas de diffraction d'arête & bord de fuite sous-estimé, surtout hors des points spéculaires & faible de face \\
+Pas d'ondes rampantes & polarisations TM et TE confondues & moyenne pour les profils minces \\
+Ombrage par simple test $\vect n\cdot\shat>0$ & faux pour des parties concaves (intrados très cambré) & faible \\
+Conducteur parfait & pas de matériaux absorbants & hors sujet ici \\
+Secteur moyenné & une seule grandeur scalaire & choix de modélisation \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Feuille de route, par rapport utilité / effort}
+\begin{enumerate}
+\item \textbf{Méthode des moments 2D en polarisation TM} (EFIE) : quelques heures d'implémentation, quelques centaines d'inconnues. Elle donnerait une référence exacte pour valider la PO sur les vrais profils, et lèverait le doute sur le bord d'attaque des profils minces.
+\item \textbf{PO 3D sur le STL}, avec la formule fermée de l'intégrale sur un triangle (Gordon, 1975) : c'est le modèle le plus proche de ce que la note d'intention prévoit, et il permet de tester la chaîne STL $\to$ SER.
+\item \textbf{Diffraction d'arête} (PTD ou UTD) pour le bord de fuite.
+\item \textbf{Étude de sensibilité} à la fréquence, à la polarisation et au secteur, avec le front de Pareto comme sortie.
+\end{enumerate}
+
+\begin{projet}
+Le message pour l'équipe : le modèle simplifié suffit pour construire, déboguer et comparer les méthodes d'optimisation. Il prédit que, pour une approche de face, la SER d'un profil NACA est dominée par le rayon de bord d'attaque, donc par l'épaisseur. Si le vrai solveur confirme cette tendance, le front de Pareto restera concentré à épaisseur minimale, et c'est la paramétrisation, plus que le solveur, qu'il faudra enrichir pour obtenir un compromis intéressant.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Pourquoi une méthode des moments 2D en TM est-elle beaucoup plus simple à écrire qu'en TE, et pourquoi a-t-on besoin d'environ 10 inconnues par longueur d'onde ? Combien d'inconnues faut-il pour un profil de corde 1~m à 10~GHz ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Cette feuille de route est elle-même la liste des pistes : commencer par la méthode des moments 2D, qui sert de validation à tout le reste.
+\item Documenter l'écart PO/MoM sur la grille sous forme de corrélation de rang, comme pour la traînée : pour l'optimisation, c'est le classement qui compte.
+\end{itemize}
+\end{pistes}

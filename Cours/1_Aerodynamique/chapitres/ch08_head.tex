@@ -1,0 +1,108 @@
+\chapter{Couche limite turbulente : la méthode d'entraînement de Head}\label{ch:head}
+\iterbanner{V0}
+
+\section{Pourquoi une deuxième équation}
+En laminaire, la forme du profil de vitesse suit le gradient de pression local, et un seul paramètre ($\lambda$) suffit. En turbulent, ce n'est plus vrai : la forme moyenne dépend de l'histoire de la couche, de la façon dont la turbulence s'est développée en amont. Il faut donc suivre $H$ comme une inconnue à part entière, et lui donner sa propre équation d'évolution.
+
+\section{L'idée de Head : l'entraînement}
+Le débit volumique qui traverse la couche limite, par unité d'envergure, vaut
+\[
+Q=\int_0^\delta u\,\dd y=U_e\,(\delta-\delta^*)=U_e\,\theta\,H_1,\qquad H_1=\frac{\delta-\delta^*}{\theta}.
+\]
+Ce débit ne peut augmenter que si la couche \textbf{entraîne} du fluide extérieur irrotationnel à travers sa frontière, l'interface turbulent--non turbulent (figure~\ref{fig:entrainement}). Head (1958) suppose que la vitesse d'entraînement, rapportée à $U_e$, ne dépend que de la forme du profil :
+\[
+\frac{1}{U_e}\frac{\dd Q}{\dd s}=\frac{1}{U_e}\frac{\dd(U_e\theta H_1)}{\dd s}=F(H_1),
+\]
+et que $H_1$ est lui-même une fonction de $H$. Avec l'équation de von Kármán, on obtient un système fermé de deux EDO.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1.1cm,y=1.1cm]
+\fill[pattern=north east lines,pattern color=cmuted] (0,-0.25) rectangle (10,0);
+\draw[cink,thick] (0,0) -- (10,0);
+\draw[cblue,very thick,decorate,decoration={snake,amplitude=0.6mm,segment length=4mm}] (0,0.8) .. controls (4,1.3) and (7,1.7) .. (10,2.1);
+\node[cblue,font=\small] at (8.2,2.25) {frontière turbulente $\delta(s)$};
+\foreach \x in {2.5,5.5,8}{\draw[corange,thick,-{Stealth[length=2mm]}] (\x-0.3,{0.8+0.13*\x+0.7}) -- (\x,{0.8+0.13*\x+0.12});}
+\node[corange,font=\small] at (3.2,2.4) {entraînement de fluide extérieur};
+\draw[cink,-{Stealth[length=2.5mm]},thick] (-1.2,1.0) -- (-0.2,1.0) node[midway,above,font=\small] {$U_e$};
+\node[font=\small,align=center] at (5,0.55) {débit $Q=U_e(\delta-\delta^*)$ croissant};
+\end{tikzpicture}
+\caption{L'idée de Head : le débit dans la couche limite turbulente n'augmente que par entraînement de fluide extérieur à travers la frontière turbulente.}\label{fig:entrainement}
+\end{figure}
+
+\section{Le système résolu}
+\[
+\frac{\dd\theta}{\dd s}=\frac{c_f}{2}-\big(H+2\big)\frac{\theta}{U_e}\frac{\dd U_e}{\dd s},\qquad
+\frac{\dd E}{\dd s}=U_e\,F(H_1),\qquad E=U_e\,\theta\,H_1,
+\]
+avec les fermetures empiriques suivantes (Head, puis Cebeci et Bradshaw) :
+\[
+F(H_1)=0{,}0306\,(H_1-3)^{-0{,}6169},
+\]
+\[
+H_1(H)=\begin{cases}3{,}3+0{,}8234\,(H-1{,}1)^{-1{,}287} & H\le1{,}6,\\ 3{,}3+1{,}5501\,(H-0{,}6778)^{-3{,}064} & H>1{,}6,\end{cases}
+\]
+\[
+c_f=0{,}246\cdot10^{-0{,}678\,H}\,\Re_\theta^{-0{,}268}\qquad\text{(Ludwieg-Tillmann).}
+\]
+Les inconnues intégrées sont $\theta$ et $E$. À chaque pas, on en déduit $H_1=E/(U_e\theta)$, puis $H$ en inversant $H_1(H)$, puis $c_f$.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/head_fermeture}
+\caption{Les fermetures de Head. $H_1$ décroît quand $H$ croît : un profil creusé ($H$ grand) a peu de débit pour son déficit de quantité de mouvement. L'entraînement $F$ décroît avec $H_1$.}\label{fig:head-fermeture}
+\end{figure}
+
+\paragraph{Mécanisme du décollement turbulent.} En gradient adverse ($U_e'<0$) :
+\begin{enumerate}
+\item le terme $-(H+2)\theta U_e'/U_e$ devient positif et $\theta$ croît vite ;
+\item $E$ croît plus lentement que $U_e\theta$, donc $H_1$ diminue et $H$ augmente : le profil se creuse ;
+\item $c_f$ diminue avec $H$ (facteur $10^{-0{,}678H}$) ;
+\item quand $H$ atteint 2 à 2,8, le frottement s'annule : c'est le décollement.
+\end{enumerate}
+Le seuil est flou dans la littérature. Le code prend $H_{sep}=2{,}4$ (constante \code{H\_SEP\_TURB}).
+
+\section{Conditions initiales à la transition}
+À la transition, on suppose $\theta$ continu (la quantité de mouvement ne saute pas) et on impose $H=1{,}4$, valeur typique d'une couche turbulente jeune. Le facteur de forme saute donc d'environ 2,6 (laminaire) à 1,4 (turbulent) : c'est le saut visible sur la figure~\ref{fig:bl-2412}. On démarre en $s_{tr}$ interpolé, avec $E_0=U_e(s_{tr})\,\theta(s_{tr})\,H_1(1{,}4)$, où $H_1(1{,}4)=7{,}18$.
+
+\begin{codebox}[ : la fonction \code{rhs} et son intégration]
+\begin{lstlisting}
+def rhs(si, y):
+    th, E = y                          # E = Ue * theta * H1
+    ue = Ue_f(si)                      # interpolation lineaire de Ue(s)
+    H1 = max(E / (ue * th), H1_sep)    # au-dela du decollement : H gele a 2.4
+    Hh = float(H_of_H1(H1))
+    cft = float(cf_ludwieg_tillmann(Hh, ue * th * Re))
+    dth = 0.5 * cft - (Hh + 2) * th / ue * dUe_f(si)
+    dE = ue * 0.0306 * (H1 - 3.0) ** -0.6169
+    return [dth, dE]
+
+sol = solve_ivp(rhs, (s_tr, st[-1]), y0, t_eval=st, method="RK45", rtol=1e-6, atol=1e-12)
+\end{lstlisting}
+Deux protections rendent l'intégration robuste. D'abord, $H_1$ est borné par le bas à $H_1(H_{sep})$ : au-delà du décollement, $H$ est gelé à 2,4 au lieu de diverger, et le drapeau \code{turbulent\_separation} est levé avec l'abscisse $x_{sep}$. Ensuite, \code{H\_of\_H1} borne $H_1$ au-dessus de 3,3, car l'inversion de $H_1(H)$ est singulière en $H_1\to3{,}3$.
+\end{codebox}
+
+\section{Le résultat sur un profil}
+\begin{figure}[htbp]
+\centering
+\input{figures/cl_2412}
+\caption{Couche limite complète du NACA 2412 à $\alpha=2^\circ$, $\Re=3\cdot10^6$, calculée par \code{march\_surface}. On voit la transition (saut de $H$ et de $c_f$) en $x/c=0{,}28$ sur l'extrados et $0{,}48$ sur l'intrados, puis la montée de $H$ en fin d'extrados sous l'effet du gradient adverse.}\label{fig:bl-2412}
+\end{figure}
+
+La validation sur plaque plane turbulente (figure~\ref{fig:plaque}, à droite) donne $\theta$ à moins de 5~\% de la loi en $1/7$, $\theta=0{,}036\,x\,\Re_x^{-1/5}$, et $H\to1{,}34$.
+
+\begin{piege}
+\textbf{Le faux décollement de bord de fuite.} Près d'un bord de fuite fermé, l'écoulement potentiel décélère fortement (ch.~\ref{ch:trainee}), et ce gradient adverse est exagéré par rapport à l'écoulement réel. Sur la base de 512 profils à $\alpha=2^\circ$, 145 profils épais ou cambrés atteignent $H>2{,}4$ entre $x/c=0{,}957$ et $0{,}983$. Les déclarer invalides retirerait 28~\% de l'espace de conception à cause d'un artefact local. Le code les tolère (seuil \code{x\_sep\_crit}, ch.~\ref{ch:modele}).
+\end{piege}
+
+\begin{piege}
+Head est une méthode « d'équilibre » : $F$ ne dépend que de la forme locale. Elle réagit donc instantanément, donc mal, aux changements brusques (choc, recollement de bulbe). Les méthodes à retard (\emph{lag-entrainment} de Green, ou le \emph{shear-lag} d'XFOIL) ajoutent une équation pour la contrainte de cisaillement et corrigent ce défaut.
+\end{piege}
+
+\exercices
+\begin{exercice}
+Calculer $H_1$ pour $H=1{,}3$, $1{,}4$ et $2{,}4$ avec les corrélations de Head. Que vaut $F$ pour $H=1{,}4$ ? Pour une couche limite d'épaisseur de quantité de mouvement $\theta=10^{-3}c$, quelle est alors l'épaisseur $\delta-\delta^*$ ?
+\end{exercice}
+\begin{exercice}
+Montrer, à partir du système de Head et du sens de variation des fermetures, qu'en gradient adverse $H$ augmente. On pourra raisonner à $\theta$ fixé sur une petite distance et regarder comment évolue $H_1=E/(U_e\theta)$ quand $U_e$ diminue.
+\end{exercice}

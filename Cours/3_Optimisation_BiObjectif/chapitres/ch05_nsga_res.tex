@@ -1,0 +1,50 @@
+\chapter{NSGA-II sur notre problème}\label{ch:nsga-res}
+\iterbanner{V1}
+
+\section{Le protocole}
+Chaque expérience est répétée sur \textbf{20 graines aléatoires}, car NSGA-II est stochastique : un seul essai ne dit rien. On enregistre, après chaque génération, le nombre de simulations distinctes, la fraction du front exact déjà simulée et l'hypervolume relatif. On rapporte la médiane et les quartiles.
+
+Le budget est mesuré en simulations, et seulement en simulations : une génération de NSGA-II coûte au plus $N$ simulations, moins si certains enfants ont déjà été simulés à une génération antérieure.
+
+\section{Le réglage qui compte : la taille de population}
+\begin{figure}[htbp]
+\centering
+\input{figures/population}
+\caption{Nombre de simulations nécessaires pour retrouver tout le front exact, selon la taille de population (médiane sur 20 graines, quartiles en tirets). Les petites populations sont nettement plus économes sur ce problème.}\label{fig:population}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+$N$ & 8 & 12 & 16 & 24 & 32 & 48 \\
+\midrule
+S1 & 65 & 76 & 107 & 122 & 149 & 181 \\
+S2 & 81 & 93 & 106 & 130 & 150 & 208 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Sur un espace de 512 profils seulement, une grande population gaspille des simulations dans les premières générations, quand elle explore au hasard. Une petite population converge plus vite, et la mutation suffit à maintenir la diversité. La règle usuelle ($N$ de 50 à 100) est pensée pour des espaces beaucoup plus grands. Dans la suite, on garde $N=16$ comme réglage « par défaut », et on cite $N=8$ comme NSGA-II « bien réglé ».
+
+\begin{piege}
+Comparer une boucle QUBO soigneusement réglée à un NSGA-II avec ses réglages par défaut serait injuste. Une comparaison honnête doit régler les deux méthodes avec le même effort, ou au moins montrer la sensibilité de chacune à ses paramètres, comme ici.
+\end{piege}
+
+\section{Convergence}
+Les courbes de convergence de NSGA-II sont tracées au chapitre~\ref{ch:comparaison}, avec celles des autres méthodes. Deux comportements ressortent :
+\begin{itemize}
+\item l'\textbf{hypervolume} monte vite : en quelques générations, NSGA-II a trouvé des profils proches du front, et l'hypervolume dépasse 99~\% bien avant que le front soit complet ;
+\item la \textbf{fraction du front exact} progresse plus lentement, par paliers : les derniers profils du front sont des voisins très proches d'autres profils déjà trouvés (même $t$, cambrure voisine), et il faut une mutation précise pour tomber dessus.
+\end{itemize}
+
+\exercices
+\begin{exercice}
+Avec $N=48$ et 512 profils dans l'espace, quelle fraction de l'espace est simulée dès la population initiale ? Combien de générations faut-il au minimum pour dépasser 180 simulations ? Commenter le chiffre médian du tableau.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Utiliser une population initiale construite (hypercube latin sur la grille) plutôt qu'aléatoire.
+\item Arrêter NSGA-II avec un critère réaliste, qui n'utilise pas le front exact : stagnation de l'hypervolume pendant $k$ générations. C'est ce qu'il faudrait faire sur un cas industriel, où le front exact n'est pas connu.
+\end{itemize}
+\end{pistes}

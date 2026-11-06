@@ -1,0 +1,128 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_Aerodynamique.tex (ou xelatex, deux passes)
+% Figures à données : python3 tools/make_figures.py (appelle le code aero du projet et régénère figures/*.tex)
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+\fi
+\usepackage[french]{babel}
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,shapes.geometric,decorations.pathreplacing,decorations.markings,patterns,babel}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\usepackage{tabularx,booktabs,array}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\usepackage{listings}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[raggedright]{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+\definecolor{cblue}{HTML}{2A78D6}
+\definecolor{corange}{HTML}{EB6834}
+\definecolor{cgreen}{HTML}{1BAF7A}
+\definecolor{cink}{HTML}{1F2328}
+\definecolor{cmuted}{HTML}{6B6F76}
+
+% ---------------------------------------------------------------- notations
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\Ue}{U_e}
+\renewcommand{\Re}{\mathit{Re}}
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% ---------------------------------------------------------------- encadrés
+\tcbset{coursbox/.style={enhanced,breakable,boxrule=0pt,leftrule=2.5pt,arc=0pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,fonttitle=\bfseries\small,coltitle=cink,
+  attach title to upper={\ }}}
+\newtcolorbox{definition}[1][]{coursbox,colback=cblue!5,colframe=cblue,title={Définition#1.}}
+\newtcolorbox{resultat}[1][]{coursbox,colback=cgreen!6,colframe=cgreen,title={À retenir#1.}}
+\newtcolorbox{projet}[1][]{coursbox,colback=corange!6,colframe=corange,title={Dans notre projet#1.}}
+\newtcolorbox{piege}[1][]{coursbox,colback=cmuted!7,colframe=cmuted,title={Piège#1.}}
+\newtcolorbox{codebox}[1][]{coursbox,colback=cmuted!3,colframe=cblue!60,title={Dans le code#1.}}
+
+% ---------------------------------------------------------------- exercices
+\newcounter{exo}[chapter]
+\renewcommand{\theexo}{\thechapter.\arabic{exo}}
+\newenvironment{exercice}[1][]{\refstepcounter{exo}\par\medskip\noindent
+  \textbf{\color{cblue}Exercice~\theexo}\if\relax\detokenize{#1}\relax\else\ (#1)\fi.\ }{\par}
+\newcommand{\exercices}{\section*{Exercices}\addcontentsline{toc}{section}{Exercices}
+  \noindent\textit{Corrigés en annexe~\ref{annexe:corriges}. Chercher d'abord sans les regarder.}}
+
+\tikzset{
+  flow/.style={draw=cink,rounded corners=2pt,fill=white,align=center,font=\small,inner sep=4pt},
+  arr/.style={-{Stealth[length=2.2mm]},cink,thick},
+}
+
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,frame=single,rulecolor=\color{cmuted!50},
+  backgroundcolor=\color{cmuted!6},keywordstyle=\color{cblue}\bfseries,commentstyle=\color{cmuted}\itshape,
+  stringstyle=\color{corange},showstringspaces=false,language=Python,
+  literate={é}{\'e}1{è}{\`e}1{à}{\`a}1{ê}{\^e}1{ç}{\c c}1{ô}{\^o}1{î}{\^i}1{ù}{\`u}1{É}{\'E}1{→}{$\to$}1}
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{1}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+\setlength{\parskip}{0.45em}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{Le modèle aérodynamique de la phase 1}\\[0.4em]\large Panneaux de Hess-Smith, couche limite intégrale et traînée de Squire-Young :\\ théorie et code du simulateur du hackathon quantique}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 3 novembre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Objet.} Ce cours explique, de la théorie jusqu'à la ligne de code, le modèle aérodynamique de la phase~1 du hackathon : la fonction qui, à un profil NACA à quatre chiffres $(m,p,t)$, associe sa portance, sa traînée, son moment et un diagnostic de validité. C'est l'« oracle » que les phases suivantes appellent : l'énumération exhaustive (front de Pareto exact), NSGA-II, et la boucle QUBO/QAOA décrite dans le cours compagnon \emph{Calcul quantique pour l'optimisation}.
+
+\paragraph{Ce qu'on suppose connu.} Les équations de Navier-Stokes, la notion de couche limite et ses grandeurs intégrales, la turbulence de paroi. Ces bases sont rappelées en quelques lignes, sans démonstration. En revanche, tout ce qui est propre au modèle est démontré ou justifié : les intégrales de panneau, la condition de Kutta discrète, la quadrature de Thwaites, l'équation d'entraînement de Head, l'exposant de Squire-Young, et chaque correction d'ingénierie (\code{x\_stop}, \code{x\_sep\_crit}, interpolation de la transition).
+
+\paragraph{Fil conducteur.} Le rôle du modèle et ses exigences (ch.~\ref{ch:intro}) $\to$ la géométrie NACA (ch.~\ref{ch:naca}) $\to$ l'écoulement potentiel et ses singularités (ch.~\ref{ch:potentiel}) $\to$ la méthode des panneaux de Hess-Smith (ch.~\ref{ch:panneaux}) $\to$ la couche limite intégrale : principe et découpage (ch.~\ref{ch:cl}), laminaire par Thwaites (ch.~\ref{ch:thwaites}), transition (ch.~\ref{ch:transition}), turbulent par Head (ch.~\ref{ch:head}) $\to$ la traînée par Squire-Young (ch.~\ref{ch:trainee}) $\to$ l'assemblage dans \code{evaluate} (ch.~\ref{ch:modele}) $\to$ l'espace de conception et les interfaces avec les autres phases (ch.~\ref{ch:espace}) $\to$ la validation et les limites (ch.~\ref{ch:validation}).
+
+\paragraph{Figures et chiffres.} Toutes les courbes à données de ce cours sont \textbf{calculées par le code du projet} (dossier \texttt{Code/aero/} du projet \emph{HackathonQuantique}), via le script \texttt{tools/make\_figures.py} de ce dossier. Elles sont tracées en pgfplots, et les nombres cités dans le texte sont dans \texttt{figures/chiffres.json}. Si le code change, on relance le script et on recompile. Les schémas de principe sont en TikZ.
+
+\paragraph{Encadrés.} Bleu : définitions. Vert : à retenir. Gris : pièges. Bleu clair \emph{Dans le code} : où et comment la notion est implémentée. Orange \emph{Dans notre projet} : lien avec l'optimisation et les autres phases. Chaque chapitre se termine par un ou deux exercices, corrigés en annexe~\ref{annexe:corriges}. L'annexe~\ref{annexe:memo} résume formules et API sur une page.
+
+\paragraph{Conventions.} Tout est adimensionné par la corde $c$ et la vitesse amont $U_\infty$ : $x,y,s$ sont en cordes, les vitesses sont des rapports $U/U_\infty$, et $\nu=1/\Re$ avec $\Re=U_\infty c/\nu$. Le contour est parcouru comme dans XFOIL : bord de fuite extrados $\to$ bord d'attaque $\to$ bord de fuite intrados. Un \emph{count} de traînée vaut $10^{-4}$.
+
+\paragraph{Itérations du projet.} Le projet avance par itérations, chacune avec sa couleur dans tous les cours et dans la fiche projet (dossier \texttt{Fiche\_Projet/} du projet). Chaque chapitre commence par un bandeau qui indique l'itération de son contenu ; un ajout ou une révision faite lors d'une itération ultérieure apparaît dans un encadré « Évolution » de la couleur correspondante.
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_intro}
+\input{chapitres/ch02_naca}
+\input{chapitres/ch03_potentiel}
+\input{chapitres/ch04_panneaux}
+\input{chapitres/ch05_cl}
+\input{chapitres/ch06_thwaites}
+\input{chapitres/ch07_transition}
+\input{chapitres/ch08_head}
+\input{chapitres/ch09_trainee}
+\input{chapitres/ch10_modele}
+\input{chapitres/ch11_espace}
+\input{chapitres/ch12_validation}
+\input{chapitres/ch13_v2}
+
+\appendix
+\input{chapitres/annexe_corriges}
+\input{chapitres/annexe_memo}
+\input{chapitres/annexe_pistes}
+
+\end{document}

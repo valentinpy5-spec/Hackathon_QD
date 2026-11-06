@@ -1,0 +1,139 @@
+\chapter{QAOA : l'algorithme d'optimisation approximative quantique}\label{ch:qaoa}
+\iterbanner{V0}
+
+QAOA (\emph{Quantum Approximate Optimization Algorithm}, Farhi, Goldstone et Gutmann, 2014) est l'algorithme que la note d'intention prévoit d'exécuter sur simulateur. Il réunit tout ce qui précède : un hamiltonien de coût diagonal (ch.~\ref{ch:qubo}), un mélangeur qui ne commute pas avec lui (ch.~\ref{ch:algebre}), une alternance à la Trotter (ch.~\ref{ch:hamiltoniens}) et un principe variationnel réglé par un ordinateur classique.
+
+\section{De l'adiabatique à QAOA}
+Discrétisons le recuit adiabatique $H(s)=(1-s)H_B+sH_C$ en $p$ pas, et séparons chaque pas par Trotter :
+\[e^{-iH(s_k)\Delta t}\approx e^{-i(1-s_k)\Delta t\,H_B}\ e^{-is_k\Delta t\,H_C}.\]
+On obtient une alternance de deux types d'opérations, dont les « durées » suivent un programme fixé : $s_k\Delta t$ croissant pour le coût, $(1-s_k)\Delta t$ décroissant pour le mélangeur. \textbf{L'idée de QAOA : ne pas imposer ces durées, mais les optimiser.}
+
+\section{Définition}
+\begin{definition}[ (QAOA de profondeur $p$)]
+Avec $H_C$ l'hamiltonien d'Ising du problème et le mélangeur $H_M=\sum_kX_k$, on prépare
+\[\ket{\boldsymbol\gamma,\boldsymbol\beta}=e^{-i\beta_pH_M}e^{-i\gamma_pH_C}\cdots e^{-i\beta_1H_M}e^{-i\gamma_1H_C}\ \ket+^{\otimes n},\]
+puis on cherche les $2p$ angles qui minimisent
+\[F_p(\boldsymbol\gamma,\boldsymbol\beta)=\bra{\boldsymbol\gamma,\boldsymbol\beta}H_C\ket{\boldsymbol\gamma,\boldsymbol\beta}.\]
+On mesure ensuite l'état optimal en base de calcul : chaque shot donne une chaîne de bits candidate.
+\end{definition}
+\paragraph{Ce que fait chaque étage, intuitivement.}
+\begin{itemize}
+\item $\ket+^{\otimes n}$ : toutes les chaînes ont la même amplitude, $2^{-n/2}$ ;
+\item $e^{-i\gamma H_C}$ : chaque chaîne $x$ reçoit une phase $e^{-i\gamma E(x)}$. Le coût est « écrit » dans les phases, les probabilités sont inchangées ;
+\item $e^{-i\beta H_M}$ : chaque qubit tourne autour de $x$. Les amplitudes de chaînes voisines (un bit de différence) se mélangent et \textbf{interfèrent}. Selon leurs phases, elles se renforcent ou s'annulent. Bien réglé, ce mélange concentre la probabilité sur les chaînes de basse énergie.
+\end{itemize}
+\paragraph{Garanties.} $F_p$ décroît (au sens large) avec $p$, et quand $p\to\infty$, QAOA contient le recuit adiabatique : il atteint l'optimum. À $p$ fini, c'est une heuristique.
+
+\section{Le circuit}
+On utilise $e^{-i\gamma h_iZ_i}=R_Z(2\gamma h_i)$, $e^{-i\gamma J_{ij}Z_iZ_j}=R_{ZZ}(2\gamma J_{ij})$ et $e^{-i\beta X_k}=R_X(2\beta)$. Tous les termes de $H_C$ commutent entre eux (ils sont tous diagonaux) : $e^{-i\gamma H_C}$ se factorise donc \emph{exactement}, sans erreur de Trotter.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=0.95cm]
+\foreach \q in {0,1,2}{\draw[cink] (0,-\q) -- (11.6,-\q); \node[anchor=east,font=\small] at (0,-\q) {$q_\q:\ \ket0$};}
+\foreach \q in {0,1,2}{\node[gate] at (0.6,-\q) {$H$};}
+\draw[cmuted,dashed,rounded corners] (1.15,0.55) rectangle (7.55,-2.55);
+\node[font=\scriptsize,cmuted] at (4.35,0.78) {coût $e^{-i\gamma_kH_C}$};
+\node[gate,font=\footnotesize,minimum width=17mm] at (2.25,-1) {$R_Z(2\gamma_kh_1)$};
+\node[draw=cink,fill=white,minimum width=20mm,minimum height=14mm,font=\footnotesize] at (4.3,-0.5) {$R_{ZZ}(2\gamma_kJ_{01})$};
+\node[draw=cink,fill=white,minimum width=20mm,minimum height=14mm,font=\footnotesize] at (6.45,-1.5) {$R_{ZZ}(2\gamma_kJ_{12})$};
+\draw[cmuted,dashed,rounded corners] (7.75,0.55) rectangle (9.65,-2.55);
+\node[font=\scriptsize,cmuted] at (8.7,0.78) {mélangeur};
+\foreach \q in {0,1,2}{\node[gate,font=\footnotesize,minimum width=14mm] at (8.7,-\q) {$R_X(2\beta_k)$};}
+\draw[decorate,decoration={brace,amplitude=5pt,mirror}] (1.15,-2.75) -- (9.65,-2.75) node[midway,below=6pt,font=\small] {répété pour $k=1,\dots,p$};
+\foreach \q in {0,1,2}{\meter{10.7}{-\q}}
+\end{tikzpicture}
+\caption{Circuit QAOA pour le QUBO jouet à 3 qubits ($h_0=h_2=0$, $h_1=-\frac12$, $J_{01}=J_{12}=\frac12$). Chaque $R_{ZZ}$ se décompose en 2 CNOT (figure~\ref{fig:rzz}).}\label{fig:circuit-qaoa}
+\end{figure}
+
+\paragraph{Ressources par couche.} Pour $n$ qubits et $|E|$ couplages non nuls : $n$ portes $R_Z$, $|E|$ portes $R_{ZZ}$ (donc $2|E|$ CNOT) et $n$ portes $R_X$. Au total, $p$ couches, $n$ portes $H$ initiales et $n$ mesures. Le nombre de qubits vaut $n$, le nombre de bits du QUBO.
+
+\section{La boucle hybride quantique--classique}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=10mm and 16mm]
+\node[flow,fill=cblue!10,minimum width=4.2cm,minimum height=1.5cm] (q) {\textbf{Processeur quantique}\\ (ou simulateur)\\ prépare $\ket{\boldsymbol\gamma,\boldsymbol\beta}$, mesure $N$ shots};
+\node[flow,right=of q,minimum width=4.2cm,minimum height=1.5cm] (c) {\textbf{Optimiseur classique}\\ (COBYLA, Nelder-Mead)\\ propose de nouveaux $(\boldsymbol\gamma,\boldsymbol\beta)$};
+\draw[arr] (q.north east) to[bend left=20] node[above,font=\small] {estimation de $F_p$} (c.north west);
+\draw[arr] (c.south west) to[bend left=20] node[below,font=\small] {$(\boldsymbol\gamma,\boldsymbol\beta)$} (q.south east);
+\node[flow,below=14mm of q,minimum width=4.2cm] (s) {échantillonnage final\\ $\to$ meilleure chaîne $x^*$};
+\draw[arr] (q) -- node[left,font=\small] {à convergence} (s);
+\end{tikzpicture}
+\caption{QAOA est un algorithme \emph{variationnel} : le circuit quantique évalue la fonction, l'ordinateur classique l'optimise. Les $2p$ angles sont les seuls paramètres.}\label{fig:boucle-hybride}
+\end{figure}
+
+\section{Exemple entièrement calculé : un qubit}
+Prenons $H_C=Z$ : les énergies sont $+1$ pour $\ket0$ et $-1$ pour $\ket1$, donc l'optimum est $\ket1$. Avec $p=1$, suivons le point sur la sphère de Bloch :
+\begin{enumerate}
+\item $\ket+$ est le point $(1,0,0)$ ;
+\item $e^{-i\gamma Z}=R_Z(2\gamma)$ le fait tourner de $2\gamma$ autour de $z$ : $(\cos2\gamma,\ \sin2\gamma,\ 0)$ ;
+\item $e^{-i\beta X}=R_X(2\beta)$ le fait tourner de $2\beta$ autour de $x$, ce qui donne une composante $z=\sin2\gamma\,\sin2\beta$.
+\end{enumerate}
+Comme $\expval Z$ est la coordonnée $z$ :
+\[F_1(\gamma,\beta)=\sin2\gamma\ \sin2\beta,\qquad \min F_1=-1\ \text{ en }(\gamma,\beta)=(\tfrac\pi4,-\tfrac\pi4)\ \Rightarrow\ \text{on mesure }\ket1\text{ avec certitude}.\]
+Le coût a d'abord fait tourner l'état \emph{dans l'équateur} (une phase), puis le mélangeur a converti cette phase en déplacement vers le pôle de basse énergie. C'est le mécanisme général, sur $2^n$ amplitudes au lieu d'une.
+
+\section{Résultats sur le QUBO jouet (3 qubits)}
+\begin{figure}[htbp]
+\centering
+\input{figures/paysage_qaoa_p1}
+\caption{Paysage $F_1(\gamma,\beta)$ du QUBO jouet (calcul exact sur une grille $73\times37$). La croix marque le minimum, $F_1\approx-1{,}16$, à comparer à l'énergie moyenne $-0{,}5$ de l'état initial et au fondamental $-2$. Le paysage est périodique ($2\pi$ en $\gamma$ car les énergies sont entières, $\pi$ en $\beta$) et non convexe : l'optimiseur classique a besoin de plusieurs points de départ.}\label{fig:paysage-qaoa}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/jouet_proba_p1}
+\caption{Distribution de mesure après QAOA $p=1$ aux angles optimaux. La solution $\ket{101}$ sort avec probabilité $0{,}31$, contre $1/8=0{,}125$ pour la superposition uniforme (trait orange). À $p=2$ et $p=3$, elle monte à $0{,}54$ puis $0{,}67$.}\label{fig:jouet-proba}
+\end{figure}
+
+\section{Résultats sur notre QUBO aéro (9 qubits)}
+Le QUBO de traînée du chapitre~\ref{ch:qubo} (512 chaînes) a été traité par QAOA simulé exactement, avec une optimisation COBYLA. Pour $p=1$, on part de 8 points de départ aléatoires ; pour $p\ge2$, on part de l'interpolation des angles optimaux de $p-1$ (stratégie INTERP).
+
+\begin{center}
+\begin{tabular}{cccccc}
+\toprule
+$p$ & CNOT & $P(\text{optimum})$ & $P(\text{5 meilleurs})$ & ratio $r$ & shots moyens pour voir l'optimum\\
+\midrule
+1 & 72 & 0,018 & 0,088 & 0,867 & 56\\
+2 & 144 & 0,062 & 0,218 & 0,933 & 16\\
+3 & 216 & 0,097 & 0,302 & 0,952 & 10\\
+4 & 288 & 0,127 & 0,384 & 0,966 & 8\\
+5 & 360 & 0,142 & 0,436 & 0,972 & 7\\
+\bottomrule
+\end{tabular}
+\end{center}
+Le ratio d'approximation est $r=1-\expval{\tilde E}$, où $\tilde E=(E-E_{\min})/(E_{\max}-E_{\min})\in[0,1]$ ; il vaut 1 si l'on mesure toujours l'optimum. Le hasard uniforme donne $P(\text{optimum})=1/512\approx0{,}002$.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/qaoa_proba_rang}
+\caption{Probabilité de mesurer chaque chaîne, classée par énergie QUBO croissante (25 premières). QAOA concentre la probabilité sur le bas du spectre, d'autant plus que $p$ est grand. Pour $p=1$, le rang 2 dépasse le rang 1 : les deux profils sont quasi dégénérés (§\ref{sec:notre-qubo}).}\label{fig:qaoa-rang}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.49\linewidth}\centering\input{figures/qaoa_convergence_p}\end{minipage}\hfill
+\begin{minipage}{0.49\linewidth}\centering\input{figures/qaoa_angles}\end{minipage}
+\caption{À gauche : qualité en fonction de la profondeur. À droite : angles optimaux pour $p=5$. $\gamma_k$ croît et $|\beta_k|$ décroît le long du circuit : c'est le profil d'un \emph{recuit} ($s$ croissant), retrouvé par l'optimiseur sans qu'on le lui impose.}\label{fig:qaoa-p}
+\end{figure}
+
+\begin{piege}[ (échelle de l'énergie)]
+$\gamma$ multiplie $E$ dans une phase. Avec $E$ en counts de traînée (de $57$ à $117$), une variation de $\gamma$ de $0{,}1$ fait tourner les phases de plusieurs radians : le paysage $F_1$ devient une « tôle ondulée » où l'optimiseur se perd. Sans normalisation, on obtient $P(\text{optimum})=0{,}0045$ à $p=1$ ; en centrant et réduisant $E$ (\texttt{normalize}), on obtient $0{,}018$. Il faut toujours normaliser le QUBO avant QAOA.
+\end{piege}
+
+\section{Limites à connaître}
+\begin{itemize}
+\item \textbf{Optimisation classique difficile} : le paysage est non convexe, avec de nombreux minima locaux. Il faut des stratégies d'initialisation (INTERP, transfert d'angles d'une instance à une autre).
+\item \textbf{Estimation bruitée} : sur un vrai processeur, $F_p$ est estimé avec $N$ shots, donc avec un bruit statistique en $1/\sqrt N$, plus le bruit matériel.
+\item \textbf{Profondeur} : $2|E|p$ CNOT. Avec un graphe complet, la profondeur explose avec $n$, ce qui est incompatible avec le matériel bruité actuel au-delà de quelques couches.
+\item \textbf{Plateaux arides} : pour des circuits profonds et larges, le gradient de $F_p$ peut devenir exponentiellement petit.
+\item \textbf{Pas d'avantage prouvé} : QAOA à $p$ fixe n'est pas connu pour battre les meilleurs algorithmes classiques sur des QUBO généraux.
+\end{itemize}
+
+\exercices
+\begin{exercice}
+Généraliser l'exemple à un qubit à $H_C=h\,Z$ avec $h>0$. Montrer que $F_1(\gamma,\beta)=h\,\sin(2h\gamma)\,\sin2\beta$. Où sont les minima ? Que se passe-t-il pour le paysage si $h$ est très grand ? (Lien avec le piège de l'échelle.)
+\end{exercice}
+\begin{exercice}
+Pour notre QUBO aéro (9 qubits, 36 couplages), compter les portes d'un circuit QAOA à $p=3$ : $H$, $R_Z$, CNOT, $R_X$. Avec $P(\text{optimum})=0{,}097$, combien de shots faut-il pour observer l'optimum au moins une fois avec une probabilité de 99~\% ?
+\end{exercice}

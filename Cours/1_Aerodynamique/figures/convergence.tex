@@ -1,0 +1,14 @@
+% figure générée par tools/make_figures.py : convergence
+\begin{tikzpicture}
+\begin{loglogaxis}[width=0.72\linewidth,height=6cm,xlabel={nombre de panneaux $N$},ylabel={erreur},
+  legend style={draw=none,font=\small,at={(0.02,0.02)},anchor=south west},xmin=15,xmax=800,xtick={20,50,100,200,500},xticklabels={20,50,100,200,500}]
+\addplot[cblue,very thick,mark=*,mark size=1.5pt] coordinates {(20,0.001539) (30,0.003499) (40,0.003447) (60,0.002396) (80,0.001768) (120,0.001137) (160,0.0008237) (200,0.000638) (320,0.0003657) (480,0.0002197) (640,0.0001488)};
+\addlegendentry{$|C_L(N)-C_L^\infty|/C_L^\infty$}
+\addplot[corange,very thick,mark=square*,mark size=1.5pt] coordinates {(20,0.01875) (30,0.01904) (40,0.01595) (60,0.01136) (80,0.008758) (120,0.006) (160,0.004562) (200,0.00368) (320,0.002328) (480,0.001562) (640,0.001176)};
+\addlegendentry{$|C_{L,C_p}-C_{L,KJ}|/C_L^\infty$}
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.8pt] coordinates {(20,0.005424) (30,0.002714) (40,0.001664) (60,0.0008615) (80,0.0005582) (120,0.0003175) (160,0.0002189) (200,0.0001662) (320,9.574e-05) (480,6.09e-05) (640,4.459e-05)};
+\addlegendentry{$|C_{D,p}|$ (d'Alembert)}
+\addplot[cmuted,dashed,domain=40:640] {0.6/x};
+\node[cmuted,font=\scriptsize] at (axis cs:330,0.0035) {pente $-1$};
+\end{loglogaxis}
+\end{tikzpicture}

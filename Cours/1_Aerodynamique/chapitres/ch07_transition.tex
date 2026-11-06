@@ -1,0 +1,90 @@
+\chapter{La transition laminaire--turbulent}\label{ch:transition}
+\iterbanner{V0}
+
+La position de la transition est le paramètre qui pèse le plus sur la traînée d'un profil à $\Re\sim10^6$ : une couche limite turbulente frotte environ cinq fois plus qu'une couche laminaire. C'est aussi, on le verra, la principale source d'irrégularité de $C_D(m,p,t)$.
+
+\section{Trois événements, le premier l'emporte}
+Le code déclenche la transition à la première station où l'un des trois critères suivants est franchi.
+
+\paragraph{1. Le critère de Michel (transition naturelle).} Corrélation empirique à un paramètre (Michel, ONERA, 1951) : la transition a lieu quand le Reynolds de quantité de mouvement dépasse une valeur qui dépend du Reynolds local,
+\[
+\Re_\theta>\Re_{\theta,tr}(\Re_x)=1{,}174\left(1+\frac{22\,400}{\Re_x}\right)\Re_x^{0{,}46},\qquad \Re_x=\frac{U_e\,s}{\nu}.
+\]
+Il représente la transition « naturelle » par amplification des ondes de Tollmien-Schlichting dans un environnement calme. Il ne contient ni le gradient de pression explicitement (seulement via l'historique dans $\theta$) ni le taux de turbulence extérieure.
+
+\paragraph{2. Le décollement laminaire.} Si $\lambda<-0{,}09$ avant que Michel ne soit atteint, la couche laminaire décolle. Physiquement, elle forme le plus souvent un \textbf{bulbe de décollement} : la couche décollée transitionne très vite et recolle en turbulent. Le modèle suppose un bulbe court, réduit à une transition instantanée au point de décollement.
+
+\paragraph{3. Le déclenchement forcé.} Une abscisse \code{x\_trip} imposée par l'utilisateur, qui représente une bande de rugosité. C'est la même sémantique que la commande \texttt{XTR} d'XFOIL : la transition a lieu au premier des deux, critère libre ou \code{x\_trip}. L'option \code{free\_transition=False} désactive Michel, pour pouvoir imposer une transition \emph{plus tardive} que celle de Michel, par exemple celle trouvée par XFOIL.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/transition_michel}
+\caption{NACA 2412, $\alpha=2^\circ$, $\Re=3\cdot10^6$ : $\Re_\theta$ laminaire calculé par Thwaites (bleu) et seuil de Michel (orange) le long de chaque face. La transition a lieu au croisement, interpolé entre les deux stations qui l'encadrent.}\label{fig:michel}
+\end{figure}
+
+\section{Interpoler la position de transition}
+Chaque critère s'écrit comme une fonction $g_i$ aux stations, avec la convention « franchi si $g\ge0$ » :
+\[
+g^{\text{Michel}}=\Re_\theta-\Re_{\theta,tr}(\Re_x),\qquad g^{\text{décollement}}=-0{,}09-\lambda,\qquad g^{\text{forcé}}=x-x_{trip}.
+\]
+À la première station $i$ où l'un d'eux devient positif, on interpole linéairement le zéro entre $i-1$ et $i$ :
+\[
+w=\frac{-g_{i-1}}{g_i-g_{i-1}}\in[0,1],\qquad s_{tr}=s_{i-1}+w\,(s_i-s_{i-1}).
+\]
+La condition initiale de Head (ch.~\ref{ch:head}) est prise en $s_{tr}$, avec $\theta$ interpolé au même endroit.
+
+\paragraph{Pourquoi c'est important.} Sans interpolation, $x_{tr}$ ne peut prendre que les abscisses des stations. Quand $(m,p,t)$ varie continûment, $x_{tr}$ saute d'une station à la suivante et $C_D$ devient une fonction en escalier. Mesuré sur le NACA 2412, $C_D$ variait de $\pm1{,}5$~\% quand on changeait le nombre de panneaux. Avec l'interpolation, il varie de $\pm0{,}1$~\%. Pour un ajustement quadratique, des marches sont du bruit pur.
+
+\begin{codebox}[ : recherche de la transition dans \code{march\_surface}]
+\begin{lstlisting}
+crit = {}
+if x_trip is not None:
+    crit["forced"] = x - x_trip
+crit["laminar_sep"] = np.where(s > 0.002, LAMBDA_SEP - lam, -1.0)
+if free_transition:
+    crit["michel"] = Re_th - michel_transition(Re_x)
+i_tr, mode, w = n, "none", 0.0
+for i in range(n):
+    hit = [k for k, g in crit.items() if g[i] >= 0]
+    if hit:
+        i_tr, mode = i, hit[0]
+        if i > 0:
+            g0, g1 = crit[mode][i - 1], crit[mode][i]
+            w = float(np.clip(-g0 / (g1 - g0), 0.0, 1.0)) if g1 != g0 else 1.0
+        break
+\end{lstlisting}
+Le décollement laminaire est ignoré sur les deux premiers millièmes de corde ($s\le0{,}002$) : juste après le point d'arrêt, $U_e'$ est mal estimé par différences finies et $\lambda$ peut être faussement très négatif. L'ordre des clés du dictionnaire fixe la priorité en cas d'égalité sur une même station : forcé, puis décollement laminaire, puis Michel.
+\end{codebox}
+
+\section{Comportement sur un profil}
+\begin{figure}[htbp]
+\centering
+\input{figures/xtr_alpha}
+\caption{Position de transition du NACA 2412 en fonction de l'incidence ($\Re=3\cdot10^6$). Quand $\alpha$ augmente, la transition remonte vers le bord d'attaque sur l'extrados (gradient adverse plus fort après le pic d'aspiration) et recule sur l'intrados. Cercles : transition par décollement laminaire plutôt que par Michel.}\label{fig:xtr-alpha}
+\end{figure}
+
+La figure~\ref{fig:xtr-alpha} montre le comportement attendu, et une bascule de mode. Sur l'intrados, à partir de $\alpha=6^\circ$, la couche laminaire décolle avant d'atteindre le seuil de Michel. Sur l'extrados, la même bascule se produit vers $\alpha=8^\circ$, sous le pic d'aspiration. Chaque bascule crée une rupture de pente dans $x_{tr}(\alpha)$, donc dans $C_D(\alpha)$.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/cd_xtrip}
+\caption{$C_D$ du NACA 2412 ($\alpha=2^\circ$) quand on impose la même position de transition sur les deux faces. De $x_{tr}=0{,}02$ à $0{,}8$, la traînée passe de 98 à 53~counts. En transition libre, Michel donne 69~counts.}\label{fig:cd-xtrip}
+\end{figure}
+
+La figure~\ref{fig:cd-xtrip} chiffre l'enjeu : selon l'endroit où la transition a lieu, la traînée du même profil varie presque du simple au double. Toute erreur sur le critère de transition se retrouve directement dans $C_D$.
+
+\begin{piege}
+Michel est connu pour être \textbf{trop précoce à bas Reynolds}. Sur le NACA 0012 à $\alpha=0$ et $\Re=10^6$, il fait transitionner en $x/c=0{,}46$, et donne $C_D=75$~counts contre environ 54 couramment cités pour XFOIL, à reconfirmer au test V5. Si l'on impose la transition au décollement laminaire ($x\approx0{,}62$), on obtient 62~counts. L'erreur de transition domine donc l'erreur de couche limite. La méthode $e^N$ d'XFOIL suit l'amplification des ondes instables et voit l'effet stabilisant d'un gradient favorable ; Michel ne le voit pas.
+\end{piege}
+
+\begin{projet}
+La bascule entre transition de Michel et transition par décollement laminaire est la principale non-régularité de $C_D(m,p,t)$ sur la grille. C'est elle qui limite le $R^2$ du modèle quadratique à environ 0,91 (ch.~\ref{ch:espace}). Deux leviers existent si la phase~4 en a besoin. On peut forcer la transition près du bord d'attaque (cas « tout turbulent », plus régulier et défendable pour un drone de série aux surfaces imparfaites). On peut aussi caler le critère sur XFOIL.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Sur plaque plane, Thwaites donne $\Re_\theta=0{,}671\sqrt{\Re_x}$. Écrire l'équation qui donne le $\Re_x$ de transition selon Michel, et la résoudre numériquement (quelques itérations suffisent). En déduire $x_{tr}$ pour $\Re=3\cdot10^6$.
+\end{exercice}
+\begin{exercice}
+On fait varier continûment l'épaisseur $t$ d'un profil. Expliquer pourquoi, sans interpolation de $x_{tr}$, la courbe $C_D(t)$ présenterait de petites marches. Quel serait l'effet de ces marches sur un modèle quadratique ajusté par moindres carrés, et sur un optimiseur par gradient ?
+\end{exercice}

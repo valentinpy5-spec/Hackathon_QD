@@ -1,0 +1,83 @@
+\chapter{L'optique physique}\label{ch:po}
+\iterbanner{V1}
+
+\section{L'approximation}
+Sur un conducteur parfait, le champ incident induit une densité de courant surfacique $\vect J_s=\vect n\times\vect H$, où $\vect H$ est le champ magnétique \emph{total} à la paroi et $\vect n$ la normale sortante. Ce courant rayonne le champ diffusé. Le problème exact consiste à trouver $\vect J_s$ en résolvant une équation intégrale sur toute la surface (méthode des moments) : c'est ce que fera le solveur du groupe SER.
+
+L'\textbf{optique physique} remplace ce problème par une approximation locale. En régime optique, chaque élément de surface éclairé se comporte comme un morceau de plan infini tangent, sur lequel le champ total vaut deux fois le champ incident (réflexion totale). D'où :
+\[
+\vect J_s^{PO}=\begin{cases}2\,\vect n\times\vect H_i & \text{si l'élément est éclairé},\\ \vect 0 & \text{s'il est dans l'ombre}.\end{cases}
+\]
+Il n'y a plus d'inconnue : on calcule directement le champ rayonné par ce courant.
+
+\section{L'intégrale de rayonnement en 2D}
+Prenons la polarisation TM : le champ électrique est parallèle à l'envergure, $\vect E_i=\hat{\vect z}\,e^{ik\,\shat\cdot\vect r}$, pour une onde qui arrive \emph{depuis} la direction $\shat$ du radar. Alors $\vect H_i=-\frac1\eta\,\shat\times\vect E_i$ et le courant PO est porté par $\hat{\vect z}$ :
+\[
+J_z=\frac{2}{\eta}\,(\vect n\cdot\shat)\,e^{ik\,\shat\cdot\vect r'} .
+\]
+Le champ rayonné par un courant linéique en 2D fait intervenir la fonction de Hankel :
+\[
+E_{s,z}(\vect r)=-\frac{k\eta}{4}\int_{\text{contour}}J_z(\vect r')\,H_0^{(2)}\big(k|\vect r-\vect r'|\big)\,\dd\ell'.
+\]
+Loin de l'objet, dans la direction $\shat$ (retour vers le radar), $H_0^{(2)}(k|\vect r-\vect r'|)\approx\sqrt{\frac{2}{\pi k\rho}}\,e^{-i(k\rho-\pi/4)}\,e^{ik\,\shat\cdot\vect r'}$. En reportant, puis en appliquant la définition $\sigma_{2D}=2\pi\rho|E_s|^2$, tous les facteurs se simplifient :
+\[
+\boxed{\ \sigma_{2D}=k\,\Big|\int_{\text{éclairé}}(\vect n\cdot\shat)\,e^{2ik\,\shat\cdot\vect r'}\,\dd\ell'\Big|^2\ }
+\]
+Le facteur 2 dans l'exponentielle est l'aller-retour : un point plus proche du radar de $\delta$ renvoie une onde en avance de phase de $2k\delta$. La polarisation TE donne la même expression en optique physique monostatique 2D ; la différence entre les deux polarisations vient de ce que la PO néglige (ondes rampantes, diffraction).
+
+\section{Une facette plane : formule exacte}
+Sur un segment de milieu $\vect r_j$, de tangente $\vect t_j$ et de longueur $L_j$, on paramètre $\vect r'=\vect r_j+\tau\,\vect t_j$ avec $\tau\in[-L_j/2,L_j/2]$ :
+\[
+\int_{-L_j/2}^{L_j/2}e^{2ik\,\shat\cdot(\vect r_j+\tau\vect t_j)}\,\dd\tau
+=L_j\,e^{2ik\,\shat\cdot\vect r_j}\,\operatorname{sinc}\big(kL_j\,\vect t_j\cdot\shat\big),\qquad\operatorname{sinc}x=\frac{\sin x}{x}.
+\]
+D'où la formule implémentée, \emph{exacte} pour un contour polygonal dans le cadre de la PO :
+\[
+\sigma_{2D}=k\,\Big|\sum_{j\ \text{éclairées}}(\vect n_j\cdot\shat)\,L_j\,\operatorname{sinc}\big(kL_j\,\vect t_j\cdot\shat\big)\,e^{2ik\,\shat\cdot\vect r_j}\Big|^2 .
+\]
+Une facette est éclairée si $\vect n_j\cdot\shat>0$. Pour un contour convexe, ce test suffit ; pour une partie concave, une facette peut être tournée vers le radar et cachée par une autre (ombrage), ce que le test ignore.
+
+\paragraph{Cas de la bande.} Une bande de largeur $w$ vue sous l'angle $\theta$ par rapport à sa normale donne $\sigma_{2D}=k\,w^2\cos^2\theta\,\operatorname{sinc}^2(kw\sin\theta)$ : un pic de hauteur $kw^2$ en incidence normale, et des lobes de largeur angulaire $\sim\lambda/(2w)$.
+
+\section{Une surface courbe : la phase stationnaire}
+Sur une surface lisse, le terme $e^{2ik\,\shat\cdot\vect r'}$ oscille très vite quand $k$ est grand : les contributions se détruisent, sauf près du point où la phase est stationnaire, c'est-à-dire où $\vect t\cdot\shat=0$. C'est le \textbf{point spéculaire}, où la normale pointe vers le radar. Au voisinage, si $\rho$ est le rayon de courbure et $\ell$ l'abscisse depuis ce point, $\shat\cdot\vect r'\approx\shat\cdot\vect r_0-\frac{\ell^2}{2\rho}$ (la surface s'éloigne du radar), et
+\[
+\int e^{-ik\ell^2/\rho}\,\dd\ell=\sqrt{\frac{\pi\rho}{ik}}
+\quad\Longrightarrow\quad
+\boxed{\ \sigma_{2D}=k\cdot\frac{\pi\rho}{k}=\pi\rho\ }
+\]
+La largeur équivalente d'un point spéculaire ne dépend pas de la fréquence, seulement de la courbure locale. Pour un cylindre de rayon $a$, $\sigma_{2D}=\pi a$, et pour un bord d'attaque vu de face, $\sigma_{2D}=\pi r_{BA}$.
+
+\section{Domaine de validité}
+La PO suppose que chaque élément « voit » un plan tangent infini, donc des rayons de courbure grands devant $\lambda$. La solution exacte du cylindre (série de Mie) permet de chiffrer l'erreur commise quand $ka$ n'est pas grand (figure~\ref{fig:mie}).
+
+\begin{figure}[htbp]
+\centering
+\input{figures/mie}
+\caption{Écart entre la SER exacte d'un cylindre conducteur (série de Mie) et la valeur PO $\pi a$, selon $ka$. Traits verticaux : $k\,r_{BA}$ du bord d'attaque à 10~GHz pour trois épaisseurs. Pour $t\ge12$~\%, l'erreur est inférieure à 0,4~dB ; pour $t=6$~\%, elle atteint environ 1~dB.}\label{fig:mie}
+\end{figure}
+
+\begin{resultat}
+\begin{itemize}
+\item PO : courants $2\vect n\times\vect H_i$ sur la partie éclairée, nuls dans l'ombre.
+\item En 2D monostatique : $\sigma_{2D}=k|\int(\vect n\cdot\shat)e^{2ik\shat\cdot\vect r'}\dd\ell'|^2$, exacte par facette avec un sinc.
+\item Point spéculaire d'une surface courbe : $\sigma_{2D}=\pi\rho$.
+\item Validité : $k\rho\gg1$. À 10~GHz, le bord d'attaque des profils minces est à la limite (erreur jusqu'à environ 1~dB).
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Retrouver la formule de la bande à partir de la formule par facettes, en considérant une bande comme un rectangle très plat (deux facettes de largeur $w$ dos à dos). Pourquoi une seule des deux facettes contribue-t-elle ?
+\end{exercice}
+\begin{exercice}
+Un cylindre elliptique de demi-axes $a$ (selon $x$) et $b$ (selon $y$) est vu selon l'axe $x$. Le rayon de courbure au sommet vaut $b^2/a$. Que vaut $\sigma_{2D}$ en PO ? Application : un profil elliptique de corde 1~m et d'épaisseur 12~cm, vu de face.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter la \textbf{théorie physique de la diffraction} (PTD, Ufimtsev) ou les coefficients de diffraction d'arête (GTD/UTD, Keller) pour représenter le bord de fuite.
+\item Distinguer les polarisations TM et TE avec une méthode qui tient compte des ondes rampantes, au moins au bord d'attaque.
+\item Calculer la solution exacte par une méthode des moments 2D (équation intégrale du champ électrique, en TM) : quelques centaines d'inconnues suffisent, et cela donnerait une référence pour valider la PO sur les profils eux-mêmes.
+\end{itemize}
+\end{pistes}

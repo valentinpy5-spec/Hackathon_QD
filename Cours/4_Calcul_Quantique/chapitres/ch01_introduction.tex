@@ -1,0 +1,89 @@
+\chapter{Pourquoi le calcul quantique, et ce qu'il fait vraiment}\label{ch:intro}
+\iterbanner{V0}
+
+Avant toute formule, situons la place du quantique dans le hackathon. Nous voulons des profils qui réalisent un bon compromis entre traînée $C_D$ et surface équivalente radar (SER). La partie quantique ne calcule \emph{ni} l'aérodynamique \emph{ni} l'électromagnétisme : elle sert à \textbf{chercher les meilleures combinaisons de bits} dans un problème d'optimisation dont la fonction de coût est un \emph{modèle} quadratique ajusté sur quelques simulations classiques.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=6mm and 7mm]
+\node[flow] (a) {Profils simulés\\ (phase 1 : $C_D$ ;\\ phase 2 : SER)};
+\node[flow,right=of a] (b) {Modèle\\ quadratique\\ (moindres carrés)};
+\node[flow,right=of b,fill=corange!10] (c) {QUBO\\ $\min_{\mathbf b}\ \mathbf b^\top Q\mathbf b$\\ (ch.~7)};
+\node[flow,right=of c,fill=cblue!10] (d) {QAOA ou recuit\\ (ch.~8, 9)\\ \emph{partie quantique}};
+\node[flow,below=9mm of c] (e) {Meilleurs candidats\\ $\to$ simulés à leur tour};
+\draw[arr] (a) -- (b); \draw[arr] (b) -- (c); \draw[arr] (c) -- (d);
+\draw[arr] (d) |- (e); \draw[arr] (e) -| (a);
+\end{tikzpicture}
+\caption{La boucle de la formulation quantique. Seul le bloc bleu fait appel au calcul quantique ; tout le reste est classique.}\label{fig:boucle-intro}
+\end{figure}
+
+\section{Bits, bits aléatoires, qubits}
+\paragraph{Bit classique.} Un registre de $n$ bits est dans \emph{un} état parmi $2^n$. Le profil NACA $(m,p,t)$ codé sur 9 bits est l'un des $2^9=512$ profils de notre grille.
+
+\paragraph{Bit aléatoire.} Si l'on ne connaît l'état qu'en probabilité, on le décrit par un vecteur $\mathbf p=(p_0,p_1)$ avec $p_i\ge0$ et $p_0+p_1=1$. Une opération aléatoire, par exemple « lancer une pièce » qui remplace le bit par un bit uniforme, est une matrice \emph{stochastique} (coefficients positifs, colonnes de somme 1) :
+\[
+\text{Pièce}=\begin{pmatrix}1/2&1/2\\1/2&1/2\end{pmatrix},\qquad \text{Pièce}\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}1/2\\1/2\end{pmatrix}.
+\]
+Pour $n$ bits aléatoires, il faut $2^n$ probabilités. Le nombre de paramètres croît déjà exponentiellement. Ce n'est donc \emph{pas} cette croissance qui fait la spécificité du quantique.
+
+\paragraph{Qubit.} Un qubit est décrit par deux \textbf{amplitudes} complexes $(\alpha,\beta)$, avec $|\alpha|^2+|\beta|^2=1$ ; les \emph{probabilités} de lire 0 ou 1 sont $|\alpha|^2$ et $|\beta|^2$. Les opérations sont des matrices \textbf{unitaires} (elles conservent la norme euclidienne), par exemple la porte de Hadamard
+\[
+H=\frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\qquad H\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}1/\sqrt2\\1/\sqrt2\end{pmatrix}.
+\]
+Après une seule porte, la mesure donne 0 ou 1 avec probabilité $1/2$, exactement comme la pièce. La différence n'apparaît qu'au second pas.
+
+\section{L'interférence : la vraie différence}
+Appliquons deux fois chaque opération à partir de 0.
+\begin{itemize}
+\item Deux pièces : $\text{Pièce}^2\,(1,0)^\top=(1/2,1/2)^\top$. Le résultat reste aléatoire.
+\item Deux Hadamard : $H^2=\Id$, donc $H^2\,(1,0)^\top=(1,0)^\top$. On lit 0 \emph{avec certitude}.
+\end{itemize}
+Le mécanisme est visible sur l'arbre des amplitudes (figure~\ref{fig:interference}). Pour aboutir en 1, il y a deux chemins, d'amplitudes $+\tfrac12$ et $-\tfrac12$ : ils \textbf{s'annulent}. Pour aboutir en 0, les deux chemins valent $+\tfrac12$ : ils \textbf{s'ajoutent}. Des probabilités, positives, ne peuvent jamais se compenser ; des amplitudes, de signe (ou de phase) quelconque, le peuvent.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=2.6cm,y=1.1cm,lab/.style={font=\small,fill=white,inner sep=1pt}]
+\node[flow] (s) at (0,0) {$\ket0$};
+\node[flow] (a0) at (1,1) {$\ket0$}; \node[flow] (a1) at (1,-1) {$\ket1$};
+\node[flow] (b00) at (2,1.6) {$\ket0$}; \node[flow] (b01) at (2,0.55) {$\ket1$};
+\node[flow] (b10) at (2,-0.55) {$\ket0$}; \node[flow] (b11) at (2,-1.6) {$\ket1$};
+\draw[arr] (s) -- node[lab,above left]{$\frac{1}{\sqrt2}$} (a0);
+\draw[arr] (s) -- node[lab,below left]{$\frac{1}{\sqrt2}$} (a1);
+\draw[arr] (a0) -- node[lab,above]{$\frac{1}{\sqrt2}$} (b00);
+\draw[arr] (a0) -- node[lab,below]{$\frac{1}{\sqrt2}$} (b01);
+\draw[arr] (a1) -- node[lab,above]{$\frac{1}{\sqrt2}$} (b10);
+\draw[arr,corange] (a1) -- node[lab,below]{$-\frac{1}{\sqrt2}$} (b11);
+\node[anchor=west,font=\small] at (2.25,1.6) {$+\tfrac12$};
+\node[anchor=west,font=\small] at (2.25,0.55) {$+\tfrac12$};
+\node[anchor=west,font=\small] at (2.25,-0.55) {$+\tfrac12$};
+\node[anchor=west,font=\small,corange] at (2.25,-1.6) {$-\tfrac12$};
+\draw[decorate,decoration={brace,amplitude=4pt}] (2.75,1.75) -- (2.75,-0.7) node[midway,right=5pt,font=\small,align=left] {$\ket0$ : $\tfrac12+\tfrac12=1$};
+\node[font=\small,align=left,anchor=west] at (2.85,-1.1) {$\ket1$ : $\tfrac12-\tfrac12=0$};
+\node[font=\small] at (0.5,-2.3) {porte $H$}; \node[font=\small] at (1.5,-2.3) {porte $H$};
+\end{tikzpicture}
+\caption{Arbre des amplitudes pour $H$ puis $H$. On \emph{additionne} les amplitudes des chemins qui mènent au même état, puis on prend le module au carré. Les deux chemins vers $\ket1$ interfèrent destructivement.}\label{fig:interference}
+\end{figure}
+
+\begin{resultat}
+Un algorithme quantique est une façon d'orchestrer les interférences : faire s'annuler les amplitudes des mauvaises réponses et s'ajouter celles des bonnes. QAOA (ch.~\ref{ch:qaoa}) le fait en codant la fonction de coût dans des \emph{phases} $e^{-i\gamma E(x)}$, puis en mélangeant les états pour que ces phases interfèrent.
+\end{resultat}
+
+\section{Ce que le quantique promet, et ce qu'il ne promet pas}
+\begin{itemize}
+\item \textbf{Parallélisme ?} Un registre de $n$ qubits porte $2^n$ amplitudes, mais une mesure ne renvoie que \emph{$n$ bits}, tirés au hasard selon les $|{\rm amplitude}|^2$. On ne « lit » pas les 512 profils en même temps. Tout l'enjeu est de rendre la bonne réponse \emph{probable} avant de mesurer.
+\item \textbf{Accélérations prouvées} : elles concernent des problèmes à structure particulière. Shor (factorisation) est exponentiel. Grover (recherche non structurée) est quadratique : environ $\sqrt N$ requêtes au lieu de $N$.
+\item \textbf{Optimisation combinatoire} (notre cas) : QAOA et le recuit quantique sont des \emph{heuristiques}. Il n'existe pas de preuve d'avantage exponentiel pour les problèmes NP-difficiles, et l'on ne s'attend pas à en trouver.
+\item \textbf{Matériel actuel} : il est bruité et de taille intermédiaire (ère \emph{NISQ}). La profondeur des circuits exécutables est limitée par les erreurs (ch.~\ref{ch:outils}).
+\end{itemize}
+
+\begin{projet}
+La note d'intention le dit explicitement : \emph{aucun gain de temps de calcul n'est attendu}. Le cas (9 qubits) est volontairement assez petit pour être résolu exactement, et le quantique y tourne \emph{sur simulateur}. Le livrable, c'est une \textbf{formulation} correcte, une \textbf{qualité de solution} mesurée (nombre de simulations aérodynamiques pour retrouver le front de Pareto exact) et une analyse des \textbf{ressources} (qubits, portes, profondeur) en fonction de la taille du problème.
+\end{projet}
+
+\exercices
+\begin{exercice}[interférence]
+On part de $\ket1=(0,1)^\top$. Calculer l'état après une puis deux portes $H$, et les probabilités de mesure correspondantes. Comparer avec deux « pièces » appliquées au bit 1.
+\end{exercice}
+\begin{exercice}[parallélisme]
+Un collègue affirme : « avec 9 qubits on évalue les 512 profils en parallèle, donc QAOA donne l'optimum en un seul passage ». Expliquer en trois phrases pourquoi c'est faux, et ce que l'on obtient réellement à la sortie d'un passage.
+\end{exercice}

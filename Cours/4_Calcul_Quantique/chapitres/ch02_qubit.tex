@@ -1,0 +1,329 @@
+\chapter{Le qubit}\label{ch:qubit}
+\iterbanner{V0}
+
+On formalise ici ce que la polarisation du photon (ch.~\ref{ch:bases}) a montré : un système à deux résultats possibles, dont l'état est un vecteur, que la mesure perturbe. On parlera désormais de \emph{qubit} sans se soucier du support physique.
+
+\section{État d'un qubit et notation de Dirac}
+\begin{definition}[ (postulat 1)]
+L'état d'un qubit est un vecteur unitaire de $\C^2$ :
+\[\ket\psi=\alpha\ket0+\beta\ket1,\qquad \ket0=\begin{pmatrix}1\\0\end{pmatrix},\ \ket1=\begin{pmatrix}0\\1\end{pmatrix},\qquad |\alpha|^2+|\beta|^2=1.\]
+$(\ket0,\ket1)$ est la \emph{base de calcul}. Deux vecteurs qui ne diffèrent que d'un facteur $e^{i\chi}$ représentent le même état physique.
+\end{definition}
+\paragraph{Notation de Dirac.} C'est simplement de l'algèbre linéaire avec une typographie commode :
+\begin{itemize}
+\item \emph{ket} $\ket\psi$ : vecteur colonne ;
+\item \emph{bra} $\bra\psi=\ket\psi^\dagger$ : vecteur ligne conjugué ($\dagger$ = transposée conjuguée) ;
+\item produit hermitien $\braket\phi\psi=\sum_i\overline{\phi_i}\psi_i$, linéaire à droite, antilinéaire à gauche ;
+\item $\ket\psi\bra\phi$ : une \emph{matrice} (produit extérieur). Par exemple $\ket0\bra0=\begin{pmatrix}1&0\\0&0\end{pmatrix}$ est le projecteur sur $\ket0$.
+\end{itemize}
+Norme : $\braket\psi\psi=|\alpha|^2+|\beta|^2=1$.
+
+\paragraph{Exemple chiffré.} $\ket\psi=\tfrac35\ket0+\tfrac{4i}{5}\ket1$ est bien normé : $\tfrac9{25}+\tfrac{16}{25}=1$. Son bra est $\bra\psi=\tfrac35\bra0-\tfrac{4i}{5}\bra1$ (on conjugue). Avec $\ket\phi=\ket1$, on obtient $\braket\phi\psi=\tfrac{4i}5$ et $|\braket\phi\psi|^2=\tfrac{16}{25}$ : c'est la probabilité de mesurer 1 (section suivante).
+
+\paragraph{Pourquoi des nombres complexes ?} Avec des amplitudes réelles, on ne disposerait que des signes $\pm$ pour faire interférer les chemins. La phase complexe $e^{i\varphi}$ donne un continuum de « directions » possibles, et les évolutions physiques (équation de Schrödinger, ch.~\ref{ch:hamiltoniens}) produisent naturellement de telles phases.
+
+\section{La mesure : règle de Born}
+\begin{definition}[ (postulat de la mesure, base de calcul)]
+Mesurer $\ket\psi=\alpha\ket0+\beta\ket1$ donne le résultat 0 avec probabilité $|\alpha|^2=|\braket0\psi|^2$ et 1 avec probabilité $|\beta|^2=|\braket1\psi|^2$. Après la mesure, l'état \emph{est} $\ket0$ ou $\ket1$ selon le résultat (réduction du paquet d'ondes) : l'information sur $\alpha,\beta$ est perdue.
+\end{definition}
+Conséquences pratiques :
+\begin{itemize}
+\item une seule mesure ne révèle presque rien de $\ket\psi$ (un bit) ;
+\item pour estimer $|\alpha|^2$, il faut \emph{préparer et mesurer} l'état $N$ fois. Ce sont les \textbf{shots}. La fréquence observée a un écart-type $\sqrt{p(1-p)/N}$ ;
+\item la mesure est destructive : on ne peut pas « regarder » l'état en cours de calcul sans le modifier.
+\end{itemize}
+
+\section{Phase globale et phase relative}\label{sec:phases}
+Écrivons les amplitudes sous forme polaire, $\alpha=|\alpha|e^{i\varphi_0}$ et $\beta=|\beta|e^{i\varphi_1}$. L'état contient quatre nombres réels, dont seuls deux comptent :
+\[
+\ket\psi=e^{i\varphi_0}\Big(\,|\alpha|\,\ket0+|\beta|\,e^{i(\varphi_1-\varphi_0)}\ket1\Big).
+\]
+\begin{itemize}
+\item La norme impose $|\alpha|^2+|\beta|^2=1$ : un seul réel pour les modules, qui fixe les probabilités en base de calcul.
+\item Le facteur commun $e^{i\varphi_0}$ est la \textbf{phase globale}.
+\item La différence $\varphi=\varphi_1-\varphi_0$ est la \textbf{phase relative}.
+\end{itemize}
+
+\paragraph{La phase globale ne se voit jamais.} Pour n'importe quel état de référence $\ket u$, on a
+\[|\braket{u}{e^{i\chi}\psi}|^2=|e^{i\chi}|^2\,|\braket u\psi|^2=|\braket u\psi|^2,\qquad\text{car } |e^{i\chi}|=1.\] Aucune mesure, dans aucune base, ne la détecte : $\ket\psi$ et $e^{i\chi}\ket\psi$ sont \emph{le même état physique}, écrit de deux façons.
+
+\paragraph{La phase relative se voit, mais pas en base de calcul.} Les probabilités en base de calcul, $|\alpha|^2$ et $|\beta|^2$, ne dépendent pas de $\varphi$. Pourtant, $\varphi$ change l'état physique. Les quatre états suivants ont tous les mêmes modules, $\tfrac1{\sqrt2}$ et $\tfrac1{\sqrt2}$, et ne diffèrent que par $\varphi$ :
+\begin{align*}
+\ket{+}&=\tfrac{1}{\sqrt2}(\ket0+\ket1)\quad (\varphi=0), &
+\ket{+i}&=\tfrac{1}{\sqrt2}(\ket0+i\ket1)\quad (\varphi=\tfrac\pi2),\\
+\ket{-}&=\tfrac{1}{\sqrt2}(\ket0-\ket1)\quad (\varphi=\pi), &
+\ket{-i}&=\tfrac{1}{\sqrt2}(\ket0-i\ket1)\quad (\varphi=\tfrac{3\pi}2).
+\end{align*}
+
+\begin{piege}[ : le signe dans $\ket-$ et dans $-\ket-$]
+Ce qui est écrit \emph{à l'intérieur} d'un ket est une simple \textbf{étiquette}, un nom. $\ket-$ est le nom du vecteur $\tfrac1{\sqrt2}\begin{pmatrix}1\\-1\end{pmatrix}$, et $\ket+$ celui de $\tfrac1{\sqrt2}\begin{pmatrix}1\\1\end{pmatrix}$. On aurait pu les appeler $\ket{\nearrow}$ et $\ket{\searrow}$.
+
+Ce qui est écrit \emph{devant} un ket est un \textbf{nombre} qui multiplie le vecteur. Ainsi
+\[
+-\ket-=(-1)\times\tfrac1{\sqrt2}\begin{pmatrix}1\\-1\end{pmatrix}=\tfrac1{\sqrt2}\begin{pmatrix}-1\\1\end{pmatrix}=\tfrac1{\sqrt2}(-\ket0+\ket1).
+\]
+Comme $-1=e^{i\pi}$, $-\ket-$ ne diffère de $\ket-$ que par une phase \emph{globale}. Les deux vecteurs sont différents, mais représentent le même état physique. À l'inverse, $\ket-$ et $\ket+$ ne diffèrent que par le signe \emph{d'une seule} composante : c'est une phase \emph{relative}, et ce sont deux états physiques différents.
+\end{piege}
+
+\paragraph{Ce que la phase relative est physiquement : la polarisation.} Revenons au photon du chapitre~\ref{ch:bases}, avec $\ket0=$ polarisation horizontale ($0^\circ$) et $\ket1=$ verticale ($90^\circ$). Le vecteur $(\alpha,\beta)$ est exactement le \emph{vecteur de Jones} de l'optique classique : les deux composantes du champ électrique d'une onde lumineuse sont
+\[
+E_x(t)=|\alpha|\cos(\omega t),\qquad E_y(t)=|\beta|\cos(\omega t-\varphi).
+\]
+\begin{itemize}
+\item La \textbf{phase relative} $\varphi$ est le déphasage entre les deux oscillations. Il fixe la \emph{forme} décrite par la pointe du champ : un segment à $45^\circ$ ($\varphi=0$), un cercle ($\varphi=\pi/2$), un segment à $135^\circ$ ($\varphi=\pi$), une ellipse sinon (figure~\ref{fig:jones}). Ce sont des lumières physiquement différentes.
+\item La \textbf{phase globale} revient à décaler l'origine des temps, $t\to t+t_0$. La pointe du champ parcourt exactement la même courbe : rien de physique ne change. C'est l'intuition à garder : une phase globale est un choix d'horloge, pas une propriété du système.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.85]
+\foreach \phi/\lab/\nom [count=\i] in {0/{$\varphi=0$}/{$\ket+$ : linéaire $45^\circ$},
+                                     45/{$\varphi=\pi/4$}/{elliptique},
+                                     90/{$\varphi=\pi/2$}/{$\ket{+i}$ : circulaire},
+                                     180/{$\varphi=\pi$}/{$\ket-$ : linéaire $135^\circ$}}{
+  \begin{scope}[xshift={(\i-1)*3.9cm}]
+    \draw[->,cmuted] (-1.35,0) -- (1.45,0) node[right,font=\scriptsize,cink] {$E_x$};
+    \draw[->,cmuted] (0,-1.35) -- (0,1.45) node[above,font=\scriptsize,cink] {$E_y$};
+    \draw[cblue,very thick] plot[domain=0:360,samples=73,smooth] ({cos(\x)},{cos(\x-\phi)});
+    \fill[corange] ({cos(0)},{cos(-\phi)}) circle (2pt);
+    \draw[corange,thick,-{Stealth[length=2mm]}] plot[domain=0:40,samples=10,smooth] ({cos(\x)},{cos(\x-\phi)});
+    \node[font=\small] at (0,-1.75) {\lab};
+    \node[font=\footnotesize,cmuted] at (0,-2.2) {\nom};
+  \end{scope}}
+\end{tikzpicture}
+\caption{Trajectoire de la pointe du champ électrique pour $|\alpha|=|\beta|=\frac1{\sqrt2}$ et quatre phases relatives. Les quatre lumières passent toutes à 50~\% un polariseur horizontal, mais ce sont des lumières différentes. Une phase globale déplacerait seulement le point orange (l'instant $t=0$) le long de la même courbe.}\label{fig:jones}
+\end{figure}
+
+Un photon unique dans l'état $\ket+$ est donc un photon polarisé à $45^\circ$, et un photon dans l'état $\ket{+i}$ est polarisé circulairement. Le tableau suivant donne la probabilité de passer trois filtres différents, ce qui revient à mesurer dans trois bases différentes (§\ref{sec:autre-base}) :
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+État & polariseur $0^\circ$ (base $\ket0,\ket1$) & polariseur $45^\circ$ (base $\ket\pm$) & filtre circulaire (base $\ket{\pm i}$) \\
+\midrule
+$\ket+$ & $1/2$ & $1$ & $1/2$ \\
+$\ket-$ & $1/2$ & $0$ & $1/2$ \\
+$\ket{+i}$ & $1/2$ & $1/2$ & $1$ \\
+$\ket{-i}$ & $1/2$ & $1/2$ & $0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+La première colonne ne distingue rien : c'est la seule « question » qui ignore $\varphi$. Les deux autres révèlent la phase relative.
+
+\paragraph{Pourquoi c'est utile : l'interférence.} Appliquons la porte $H$ (chapitre~1) à un état quelconque :
+\[
+H\ket\psi=\alpha\,\frac{\ket0+\ket1}{\sqrt2}+\beta\,\frac{\ket0-\ket1}{\sqrt2}
+=\frac{\alpha+\beta}{\sqrt2}\ket0+\frac{\alpha-\beta}{\sqrt2}\ket1 .
+\]
+Le résultat 0 est désormais atteint par \emph{deux chemins}, l'un venant de $\ket0$ (amplitude $\alpha$), l'autre de $\ket1$ (amplitude $\beta$), et \emph{les amplitudes s'additionnent avant d'être mises au carré}. Avec $|\alpha|=|\beta|=\tfrac1{\sqrt2}$ :
+\[
+P(0)=\frac{|\alpha+\beta|^2}{2}=\frac{1+\cos\varphi}{2}=\cos^2\frac\varphi2,\qquad P(1)=\sin^2\frac\varphi2 .
+\]
+C'est exactement la figure de franges d'une expérience de Young, ou l'addition de deux houles de même amplitude : en phase, elles se renforcent ($\varphi=0$, $P(0)=1$) ; en opposition, elles s'annulent ($\varphi=\pi$, $P(0)=0$). La phase relative, invisible tant que les deux chemins restent séparés, devient une \emph{probabilité} dès qu'on les fait se recombiner (figure~\ref{fig:interference}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5cm,xmin=0,xmax=6.2832,ymin=-0.05,ymax=1.22,
+  xtick={0,1.5708,3.1416,4.7124,6.2832},xticklabels={$0$,$\pi/2$,$\pi$,$3\pi/2$,$2\pi$},
+  xlabel={phase relative $\varphi$},ylabel={probabilité},legend pos=outer north east,
+  legend style={font=\small,draw=none},tick label style={font=\small}]
+\addplot[cmuted,thick,dashed,domain=0:6.2832] {0.5};
+\addlegendentry{$P(0)$ sans $H$}
+\addplot[cblue,very thick,domain=0:6.2832,samples=100] {cos(deg(x)/2)^2};
+\addlegendentry{$P(0)$ après $H$}
+\addplot[corange,very thick,domain=0:6.2832,samples=100] {sin(deg(x)/2)^2};
+\addlegendentry{$P(1)$ après $H$}
+\node[font=\scriptsize,anchor=south] at (axis cs:0.25,1.0) {$\ket+$};
+\node[font=\scriptsize,anchor=south] at (axis cs:1.5708,0.5) {$\ket{+i}$};
+\node[font=\scriptsize,anchor=south] at (axis cs:3.1416,1.0) {$\ket-$};
+\end{axis}
+\end{tikzpicture}
+\caption{Pour $\tfrac1{\sqrt2}(\ket0+e^{i\varphi}\ket1)$, mesurer directement donne toujours 50/50 (tirets) : la phase est cachée. Après $H$, les deux chemins interfèrent et la phase se lit dans les probabilités.}\label{fig:interference}
+\end{figure}
+
+\begin{resultat}
+\begin{itemize}
+\item Phase globale : un choix d'horloge, invisible pour toute mesure. On l'ignore.
+\item Phase relative : une propriété physique (forme de la polarisation, direction du spin). Elle est invisible en base de calcul, mais une porte qui fait interférer les chemins, comme $H$, la convertit en probabilités.
+\item Un calcul quantique \emph{écrit} l'information dans les phases, puis la fait \emph{ressortir} par interférence avant la mesure.
+\end{itemize}
+\end{resultat}
+
+\paragraph{Lien avec QAOA, sur un qubit.} Prenons un coût $E(0)=0$, $E(1)=1$. QAOA part de $\ket+$, puis multiplie chaque composante par $e^{-i\gamma E(x)}$ :
+\[
+\tfrac1{\sqrt2}\big(\ket0+e^{-i\gamma}\ket1\big).
+\]
+Le coût est maintenant écrit dans la phase relative, $\varphi=-\gamma$, mais une mesure immédiate donnerait 50/50 quel que soit $\gamma$ : l'opération n'a rien appris de visible. Il faut ensuite une étape d'interférence, le \emph{mélangeur}, qui joue le rôle de $H$ ici. Avec $H$, on obtiendrait $P(0)=\cos^2(\gamma/2)$ : la probabilité de sortir la bonne réponse dépend maintenant du coût. Le chapitre~\ref{ch:qaoa} fait la même chose sur les $2^9=512$ profils à la fois.
+
+\section{La sphère de Bloch}
+En retirant la phase globale, tout état d'un qubit s'écrit
+\[
+\ket\psi=\cos\tfrac\theta2\,\ket0+e^{i\varphi}\sin\tfrac\theta2\,\ket1,\qquad \theta\in[0,\pi],\ \varphi\in[0,2\pi[,
+\]
+c'est-à-dire un point de la sphère unité, de coordonnées $\mathbf r=(\sin\theta\cos\varphi,\ \sin\theta\sin\varphi,\ \cos\theta)$.
+\begin{itemize}
+\item $\ket0$ et $\ket1$ sont aux pôles.
+\item $\ket\pm$ sont sur l'axe $x$, et $\ket{\pm i}=\tfrac1{\sqrt2}(\ket0\pm i\ket1)$ sur l'axe $y$.
+\item Deux états \emph{orthogonaux} sont \emph{antipodaux}.
+\item Les portes à un qubit sont des \textbf{rotations} de la sphère (ch.~\ref{ch:algebre}).
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x={(-1.147cm,-0.491cm)},y={(1.638cm,-0.344cm)},z={(0cm,1.91cm)},>={Stealth[length=2mm]}]
+\draw[cink,thin] (0,0,0) circle (2cm);
+\draw[cmuted,thin] plot[domain=0:360,samples=90,smooth] ({cos(\x)},{sin(\x)},0);
+\draw[->,cmuted] (0,0,0) -- (1.3,0,0) node[anchor=north east,cink] {$x$};
+\draw[->,cmuted] (0,0,0) -- (0,1.3,0) node[anchor=west,cink] {$y$};
+\draw[->,cmuted] (0,0,0) -- (0,0,1.3) node[anchor=south west,cink] {$z$};
+\fill[cink] (0,0,1) circle (1.5pt) node[anchor=south east] {$\ket0$};
+\fill[cink] (0,0,-1) circle (1.5pt) node[anchor=north] {$\ket1$};
+\fill[cink] (1,0,0) circle (1.5pt) node[anchor=south east] {$\ket+$};
+\fill[cink] (-1,0,0) circle (1.5pt) node[anchor=south west] {$\ket-$};
+\fill[cink] (0,1,0) circle (1.5pt) node[anchor=north west] {$\ket{+i}$};
+\fill[cink] (0,-1,0) circle (1.5pt) node[anchor=east] {$\ket{-i}$};
+% état (theta = 50°, phi = 60°)
+\coordinate (P) at ({sin(50)*cos(60)},{sin(50)*sin(60)},{cos(50)});
+\coordinate (Pe) at ({sin(50)*cos(60)},{sin(50)*sin(60)},0);
+\draw[->,cblue,very thick] (0,0,0) -- (P) node[anchor=south west] {$\ket\psi$};
+\draw[cblue,dashed] (P) -- (Pe); \draw[cblue,dashed] (0,0,0) -- (Pe);
+\draw[corange,thick] plot[domain=0:50,samples=20] ({0.45*sin(\x)*cos(60)},{0.45*sin(\x)*sin(60)},{0.45*cos(\x)});
+\node[corange] at ({0.62*sin(25)*cos(60)},{0.62*sin(25)*sin(60)},{0.62*cos(25)}) {$\theta$};
+\draw[corange,thick] plot[domain=0:60,samples=20] ({0.4*cos(\x)},{0.4*sin(\x)},0);
+\node[corange] at ({0.58*cos(30)},{0.58*sin(30)},0) {$\varphi$};
+\end{tikzpicture}
+\caption{Sphère de Bloch. La latitude $\theta$ fixe les probabilités de mesure ($\cos^2\frac\theta2$ pour $\ket0$) ; la longitude $\varphi$ est la phase relative, invisible en base de calcul mais essentielle pour les interférences.}\label{fig:bloch}
+\end{figure}
+
+\section{Mesurer dans une autre base}\label{sec:autre-base}
+\paragraph{Une base de mesure, c'est une question posée.} Physiquement, mesurer consiste à faire passer le système dans un appareil \emph{orienté} : un polariseur tourné d'un certain angle, ou l'aimant de Stern-Gerlach orienté selon $z$, $x$ ou $y$. L'orientation de l'appareil choisit la \emph{question} posée au système (« es-tu horizontal ou vertical ? », « es-tu à $45^\circ$ ou à $135^\circ$ ? »). Chaque orientation correspond à une base orthonormée $(\ket{u_0},\ket{u_1})$ : ce sont les deux états qui donnent chacun une réponse certaine à cette question.
+
+\begin{definition}[ (mesure dans une base quelconque)]
+Mesurer $\ket\psi$ dans la base orthonormée $(\ket{u_0},\ket{u_1})$ donne le résultat $k$ avec probabilité $|\braket{u_k}\psi|^2$, et laisse le système dans l'état $\ket{u_k}$.
+\end{definition}
+La règle de Born de la section précédente est le cas particulier $\ket{u_k}=\ket k$.
+
+\paragraph{Exemple chiffré : un même état, trois questions.} Reprenons $\ket\psi=\tfrac35\ket0+\tfrac{4i}5\ket1$ et posons-lui les trois questions du tableau précédent :
+\begin{itemize}
+\item base $\{\ket0,\ket1\}$ : $P(0)=\tfrac9{25}=0{,}36$ et $P(1)=0{,}64$ ;
+\item base $\{\ket+,\ket-\}$ : $\braket+\psi=\tfrac1{\sqrt2}\big(\tfrac35+\tfrac{4i}5\big)$, de module carré $\tfrac12\cdot\tfrac{9+16}{25}=\tfrac12$. Résultat : 50/50 ;
+\item base $\{\ket{+i},\ket{-i}\}$ : le bra $\bra{+i}=\tfrac1{\sqrt2}(\bra0-i\bra1)$ est conjugué, donc $\braket{+i}\psi=\tfrac1{\sqrt2}\big(\tfrac35-i\cdot\tfrac{4i}5\big)=\tfrac1{\sqrt2}\cdot\tfrac75$, et $P(+i)=\tfrac{49}{50}=0{,}98$.
+\end{itemize}
+Chaque question révèle une facette différente de l'état. Dans la base $\{\ket{\pm i}\}$, cet état est presque un état de base, alors qu'il paraît très « superposé » dans les deux autres. En répétant les trois mesures sur de nombreux shots, on reconstruit complètement l'état : c'est la \emph{tomographie}. Les trois réponses correspondent aux trois coordonnées $(x,y,z)$ du point sur la sphère de Bloch, ici $(0;\ 0{,}96;\ -0{,}28)$.
+
+\paragraph{Lecture géométrique : une probabilité, c'est une distance au pôle.} Si $\vec r$ est le point de l'état sur la sphère de Bloch et $\vec u$ celui de l'état de base $\ket u$, alors
+\[
+P(u)=|\braket u\psi|^2=\frac{1+\vec r\cdot\vec u}{2}=\cos^2\frac\Theta2,
+\]
+où $\Theta$ est l'angle entre $\vec r$ et $\vec u$ sur la sphère. Ici, $P(+i)=0{,}98$ donne $\vec r\cdot\vec u=y=0{,}96$, donc $\Theta=\arccos0{,}96\approx16^\circ$ : l'état est à $16^\circ$ du pôle $\ket{+i}$. Mais tous les points situés à $16^\circ$ de ce pôle donnent la même probabilité. Une seule base ne fixe donc qu'un \emph{cercle} de positions possibles, pas un point. Les deux autres bases ($x=0$, $z=-0{,}28$) choisissent le point sur ce cercle (figure~\ref{fig:cercle-mesure}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+% ---------------- gauche : vue 3D
+\begin{scope}[x={(-1.147cm,-0.491cm)},y={(1.638cm,-0.344cm)},z={(0cm,1.91cm)},>={Stealth[length=2mm]}]
+\draw[cink,thin] (0,0,0) circle (2cm);
+\draw[cmuted,thin] plot[domain=0:360,samples=90,smooth] ({cos(\x)},{sin(\x)},0);
+\draw[->,cmuted] (0,0,0) -- (1.3,0,0) node[anchor=north east,cink] {$x$};
+\draw[->,cmuted] (0,0,0) -- (0,0,1.3) node[anchor=south west,cink] {$z$};
+\draw[->,cmuted] (0,0,0) -- (0,1.55,0) node[anchor=west,cink] {$y$};
+\fill[cink] (0,0,1) circle (1.5pt) node[anchor=south east] {$\ket0$};
+\fill[cink] (0,0,-1) circle (1.5pt) node[anchor=north] {$\ket1$};
+\fill[cink] (0,-1,0) circle (1.5pt) node[anchor=east] {$\ket{-i}$};
+\fill[cblue] (0,1,0) circle (1.8pt);
+\node[cblue,anchor=north,font=\small] at (0,1.32,-0.08) {$\ket{+i}$};
+% cône et cercle des états à 16° du pôle +i (cos 16,26° = 0,96 ; sin = 0,28)
+\draw[corange,dashed] (0,0,0) -- (0,0.96,0.28);
+\draw[corange,dashed] (0,0,0) -- (0,0.96,-0.28);
+\draw[corange,very thick] plot[domain=0:360,samples=60,smooth] ({0.28*cos(\x)},0.96,{0.28*sin(\x)});
+\draw[->,cblue,very thick] (0,0,0) -- (0,0.96,-0.28);
+\fill[cblue] (0,0.96,-0.28) circle (2pt);
+\node[cblue,anchor=north east,font=\small] at (0,0.92,-0.32) {$\ket\psi$};
+\end{scope}
+\node[corange,font=\small,align=center] at (4.0,1.75) {tous ces états\\ donnent $P(+i)=0{,}98$};
+\draw[corange,-{Stealth[length=2mm]}] (3.7,1.3) -- (1.95,0.05);
+\node[font=\small] at (0,-2.75) {(a) ce que fixe une seule mesure};
+% ---------------- droite : coupe dans le plan (y, z)
+\begin{scope}[xshift=8.6cm]
+\def\R{2.1}
+\draw[cink,thin] (0,0) circle (\R);
+\draw[->,cmuted] (-\R-0.3,0) -- (\R+1.0,0) node[right,cink] {$y$};
+\draw[->,cmuted] (0,-\R-0.3) -- (0,\R+0.35) node[above,cink] {$z$};
+\fill[cink] (0,\R) circle (1.5pt) node[anchor=south west] {$\ket0$};
+\fill[cink] (0,-\R) circle (1.5pt) node[anchor=north west] {$\ket1$};
+\fill[cink] (-\R,0) circle (1.5pt) node[anchor=south east] {$\ket{-i}$};
+\fill[cblue] (\R,0) circle (1.8pt) node[anchor=south west,cblue,xshift=2pt] {$\ket{+i}$};
+% le cercle des candidats, vu de profil
+\draw[cblue,very thick,->] (0,0) -- ({0.96*\R},{-0.28*\R});
+\fill[cblue] ({0.96*\R},{-0.28*\R}) circle (2pt) node[anchor=north west,cblue,font=\small] {$\ket\psi$};
+\draw[cmuted,dashed] (0,0) -- ({0.96*\R},{0.28*\R});
+\draw[corange,line width=2.2pt] ({0.96*\R},{0.28*\R}) -- ({0.96*\R},{-0.28*\R});
+\draw[cmuted,fill=white] ({0.96*\R},{0.28*\R}) circle (2pt);
+\fill[cblue] ({0.96*\R},{-0.28*\R}) circle (2pt);
+\node[corange,font=\small,align=left,anchor=west] (prof) at ({\R+0.1},{1.7}) {cercle orange\\ vu de profil};
+\draw[corange,-{Stealth[length=2mm]}] (prof.south west) ++(0.2,0.05) -- ({0.96*\R+0.08},{0.3*\R});
+\draw[corange,thick] (0.95,0) arc (0:-16.26:0.95);
+\node[corange,font=\small] at (1.3,-0.2) {$\Theta$};
+% projection et lecture de P
+\draw[cblue,dashed] ({0.96*\R},{-0.28*\R}) -- ({0.96*\R},0);
+\draw[decorate,decoration={brace,amplitude=5pt,mirror}] (-\R,-\R-0.55) -- ({0.96*\R},-\R-0.55)
+  node[midway,below=6pt,font=\small] {$1+y=1{,}96$};
+\draw[cmuted,thin] ({0.96*\R},0) -- ({0.96*\R},-\R-0.5);
+\draw[cmuted,thin] (-\R,0) -- (-\R,-\R-0.5);
+\end{scope}
+\node[font=\small,align=center] at (8.6,-3.75) {(b) coupe dans le plan $(y,z)$ : $P(+i)=\dfrac{1+y}{2}=\dfrac{1{,}96}{2}=0{,}98$};
+\end{tikzpicture}
+\caption{Ce qu'apprend une mesure dans la base $\{\ket{+i},\ket{-i}\}$ pour $\ket\psi=\tfrac35\ket0+\tfrac{4i}5\ket1$. (a)~La probabilité $P(+i)=0{,}98$ fixe seulement l'angle $\Theta\approx16^\circ$ au pôle $\ket{+i}$ : l'état est quelque part sur le cercle orange. (b)~Vue en coupe : la probabilité est la projection $y$ du point sur l'axe, ramenée à $[0,1]$. Le cercle orange est vu de profil (segment vertical) ; le point en tirets donne la même probabilité. Les mesures en base $\{\ket0,\ket1\}$ ($z=-0{,}28$) et $\{\ket\pm\}$ ($x=0$) lèvent l'ambiguïté.}\label{fig:cercle-mesure}
+\end{figure}
+
+\paragraph{Analogie avec le polariseur, et sa limite.} Un filtre circulaire transmettrait bien 98~\% de l'intensité d'un faisceau dans cet état : c'est la loi de Malus, de même forme en $\cos^2$. À l'échelle d'\emph{un} photon, en revanche, c'est tout ou rien. Dans 98~\% des cas, le photon passe et ressort \emph{exactement} dans l'état $\ket{+i}$ ; dans 2~\% des cas, il est absorbé. La mesure ne conserve pas « 98~\% de $\ket\psi$ » : elle remplace l'état par l'état de base obtenu.
+
+\paragraph{Complémentarité.} Aucun état ne donne une réponse certaine à la fois en base $\{\ket0,\ket1\}$ et en base $\{\ket+,\ket-\}$ : si $P(0)=1$, alors l'état est $\ket0$, et $P(+)=\tfrac12$. Sur la sphère de Bloch, être certain pour une question, c'est être sur un pôle de l'axe correspondant, donc sur l'équateur des deux autres axes. C'est pour cette raison que l'information de phase est « cachée » quand on ne mesure qu'en base de calcul : c'est la question complémentaire.
+
+\paragraph{En pratique, on tourne l'état plutôt que l'appareil.} Un processeur quantique supraconducteur ne sait lire qu'une chose : le niveau d'énergie du qubit, donc la base $\{\ket0,\ket1\}$. Pour poser une autre question, on applique avant la mesure une porte $U$ qui envoie la base voulue sur la base de calcul, $U\ket{u_k}=\ket k$. Comme $U$ est unitaire, elle conserve les produits scalaires :
+\[
+|\braket{k}{U\psi}|^2=|\braket{U u_k}{U\psi}|^2=|\braket{u_k}\psi|^2 .
+\]
+Tourner l'état de $U$ revient à tourner l'appareil de $U^{-1}$ : c'est le même jeu qu'entre repère fixe et repère tournant en mécanique, où l'on peut faire tourner soit l'objet, soit l'observateur.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\begin{scope}
+  \node[font=\small] at (-0.6,0) {$\ket\psi$};
+  \draw[cink] (-0.2,0) -- (1.9,0);
+  \meter{1.2}{0}
+  \node[font=\small,align=center] at (0.9,-0.9) {base $\{\ket0,\ket1\}$\\ ($Z$)};
+\end{scope}
+\begin{scope}[xshift=4.2cm]
+  \node[font=\small] at (-0.6,0) {$\ket\psi$};
+  \draw[cink] (-0.2,0) -- (2.4,0);
+  \node[gate] at (0.6,0) {$H$};
+  \meter{1.7}{0}
+  \node[font=\small,align=center] at (1.1,-0.9) {base $\{\ket+,\ket-\}$\\ ($X$)};
+\end{scope}
+\begin{scope}[xshift=9.0cm]
+  \node[font=\small] at (-0.6,0) {$\ket\psi$};
+  \draw[cink] (-0.2,0) -- (3.3,0);
+  \node[gate] at (0.6,0) {$S^\dagger$};
+  \node[gate] at (1.5,0) {$H$};
+  \meter{2.6}{0}
+  \node[font=\small,align=center] at (1.5,-0.9) {base $\{\ket{+i},\ket{-i}\}$\\ ($Y$)};
+\end{scope}
+\end{tikzpicture}
+\caption{Mesurer dans trois bases avec un matériel qui ne lit que la base de calcul. $H$ envoie $\ket\pm$ sur $\ket0/\ket1$. $S^\dagger=\mathrm{diag}(1,-i)$ retire d'abord une phase relative $\pi/2$, ce qui envoie $\ket{\pm i}$ sur $\ket\pm$, puis $H$ termine le travail.}\label{fig:mesure-bases}
+\end{figure}
+
+\begin{projet}
+À la fin d'un circuit QAOA, on mesure les 9 qubits en base de calcul : chaque shot renvoie une chaîne de 9 bits, c'est-à-dire \emph{un profil} $(m,p,t)$ de la grille. La règle de Born dit avec quelle probabilité chaque profil sort. QAOA est réussi si les profils de faible $C_D$ sortent souvent.
+
+On ne mesure qu'en base de calcul, car c'est la question qui nous intéresse : « quel profil ? ». Les étapes du circuit qui précèdent la mesure ont précisément pour rôle de convertir l'information de coût, écrite dans les phases relatives, en différences de probabilités dans cette base. La fonction de coût $H_C$ étant diagonale dans la base de calcul, son espérance $\expval{H_C}$, que l'optimiseur classique minimise, s'estime aussi avec ces seules mesures.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Soit $\ket\psi=\tfrac{1}{\sqrt2}(\ket0+i\ket1)$. (a) Probabilités de mesure en base de calcul. (b) Angles $(\theta,\varphi)$ et position sur la sphère de Bloch. (c) Probabilités de mesure en base $\{\ket+,\ket-\}$.
+\end{exercice}
+\begin{exercice}
+On rappelle que $-\ket-$ désigne le vecteur $\ket-$ multiplié par le nombre $-1$ (voir l'encadré « Piège » du §\ref{sec:phases}). (a) Écrire $-\ket-$ en composantes. Montrer que $\ket-$ et $-\ket-$ sont physiquement identiques. (b) Montrer que $\ket+$ et $\ket-$ ne le sont pas. Proposer une procédure (porte + mesure) qui les distingue avec certitude. (c) En polarisation, à quelles lumières correspondent $\ket+$ et $\ket-$ ? Quel filtre les distingue ?
+\end{exercice}

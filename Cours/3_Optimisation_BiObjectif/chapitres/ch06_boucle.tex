@@ -1,0 +1,98 @@
+\chapter{La boucle QUBO bi-objectif}\label{ch:boucle}
+\iterbanner{V1}
+
+\section{L'algorithme}
+La note d'intention décrit une boucle itérative : simuler quelques profils, ajuster un modèle quadratique, en tirer un QUBO, le résoudre par QAOA ou recuit, simuler les meilleurs candidats, recommencer. Le cours quantique l'a appliquée à la seule traînée. Ici, on l'étend aux deux objectifs et aux contraintes.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.55cm]
+\node[flow] (init) {10 profils\\ tirés au hasard};
+\node[flow,right=of init] (fit) {ajuster $\widehat{C_D}$, $\widehat{\mathrm{SER}}$\\ (quadratiques)\\ et $\widehat{C_L}$ (affine)};
+\node[flow,right=of fit] (qubo) {pour chaque $w$ :\\ QUBO à 13 qubits\\ objectifs + contraintes};
+\node[flow,right=of qubo] (solve) {solveur :\\ exact, recuit\\ ou QAOA};
+\node[flow,below=1.1cm of qubo] (sim) {simuler les meilleurs\\ profils \textbf{non encore simulés}};
+\node[flow,below=1.1cm of fit] (arch) {archive : profils simulés\\ front = non dominés de l'archive};
+\draw[arr] (init) -- (fit); \draw[arr] (fit) -- (qubo); \draw[arr] (qubo) -- (solve);
+\draw[arr] (solve) |- (sim); \draw[arr] (sim) -- (arch); \draw[arr] (arch) -- (fit);
+\end{tikzpicture}
+\caption{La boucle bi-objectif. Le front rendu n'est formé que de profils réellement simulés, comme l'exige la note d'intention.}\label{fig:boucle}
+\end{figure}
+
+\section{Étape 1 : les modèles de substitution}
+On ajuste par moindres carrés, sur les profils faisables déjà simulés, deux polynômes quadratiques en variables normalisées $z_i=2i_i/7-1$ (10 coefficients chacun, « famille A » du cours aérodynamique) :
+\[
+\widehat{C_D}(z),\ \widehat{\mathrm{SER}}(z)=c_0+\sum_ic_iz_i+\sum_{i\le l}c_{il}z_iz_l .
+\]
+Pour la contrainte de portance, on ajuste un modèle \emph{affine} $\widehat{C_L}$ sur les profils valides : $C_L$ est quasi affine en $(m,\alpha)$, et une contrainte doit rester de degré~1 pour que sa pénalité soit quadratique.
+
+Une petite régularisation (ridge, $10^{-6}$) évite les systèmes mal conditionnés quand peu de points sont disponibles. Avec 23 profils faisables, sur le scénario S2, le modèle de SER atteint $R^2=0{,}996$ sur toute la grille, celui de traînée $R^2=0{,}86$ : la SER, lisse, est plus facile à modéliser que la traînée et ses bascules de transition.
+
+\section{Étape 2 : un QUBO par poids}
+\paragraph{L'objectif.} Un QUBO n'a qu'une fonction de coût : on utilise une somme pondérée des deux modèles, normalisés par la plage des valeurs déjà observées,
+\[
+f_w=w\,\frac{\widehat{C_D}}{\Delta C_D}+(1-w)\,\frac{\widehat{\mathrm{SER}}}{\Delta\mathrm{SER}},\qquad w\in\{0;\ 0{,}25;\ 0{,}5;\ 0{,}75;\ 1\}.
+\]
+Comme la substitution $z=a_0+A\,\vect b$ est linéaire, on combine d'abord les coefficients, puis on développe en bits une seule fois (\code{surrogate\_to\_qubo}). On obtient 9 qubits.
+
+\paragraph{La contrainte d'épaisseur : un qubit auxiliaire.} $t\ge8$~\% interdit l'indice $i_t=0$, c'est-à-dire les trois bits d'épaisseur nuls. La pénalité naturelle, $P(1-b_0)(1-b_1)(1-b_2)$, est \emph{cubique} : ce n'est pas un QUBO (c'est le piège du degré vu dans le cours quantique). On la rend quadratique par la \textbf{réduction de Rosenberg}. On introduit un qubit $y$ censé valoir $x_1x_2$, avec $x_1=1-b_1$ et $x_2=1-b_2$, et la pénalité
+\[
+P\,(1-b_0)\,y+2P\big[x_1x_2-2x_1y-2x_2y+3y\big].
+\]
+Le crochet vaut 0 si $y=x_1x_2$ et au moins 1 sinon. Avec un poids $2P>P$, le minimum sur $y$ est atteint pour $y=x_1x_2$, et on retrouve exactement la pénalité cubique. Le code vérifie l'égalité sur les 8 combinaisons par énumération.
+
+\paragraph{La contrainte de portance : des qubits d'écart.} $\widehat{C_L}(\vect b)\ge0{,}3$ est une inégalité. On la transforme en égalité $\widehat{C_L}(\vect b)-0{,}3-s=0$ avec une variable d'écart $s\ge0$ codée sur 3 qubits, et on pénalise le carré :
+\[
+P_{C_L}\big(\widehat{C_L}(\vect b)-0{,}3-s\big)^2,\qquad s=\frac{s_{\max}}{7}\sum_{j=0}^{2}2^js_j .
+\]
+Comme $\widehat{C_L}$ est affine, le carré est bien quadratique. Contrepartie : $s$ ne prend que 8 valeurs, et le résidu minimal n'est pas toujours nul. La pénalité ajoute donc un petit biais aux profils faisables, d'autant plus faible que le pas de $s$ est fin.
+
+\begin{codebox}[ : \code{optim/qubo\_loop.py}]
+\begin{lstlisting}
+def build_qubo(coef_cd, coef_ser, coef_cl, w, scale_cd, scale_ser, cons, P=3.0, n_slack=3):
+    coef = w * coef_cd / scale_cd + (1 - w) * coef_ser / scale_ser
+    Q, c = surrogate_to_qubo(coef, BITS, LEVELS)              # 9 qubits
+    Q = grow(Q, 1 + n_slack)                                   # + y + 3 bits d'ecart
+    Q, c = penalty_index_nonzero(Q, c, bits=(6, 7, 8), y=9, P=P)          # t >= 8 %
+    const, lin = lin_bits(coef_cl)                             # C_L affine -> forme affine en bits
+    Q, c = penalty_linear_geq(Q, c, lin, const, 0.3, [10, 11, 12], s_max, 25 * P)   # C_L >= 0.3
+    return Q, c, 13
+\end{lstlisting}
+\end{codebox}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/matrice_Q}
+\caption{Un QUBO de la boucle (scénario S2, $w=0{,}5$, après 30 simulations), normalisé par son plus grand coefficient. Le bloc $9\times9$ en haut à gauche vient des modèles et du couplage avec la contrainte de portance ; la colonne $y$ et le bloc $s$ viennent des pénalités. Au total, 69 couplages non nuls, soit 138 CNOT par couche de QAOA.}\label{fig:matQ}
+\end{figure}
+
+\section{Étape 3 : résoudre et choisir les candidats}
+Trois solveurs sont disponibles, de même interface : ils renvoient une liste de profils classés par énergie croissante.
+\begin{itemize}
+\item \textbf{exact} : énumération des $2^{13}=8\,192$ états. Il sert de référence, en isolant l'effet du modèle de substitution de celui du solveur ;
+\item \textbf{recuit simulé} : 40 lectures, 150 balayages, comme le \code{SimulatedAnnealingSampler} d'Ocean ;
+\item \textbf{QAOA} : profondeur $p=2$, énergie normalisée, 3 départs pour COBYLA, puis 512 tirs ; on trie les chaînes distinctes obtenues par leur énergie recalculée classiquement.
+\end{itemize}
+Pour chaque poids, on retient le meilleur profil \emph{qui n'a pas encore été simulé}. Ce détail est essentiel : sans lui, la boucle proposerait indéfiniment le même optimum du modèle, déjà connu.
+
+\paragraph{Les points non supportés.} La somme pondérée ne vise que les 4 ou 5 points supportés du front (chapitre~\ref{ch:exact}). La boucle trouve pourtant les autres, pour deux raisons : l'exclusion des profils déjà simulés pousse vers les deuxièmes, troisièmes meilleurs, qui sont souvent des voisins du front ; et l'imperfection du modèle quadratique déplace les minima d'une itération à l'autre. C'est une exploration involontaire mais efficace.
+
+\section{Étape 4 : simuler, archiver, recommencer}
+Les candidats sont simulés (le compteur avance), ajoutés à l'archive, et le front courant est recalculé sur les seuls profils simulés. On s'arrête quand le budget est atteint, ou, pour la mesure de performance, dès que tout le front exact a été simulé.
+
+\exercices
+\begin{exercice}
+Vérifier la réduction de Rosenberg : pour $x_1=x_2=1$, comparer la pénalité obtenue pour $y=0$ et $y=1$, et montrer que le minimum vaut $P(1-b_0)$. Faire de même pour $x_1=1$, $x_2=0$.
+\end{exercice}
+\begin{exercice}
+Combien de qubits faudrait-il si l'on codait la contrainte $i_t\ge1$ par une variable d'écart, comme celle de portance, au lieu du qubit auxiliaire ? Quel avantage a la réduction de Rosenberg ici ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Remplacer la somme pondérée par une \textbf{$\varepsilon$-contrainte} $\min\widehat{C_D}$ sous $\widehat{\mathrm{SER}}\le\varepsilon$ : elle vise aussi les points non supportés, au prix de qubits d'écart supplémentaires.
+\item Pondérer les moindres carrés vers les meilleurs profils (modèle \emph{local}, région de confiance), pour que le modèle soit précis là où se trouve le front.
+\item Choisir les candidats par un critère d'\emph{amélioration attendue de l'hypervolume}, comme en optimisation bayésienne multi-objectif (ParEGO, EHVI) : c'est le standard actuel des méthodes à modèle de substitution, auquel la boucle QUBO devrait être comparée.
+\item Remplacer la variable d'écart de $C_L$, qui introduit un biais, par une réduction exacte quand la contrainte se ramène à une borne sur une variable (ici, $C_L\ge0{,}3$ équivaut à $m\ge1$~\% sur la grille).
+\end{itemize}
+\end{pistes}

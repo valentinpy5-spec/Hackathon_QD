@@ -1,0 +1,131 @@
+\chapter{L'assemblage : \code{evaluate} et \code{AeroResult}}\label{ch:modele}
+\iterbanner{V0}
+
+\section{La fonction \code{evaluate}}
+C'est la seule fonction de la phase~1 que les autres phases appellent. Elle enchaîne tout ce qui précède :
+\begin{lstlisting}
+def evaluate(m, p, t, alpha=0.0, Re=3e6, n_half=100, x_trip=(None, None),
+             x_stop=0.985, free_transition=True, x_sep_crit=0.9, return_details=False):
+    X, Y = naca4(m, p, t, n_half=n_half)                     # ch. 2
+    inv = solve(X, Y, alpha)                                 # ch. 4
+    up, lo = split_at_stagnation(inv)                        # ch. 5 (exception rattrapee)
+    bl_up = march_surface(*up[:3], Re, x_trip=x_trip[0], x_stop=x_stop, ...)   # ch. 6-8
+    bl_lo = march_surface(*lo[:3], Re, x_trip=x_trip[1], x_stop=x_stop, ...)
+    CD = squire_young(...up...) + squire_young(...lo...)     # ch. 9
+    ...
+\end{lstlisting}
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Argument & Rôle \\
+\midrule
+\code{m, p, t} & variables de conception, en fractions de corde \\
+\code{alpha} & incidence en degrés \\
+\code{Re} & Reynolds de corde ($3\cdot10^6$ par défaut, à figer en équipe) \\
+\code{n\_half} & demi-nombre de panneaux (100, soit 200 panneaux) \\
+\code{x\_trip} & transition forcée (extrados, intrados) ; \code{None} = libre \\
+\code{free\_transition} & \code{False} désactive Michel, pour imposer une transition tardive \\
+\code{x\_stop} & abscisse d'arrêt de la couche limite et d'application de Squire-Young \\
+\code{x\_sep\_crit} & un décollement turbulent en amont de cette abscisse invalide le calcul \\
+\code{return\_details} & renvoie aussi la solution de panneaux et les deux \code{SurfaceBL} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le résultat : \code{AeroResult}}
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Champ & Signification \\
+\midrule
+\code{CL}, \code{CL\_inv} & portance non visqueuse (identiques : le couplage faible ne corrige pas $C_L$) \\
+\code{CD} & traînée de profil, Squire-Young sommé sur les deux faces \\
+\code{CD\_f} & part de frottement ; \code{CD - CD\_f} est la traînée de forme \\
+\code{CM} & moment de tangage au quart de corde, positif à cabrer \\
+\code{x\_tr\_up}, \code{x\_tr\_lo} & positions de transition (interpolées) \\
+\code{tr\_mode\_up}, \code{tr\_mode\_lo} & \code{'michel'}, \code{'laminar\_sep'}, \code{'forced'} ou \code{'none'} \\
+\code{x\_sep\_up}, \code{x\_sep\_lo} & abscisse de décollement turbulent, \code{nan} si attaché \\
+\code{r\_le} & rayon de bord d'attaque $1{,}1019\,t^2$, pour la phase SER \\
+\code{valid} & \code{False} si le résultat sort du domaine du modèle \\
+\code{flags} & liste de diagnostics, préfixés \code{up:} ou \code{lo:} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\code{to\_dict()} aplatit le tout pour l'écriture en CSV (\code{generer\_base.py}).
+
+\section{La logique de validité}
+Un optimiseur génétique explore les coins de l'espace. Le modèle ne doit jamais planter, mais il doit dire quand son résultat n'est plus crédible. La règle est :
+\[
+\code{valid}=\big(x_{sep}\ge x_{sep,crit}\big)\ \text{et}\ C_D\ \text{fini}\ \text{et aucun drapeau d'échec},
+\]
+où $x_{sep}$ est le plus amont des deux décollements turbulents ($+\infty$ si aucun). Les drapeaux d'échec sont \code{head\_ivp\_failed} (l'intégrateur n'a pas abouti) et \code{laminar\_separation\_no\_transition}.
+\begin{itemize}
+\item Un décollement turbulent \textbf{en aval} de $x_{sep,crit}=0{,}9$ est toléré, avec le drapeau \code{te\_separation} : c'est le plus souvent l'artefact de bord de fuite du chapitre~\ref{ch:head}, et $C_D$ reste plausible.
+\item Un décollement \textbf{en amont} signifie que le modèle sort de son domaine : couplage faible, Squire-Young et Kutta au bord de fuite n'ont plus de sens. Le profil est déclaré invalide, donc infaisable pour l'optimiseur.
+\item Un point d'arrêt ambigu (plusieurs changements de signe de $V_t$) produit un résultat invalide avec $C_D=$\,\code{nan}.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/polaire}
+\caption{Polaire du NACA 2412 à $\Re=3\cdot10^6$, de $-4^\circ$ à $10^\circ$. Tous les points restent valides : à partir de $7^\circ$, l'extrados décolle, mais en aval de $x/c=0{,}9$ (drapeau \code{te\_separation}). À droite, la traînée de forme croît avec l'incidence alors que le frottement reste à peu près constant. La finesse maximale, environ 111, est atteinte vers $7^\circ$.}\label{fig:polaire}
+\end{figure}
+
+\paragraph{Lecture de la polaire.} Elle a la forme attendue : un minimum de traînée plat entre $-2^\circ$ et $0^\circ$ (67~counts), puis une croissance plus rapide aux fortes incidences, portée par la traînée de forme (épaississement de la couche limite de l'extrados sous gradient adverse) et par la remontée de la transition. En revanche, la portance reste linéaire : le modèle ne décroche pas (ch.~\ref{ch:validation}).
+
+\section{Incidence imposée ou portance imposée : \code{alpha\_for\_cl}}
+Deux façons de comparer des profils :
+\begin{itemize}
+\item à \textbf{incidence imposée} ($\alpha=2^\circ$) : un appel à \code{evaluate} ;
+\item à \textbf{portance imposée} ($C_L^\star=0{,}4$, vol de croisière $L=W$) : il faut d'abord trouver l'incidence qui donne $C_L^\star$.
+\end{itemize}
+Comme $C_L(\alpha)$ non visqueux est quasi linéaire et monotone, une recherche de racine de Brent sur $[-10^\circ;15^\circ]$ converge en quelques itérations :
+\begin{lstlisting}
+def alpha_for_cl(m, p, t, CL_target, bracket=(-10.0, 15.0), n_half=100):
+    X, Y = naca4(m, p, t, n_half=n_half)
+    cache = {}                       # matrices d'influence et inverse partagees
+    f = lambda a: solve(X, Y, a, cache=cache).CL - CL_target
+    return brentq(f, *bracket, xtol=1e-6)
+\end{lstlisting}
+Grâce au cache, seule la première évaluation construit et inverse la matrice. Les suivantes ne font qu'un produit matrice-vecteur. Pour le NACA 2412, $C_L^\star=0{,}4$ donne $\alpha=1{,}19^\circ$. \code{evaluate\_at\_cl} enchaîne \code{alpha\_for\_cl} puis \code{evaluate}.
+
+\section{Sensibilité aux paramètres numériques}
+Le test V4 de \code{validation.py} vérifie que les paramètres numériques ne pilotent pas le résultat (NACA 2412, $\alpha=2^\circ$, $\Re=3\cdot10^6$) :
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\code{n\_half} & 60 & 100 & 150 & 200 \\
+\midrule
+$C_L$ & 0,4950 & 0,4975 & 0,4987 & 0,4993 \\
+$C_D$ & 0,00690 & 0,00692 & 0,00692 & 0,00692 \\
+$x_{tr,up}$ & 0,279 & 0,279 & 0,280 & 0,280 \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\begin{tabular}{lc}
+\toprule
+\code{x\_stop} & $C_D$ \\
+\midrule
+0,970 & 0,00681 \\
+0,980 & 0,00688 \\
+0,985 & 0,00692 \\
+0,990 & 0,00698 \\
+\bottomrule
+\end{tabular}
+\end{center}
+$C_D$ est stable au count près vis-à-vis du maillage, grâce à l'interpolation de la transition. Le choix de $x_{stop}$ déplace $C_D$ de façon presque uniforme sur tous les profils, ce qui ne change pas leur classement.
+
+\begin{projet}
+Pour l'optimisation, ce chapitre fixe le \emph{contrat} du simulateur : des entrées $(m,p,t)$ et un point de vol, des sorties toujours définies, et un booléen \code{valid} qui devient une contrainte. Le choix entre incidence imposée et portance imposée change la forme du problème. Il est discuté au chapitre suivant.
+\end{projet}
+
+\exercices
+\begin{exercice}
+Pour le NACA 2412, la méthode des panneaux donne une pente $\dd C_L/\dd\alpha=6{,}88$~/rad et $\alpha_{L0}=-2{,}13^\circ$. Estimer à la main l'incidence qui donne $C_L=0{,}4$, et comparer à la valeur $1{,}19^\circ$ trouvée par \code{alpha\_for\_cl}.
+\end{exercice}
+\begin{exercice}
+À $\alpha=7^\circ$, le NACA 2412 renvoie \code{valid=True} avec deux drapeaux : \code{up:turbulent\_\allowbreak separation} et \code{te\_separation}. Expliquer ce que signifie chacun, et pourquoi le résultat reste valide. Que faudrait-il observer pour qu'il ne le soit plus ?
+\end{exercice}

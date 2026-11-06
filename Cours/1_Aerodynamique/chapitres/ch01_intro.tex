@@ -1,0 +1,115 @@
+\chapter{Le rôle du modèle et ses exigences}\label{ch:intro}
+\iterbanner{V0}
+
+\section{Une fonction objectif, pas une simulation de référence}
+Le hackathon cherche des profils qui réalisent le meilleur compromis entre traînée aérodynamique et surface équivalente radar (SER). Il compare pour cela trois façons d'explorer l'espace de conception : l'énumération exhaustive (le front de Pareto exact), un algorithme génétique (NSGA-II) et une boucle quantique (modèle quadratique, QUBO, QAOA ou recuit). Les trois ont besoin de la même chose : une fonction
+\[
+(m,p,t)\ \longmapsto\ \big(C_L,\ C_D,\ C_M,\ x_{tr},\ \text{validité}\big)\ +\ \text{géométrie},
+\]
+qu'on appellera des centaines à des milliers de fois. La phase~1 construit cette fonction.
+
+Ce contexte change complètement la façon de juger un modèle aérodynamique. La question n'est pas « quel est le $C_D$ le plus juste ? », mais « quel modèle permet de \emph{classer} correctement des centaines de profils, vite, sans jamais planter, et avec une sortie assez régulière pour qu'un modèle quadratique puisse l'approcher ? ».
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+Exigence & Pourquoi & Conséquence de conception \\
+\midrule
+\textbf{Rapide} & 512 profils pour l'énumération, des milliers d'appels pour NSGA-II avec plusieurs graines & Pas de RANS : panneaux et couche limite intégrale, environ 8~ms par profil \\
+\textbf{Robuste} & Un optimiseur génétique propose des formes extrêmes (7~\% de cambrure, 20~\% d'épaisseur) & Pas de couplage itératif qui peut diverger ; des drapeaux de validité plutôt que des exceptions \\
+\textbf{Déterministe et régulier} & La boucle quantique ajuste un polynôme quadratique sur les sorties & Aucun bruit de convergence ; les seules irrégularités sont physiques (transition, décollement) \\
+\textbf{Cohérent} & Les trois méthodes doivent voir \emph{le même} problème & Une seule grille, un seul point de vol, un seul compteur de simulations \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{La décomposition de Prandtl, mise en algorithme}
+À grand nombre de Reynolds et sans décollement étendu, l'écoulement autour d'un profil se sépare en deux régions (figure~\ref{fig:prandtl}) :
+\begin{itemize}
+\item un \textbf{écoulement extérieur non visqueux}, irrotationnel, qui fixe la distribution de pression, donc la portance et le moment ;
+\item une \textbf{couche limite} mince, plus le sillage qui la prolonge, où la viscosité agit, et qui fixe la traînée.
+\end{itemize}
+Le lien entre les deux est la vitesse à la frontière de la couche limite, $U_e(s)$. On calcule d'abord l'écoulement extérieur comme si le fluide était parfait, on en tire $U_e(s)$, puis on résout la couche limite sur chaque face avec cette vitesse imposée. C'est un \textbf{couplage faible} : la couche limite ne rétroagit pas sur l'écoulement extérieur. Le chapitre~\ref{ch:validation} discute ce que ce choix fait perdre.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=9cm,y=9cm]
+% profil (NACA 2412 approx.)
+\fill[cmuted!25,draw=cink,thick] plot[smooth,tension=0.6] coordinates {(1,0) (0.8,0.035) (0.5,0.07) (0.3,0.08) (0.12,0.065) (0.03,0.035) (0,0) (0.03,-0.022) (0.12,-0.035) (0.3,-0.04) (0.5,-0.033) (0.8,-0.014) (1,0)};
+% couche limite (épaisseur exagérée)
+\draw[cblue,thick,dashed] plot[smooth,tension=0.6] coordinates {(0.0,0.003) (0.03,0.04) (0.12,0.073) (0.3,0.093) (0.5,0.088) (0.8,0.065) (1,0.035)};
+\draw[cblue,thick,dashed] plot[smooth,tension=0.6] coordinates {(0.0,-0.003) (0.03,-0.027) (0.12,-0.043) (0.3,-0.052) (0.5,-0.049) (0.8,-0.035) (1,-0.022)};
+% sillage
+\fill[cblue!10] (1,0.035) .. controls (1.15,0.03) and (1.3,0.025) .. (1.45,0.022) -- (1.45,-0.018) .. controls (1.3,-0.02) and (1.15,-0.021) .. (1,-0.022) -- cycle;
+\draw[cblue,thick,dashed] (1,0.035) .. controls (1.15,0.03) and (1.3,0.025) .. (1.45,0.022);
+\draw[cblue,thick,dashed] (1,-0.022) .. controls (1.15,-0.021) and (1.3,-0.02) .. (1.45,-0.018);
+% lignes de courant extérieures
+\foreach \y in {0.2,0.14,-0.12,-0.18}{
+  \draw[cmuted,-{Stealth[length=1.6mm]}] (-0.25,\y) .. controls (0.2,\y+0.25*\y) and (0.8,\y+0.1*\y) .. (1.45,\y);}
+\draw[-{Stealth[length=2.5mm]},cink,very thick] (-0.33,0) -- (-0.12,0) node[midway,above,font=\small] {$U_\infty$};
+\node[font=\small,align=center,cmuted] at (0.55,0.27) {écoulement extérieur non visqueux : $\nabla^2\phi=0$\\ $\Rightarrow$ pression, $C_L$, $C_M$, $U_e(s)$};
+\node[font=\small,cblue,align=left,anchor=west] at (0.62,0.13) {couche limite :\\ $\theta(s)$, $H(s)$, $c_f(s)$};
+\node[font=\small,cblue,align=center] at (1.27,-0.08) {sillage\\ $\Rightarrow C_D$};
+\end{tikzpicture}
+\caption{La décomposition de Prandtl qui structure le modèle. Épaisseurs de couche limite très exagérées : à $\Re=3\cdot10^6$, $\delta$ fait environ 1~\% de la corde au bord de fuite.}\label{fig:prandtl}
+\end{figure}
+
+\section{La chaîne de calcul}
+La figure~\ref{fig:chaine} montre les étapes, et le tableau qui suit associe chacune à son module Python.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.55cm]
+\node[flow] (in) {$(m,p,t)$, $\alpha$ ou $C_L^\star$, $\Re$};
+\node[flow,below=of in] (geo) {\textbf{Géométrie NACA} (ch.~\ref{ch:naca})\\ $2n+1$ points, distribution en cosinus};
+\node[flow,below=of geo] (pan) {\textbf{Panneaux de Hess-Smith} (ch.~\ref{ch:panneaux})\\ $N$ sources $\sigma_j$, un tourbillon $\gamma$, condition de Kutta};
+\node[flow,below=of pan] (stag) {\textbf{Point d'arrêt, deux faces} (ch.~\ref{ch:cl})\\ $U_e(s)=|V_t|$ sur l'extrados et l'intrados};
+\node[flow,below=of stag] (bl) {\textbf{Couche limite intégrale}, sur chaque face\\
+Thwaites (ch.~\ref{ch:thwaites}) $\to$ transition (ch.~\ref{ch:transition}) $\to$ Head (ch.~\ref{ch:head}), arrêt en $x_{stop}$};
+\node[flow,below=of bl] (sy) {\textbf{Squire-Young} (ch.~\ref{ch:trainee})\\ $C_D=\sum_{\text{faces}}2\,\theta_{TE}\,U_{e,TE}^{(H_{TE}+5)/2}$};
+\node[flow,below=of sy] (out) {\code{AeroResult} (ch.~\ref{ch:modele})\\ $C_L$, $C_D$, $C_{D,f}$, $C_M$, $x_{tr}$, $x_{sep}$, $r_{BA}$, validité};
+\draw[arr] (in) -- (geo); \draw[arr] (geo) -- (pan);
+\draw[arr] (pan) -- node[right,font=\scriptsize] {$V_t$, $C_p$, $C_L$, $C_M$} (stag);
+\draw[arr] (stag) -- (bl);
+\draw[arr] (bl) -- node[right,font=\scriptsize] {$\theta_{TE}$, $H_{TE}$, $U_{e,TE}$} (sy);
+\draw[arr] (sy) -- (out);
+\node[flow,right=0.6cm of geo,text width=2.6cm,fill=corange!8] (stl) {Export STL\\ vers la SER (phase~2)};
+\draw[arr,corange] (geo) -- (stl);
+\end{tikzpicture}
+\caption{La chaîne de calcul du modèle aérodynamique, telle qu'enchaînée par \code{aero.model.evaluate}.}\label{fig:chaine}
+\end{figure}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{lXl}
+\toprule
+Fichier (\texttt{Code/aero/}) & Contenu & Chapitre\\
+\midrule
+\code{naca4.py} & ligne moyenne, épaisseur, points du contour, rayon de bord d'attaque & \ref{ch:naca}\\
+\code{panel.py} & panneaux, matrices d'influence, système de Hess-Smith, $C_p$, $C_L$, $C_M$ & \ref{ch:panneaux}\\
+\code{boundary\_layer.py} & point d'arrêt, Thwaites, transition, Head, Squire-Young & \ref{ch:cl}--\ref{ch:trainee}\\
+\code{model.py} & \code{evaluate}, \code{AeroResult}, \code{alpha\_for\_cl} & \ref{ch:modele}\\
+\code{design\_space.py} & grille $8\times8\times8$, encodage binaire, \code{AeroSimulator} & \ref{ch:espace}\\
+\code{geometry\_export.py} & extrusion 2,5D et STL pour la SER & \ref{ch:espace}\\
+\code{xfoil\_runner.py} & pilotage d'XFOIL pour la validation & \ref{ch:validation}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+Trois scripts les utilisent : \code{demo\_profil.py} (un profil en détail), \code{validation.py} (tests V1 à V5) et \code{generer\_base.py} (les 512 profils de la grille).
+
+\section{Pourquoi pas RANS, pourquoi pas XFOIL}
+\paragraph{RANS.} Un calcul RANS 2D d'un profil coûte de quelques minutes à une heure. L'énumération exhaustive prendrait des jours, et NSGA-II avec 10 graines des semaines. C'est l'outil de l'étape industrielle, pas du démonstrateur. La note d'intention le dit explicitement : seuls le simulateur et le nombre de variables changent pour passer à l'échelle.
+
+\paragraph{XFOIL.} XFOIL résout la même physique que nous, mieux : couplage fort, transition $e^N$, sillage. Mais comme boîte noire d'optimisation, il a deux défauts. Il ne converge pas toujours, surtout aux formes extrêmes et à forte incidence, et ses échecs sont silencieux : une incidence non convergée disparaît simplement de la polaire. Il sert donc ici de \textbf{référence de validation}, pas d'oracle (ch.~\ref{ch:validation}).
+
+\begin{projet}
+Sur la machine de développement, \code{evaluate} prend environ 8~ms par profil (NACA 2412, $\alpha=2^\circ$, 200 panneaux). Les 512 profils de la grille sont donc calculés en quelques secondes. C'est ce qui rend possible le calcul du front de Pareto \emph{exact}, auquel on compare ensuite NSGA-II et la boucle quantique en nombre de simulations.
+\end{projet}
+
+\exercices
+\begin{exercice}
+NSGA-II est lancé avec une population de 40 individus pendant 50 générations, pour 10 graines aléatoires. (a) Majorer le nombre d'appels au modèle. (b) Combien de temps cela prend-il avec notre modèle (8~ms) ? Avec un RANS à 30~min par profil ? (c) Pourquoi le nombre de simulations \emph{distinctes} est-il en réalité bien plus petit ?
+\end{exercice}
+\begin{exercice}
+Citer deux raisons pour lesquelles un modèle plus précis mais qui échoue de temps en temps est un mauvais choix pour une énumération exhaustive suivie d'un ajustement quadratique.
+\end{exercice}

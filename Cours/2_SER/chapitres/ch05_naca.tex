@@ -1,0 +1,78 @@
+\chapter{La SER des profils NACA}\label{ch:naca}
+\iterbanner{V1}
+
+\section{Diagrammes de rayonnement}
+\begin{figure}[htbp]
+\centering
+\input{figures/diagrammes}
+\caption{Largeur équivalente radar de trois profils à $\alpha=0$, selon l'élévation du radar (10~GHz). La zone verte est le secteur S1. Au centre, l'écho du bord d'attaque ; plus loin, le point spéculaire glisse sur les faces, où la courbure est plus faible, et l'écho croît.}\label{fig:diagrammes}
+\end{figure}
+
+La figure~\ref{fig:diagrammes} montre trois traits communs :
+\begin{itemize}
+\item \textbf{dans l'axe}, une valeur qui ne dépend que du bord d'attaque : $-13{,}2$~dBm pour le 0012 et le 2412 (même épaisseur), $-11{,}2$~dBm pour le 4415, plus épais ;
+\item \textbf{hors de l'axe}, une croissance régulière : le point spéculaire s'éloigne du nez, vers des régions moins courbées ;
+\item \textbf{une dissymétrie} pour les profils cambrés : l'extrados, plus bombé, et l'intrados, plus plat, ne présentent pas la même courbure au radar.
+\end{itemize}
+
+\section{Le bord d'attaque : $\pi r_{BA}$}
+Près du bord d'attaque, la loi d'épaisseur NACA se comporte comme $y\approx0{,}2969\cdot5t\sqrt x$, soit $y^2\approx2\,r_{BA}\,x$ avec $r_{BA}=1{,}1019\,t^2$ : une parabole de rayon au sommet $r_{BA}$. Dans l'axe, la loi du point spéculaire donne
+\[
+\sigma_{2D}^{\text{nez}}\approx\pi\,r_{BA}=1{,}1019\,\pi\,t^2c\qquad\Longrightarrow\qquad
+\sigma_{2D,\mathrm{dB}}^{\text{nez}}\approx-13{,}0+20\log_{10}\frac{t}{0{,}12}.
+\]
+\textbf{Doubler l'épaisseur coûte 6~dB}. La figure~\ref{fig:rayon} vérifie cette loi sur les profils symétriques : l'écart est de quelques dixièmes de décibel, dû aux contributions des autres parties du profil.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/rayon}
+\caption{SER dans l'axe de profils symétriques d'épaisseur $t$ (10~GHz), comparée à la loi $\pi r_{BA}$. De 6 à 20~\% d'épaisseur, l'écho passe de $-19{,}2$ à $-8{,}7$~dBm.}\label{fig:rayon}
+\end{figure}
+
+\paragraph{Hors de l'axe.} Pour une parabole, le rayon de courbure au point où la normale fait l'angle $\beta$ avec l'axe vaut $\rho(\beta)=r_{BA}/\cos^3\beta$. L'écho croît donc comme $1/\cos^3\beta$ : $+1{,}9$~dB à $30^\circ$, $+9$~dB à $60^\circ$. La figure~\ref{fig:speculaire} compare le résultat PO à $\pi\rho$, avec $\rho$ mesuré au point spéculaire sur la géométrie discrète : la loi locale explique l'essentiel du diagramme.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/speculaire}
+\caption{NACA 0012 : SER PO selon l'élévation, et prédiction $\pi\rho$ au point spéculaire. Les petites oscillations de la courbe PO sont des interférences avec les autres contributions (bord de fuite, faces).}\label{fig:speculaire}
+\end{figure}
+
+\section{Sur toute la grille}
+\begin{figure}[htbp]
+\centering
+\input{figures/cartes}
+\caption{SER moyenne (dBm) sur la tranche $p=0{,}40$ de la grille, pour les deux scénarios (incidence $2^\circ$). Dans les deux cas, l'épaisseur domine ; dans S2, où le radar voit surtout l'intrados, la cambrure compte davantage.}\label{fig:cartes}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & S1 : $\varepsilon\in[-20^\circ,20^\circ]$ & S2 : $\varepsilon\in[-60^\circ,0^\circ]$ \\
+\midrule
+plage de SER sur les 512 profils & $-18{,}9$ à $-8{,}1$~dBm & $-18{,}8$ à $-6{,}4$~dBm \\
+corrélation avec $t$ & 0,98 & 0,95 \\
+corrélation avec $m$ & 0,04 & $-0{,}24$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Lecture.} Dans le scénario de la note d'intention, la SER est presque une fonction de la seule épaisseur. La cambrure joue un rôle secondaire, qui devient sensible quand le radar regarde l'intrados (S2) : une cambrure plus forte rend l'intrados plus plat sous le nez, ou même concave à l'arrière, et modifie la courbure présentée au radar.
+
+\begin{projet}
+Conséquence directe pour l'optimisation : la traînée et la SER croissent toutes deux avec l'épaisseur. Les deux objectifs poussent donc $t$ vers sa borne $t_{\min}=8$~\%, et le front de Pareto se réduit à des profils de cette épaisseur, qui ne diffèrent que par la cambrure. Dans S1, la SER ne varie que de 0,13~dB le long du front ; dans S2, de 1,7~dB. C'est ce qu'analyse le cours sur l'optimisation.
+\end{projet}
+
+\exercices
+\begin{exercice}
+De combien de décibels la SER de nez diminue-t-elle quand on passe de $t=12$~\% à $t=8$~\% ? Et quelle est, d'après le modèle aérodynamique, la variation de traînée correspondante pour un NACA symétrique à $\alpha=2^\circ$ (ordre de grandeur, voir le cours aéro) ?
+\end{exercice}
+\begin{exercice}
+Vérifier la formule $\rho(\beta)=r/\cos^3\beta$ pour la parabole $y^2=2rx$, en calculant la courbure au point où la tangente fait l'angle $\frac\pi2-\beta$ avec l'axe des $x$.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Étudier la sensibilité du front à la largeur du secteur et à son centre (menace aérienne ou au sol) : c'est le paramètre qui pilote le poids de la cambrure.
+\item Ajouter une variable de conception qui agit sur la SER sans trop agir sur la traînée (rayon de bord d'attaque séparé, bord d'attaque affûté) pour obtenir un vrai compromis.
+\end{itemize}
+\end{pistes}
