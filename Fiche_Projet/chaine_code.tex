@@ -1,0 +1,76 @@
+% ============================================================================
+% Schéma de la chaîne de code (état V2), commun aux quatre cours.
+% \chainecode{aero}, \chainecode{ser}, \chainecode{optim} ou \chainecode{quant} :
+% la partie nommée est mise en évidence, les autres restent pâles.
+% Inclus au début des chapitres « Le code actuel » ; à mettre à jour si la chaîne change.
+% ============================================================================
+\providecommand{\code}[1]{\texttt{#1}}
+\providecolor{cviolet}{HTML}{7A4FB3}
+\colorlet{ccaero}{cblue}
+\colorlet{ccser}{cgreen}
+\colorlet{ccoptim}{corange}
+\colorlet{ccquant}{cviolet}
+\tikzset{
+  cc box/.style={draw,rounded corners=2pt,align=center,font=\scriptsize,inner sep=3pt,text width=3.5cm,line width=0.5pt},
+  cc aero/.style={cc box,draw=ccaero,fill=ccaero!5},
+  cc ser/.style={cc box,draw=ccser,fill=ccser!5},
+  cc optim/.style={cc box,draw=ccoptim,fill=ccoptim!5},
+  cc quant/.style={cc box,draw=ccquant,fill=ccquant!5},
+  cc file/.style={draw=cmuted,dashed,rounded corners=1pt,font=\scriptsize\ttfamily,inner sep=2pt,fill=white},
+  cc arr/.style={->,>=stealth,cink!70,semithick},
+  cc lab/.style={font=\tiny,cink!80,fill=white,inner sep=1pt},
+}
+\newcommand{\chainecode}[1]{%
+\begingroup
+\tikzset{cc #1/.append style={line width=1.6pt,fill=cc#1!20}}%
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+% ---------------------------------------------------------------- simulation (une fois, hors ligne)
+\node[cc optim] (G) at (0,0) {grille \code{SpaceV2}\\ indices $(i_m,i_p,i_t,i_I)$ $\to$ $(m,p,t,I)$\\ \code{optim/problem\_v2.py}};
+\node[cc aero] (N) at (0,-1.45) {géométrie \code{naca4\_modified}\\ contour $(X,Y)$\\ \code{aero/naca4.py}};
+\node[cc aero] (X) at (-3.6,-3.0) {XFOIL \code{run\_xfoil}\\ croisière $C_L=0{,}4$ $\to$ $\alpha$, $C_D$\\ manœuvre 4--14° $\to$ $C_{L,\max}$\\ \code{aero/xfoil\_runner.py}};
+\node[cc ser] (P) at (3.6,-3.0) {SER optique physique\\ \code{evaluate\_ser}, \code{echo\_width}\\ \code{ser/model.py}, \code{ser/po2d.py}};
+\node[cc optim] (S) at (0,-4.75) {un profil : \code{simulate\_v2}\\ tous : \code{build\_table\_v2}\\ contraintes \code{cv}, \code{feasible}};
+\node[cc ser] (M) at (5.6,-4.75) {SER exacte (moments, TM)\\ \code{compare\_po\_mom grille}\\ \code{ser/mom2d.py}};
+\node[cc file] (FB) at (0,-5.85) {resultats/base\_V2.csv};
+\node[cc file] (FM) at (5.6,-5.85) {resultats/ser\_mom\_V2.csv};
+% ---------------------------------------------------------------- optimisation (lit la table)
+\node[cc optim] (W) at (0,-7.1) {\code{with\_objective(table, secteur, "MoM")}\\ $+$ compteur \code{CountedProblem}\\ \code{optim/problem.py}};
+\node[cc optim,text width=2.4cm] (R) at (-4.6,-8.75) {tirage aléatoire\\ \code{run\_random}};
+\node[cc optim,text width=2.6cm] (NS) at (-1.5,-8.75) {NSGA-II\\ \code{optim/nsga2.py}\\ \code{optim/pareto.py}};
+\node[cc optim,text width=3.2cm] (L) at (2.1,-8.75) {boucle QUBO\\ modèles quadratiques\\ $+$ pénalités\\ \code{optim/qubo\_loop.py}};
+\node[cc quant] (Q) at (6.4,-8.75) {solveurs du QUBO\\ exact, recuit, QAOA\\ \code{quantique/qubo.py}\\ \code{recuit.py}, \code{qaoa.py}};
+\node[cc optim] (E) at (0,-10.6) {comparaison \code{experiences\_v2}\\ arrêts : front exact, stagnation};
+\node[cc file] (FJ) at (0,-11.6) {resultats/pipeline\_V2.json};
+\node[cc quant] (MT) at (6.4,-10.6) {montée en taille\\ \code{quantique/montee\_en\_taille.py}\\ (QUBO V1, 6 à 18 qubits)};
+\node[cc file] (FMT) at (6.4,-11.6) {resultats/montee\_en\_taille.json};
+\node[draw=cmuted,rounded corners=2pt,font=\scriptsize,align=center,inner sep=3pt,minimum width=8.6cm] (C) at (3.2,-12.6) {cours (\code{tools/make\_figures*.py}) et fiche (\code{tools/chiffres.py})};
+% ---------------------------------------------------------------- flèches
+\draw[cc arr] (G) -- (N);
+\draw[cc arr] (N) -- node[cc lab,pos=0.45] {contour} (X);
+\draw[cc arr] (N) -- node[cc lab,pos=0.45] {contour} (P);
+\draw[cc arr] (X) -- node[cc lab] {$\alpha$ = attitude radar} (P);
+\draw[cc arr] (X) |- (S);
+\draw[cc arr] (P) |- (S);
+\draw[cc arr] (S) -- (FB);
+\draw[cc arr] (FB) -- node[cc lab] {$\alpha$ de chaque profil} (FM.west);
+\draw[cc arr] (M) -- (FM);
+\draw[cc arr] (FB) -- (W);
+\draw[cc arr] (FM) |- (W);
+\draw[cc arr] (W) -- (R.north);
+\draw[cc arr] (W) -- (NS.north);
+\draw[cc arr] (W) -- (L.north);
+\draw[cc arr] ([yshift=3pt]L.east) -- node[cc lab,above=1pt] {$(Q,c)$} ([yshift=3pt]Q.west);
+\draw[cc arr] ([yshift=-3pt]Q.west) -- node[cc lab,below=1pt] {candidats} ([yshift=-3pt]L.east);
+\draw[cc arr] (R.south) -- (E);
+\draw[cc arr] (NS.south) -- (E);
+\draw[cc arr] (L.south) -- (E);
+\draw[cc arr] (E) -- (FJ);
+\draw[cc arr] (MT) -- (FMT);
+\draw[cc arr] (FJ) -- (FJ |- C.north);
+\draw[cc arr] (FMT) -- (FMT |- C.north);
+% ---------------------------------------------------------------- légende des étapes
+\node[font=\tiny,cmuted,anchor=west,align=left] at (-6.4,-1.45) {\textbf{1. Simulation}\\ une fois, hors ligne,\\ 1\,024 profils};
+\node[font=\tiny,cmuted,anchor=west,align=left] at (-6.4,-7.1) {\textbf{2. Optimisation}\\ lit la table,\\ compte les profils lus};
+\end{tikzpicture}}%
+\endgroup}
