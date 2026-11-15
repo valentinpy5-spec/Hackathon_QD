@@ -1,0 +1,87 @@
+\chapter{Contraintes et deux objectifs}\label{ch:contraintes}
+\iterbanner{V3}
+
+Le chapitre précédent traite un objectif sans contrainte. Notre problème a deux objectifs (traînée et SER) et deux contraintes (épaisseur et manœuvre). Ce chapitre décrit comment on étend la méthode, et quels choix on a retenus.
+
+\section{La contrainte connue : l'épaisseur}
+$t\ge8$~\% ne dépend que d'une variable de conception : on la connaît sans rien simuler. La boucle QUBO l'encode par une pénalité et un qubit auxiliaire (réduction de Rosenberg). Sur une grille énumérée, il suffit de \textbf{retirer} de la liste des candidats les profils d'indice d'épaisseur nul. Le résultat est le même, sans qubit.
+
+\section{La contrainte simulée : la manœuvre}
+$C_{L,\max}\ge1{,}2$ n'est connue qu'après simulation. On la modélise donc comme un objectif : un modèle de $C_{L,\max}$, de la même famille que ceux des objectifs, donne pour chaque profil une prédiction $\mu_c(x)$ et un écart-type $s_c(x)$. Reste à décider comment s'en servir. Quatre traitements sont codés.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.1cm}X>{\raggedright\arraybackslash}p{3.6cm}}
+\toprule
+Traitement & Règle & Nom dans le code \\
+\midrule
+en dur sur la prédiction & on ne garde que les profils tels que $\mu_c(x)\ge1{,}2$ (c'est le principe de l'algorithme SEGO) & \code{constraint="mean"} \\
+probabilité de faisabilité & on multiplie l'amélioration espérée par $\mathrm{PoF}(x)$ & \code{"pof"}, sélection \code{"ei"} \\
+pénalité probabiliste & on ajoute $1-\mathrm{PoF}(x)$ à la prédiction de l'objectif & \code{"pof"}, sélection \code{"mean"} \\
+pénalité de la boucle QUBO & modèle \emph{affine} de $C_{L,\max}$ et pénalité $75\,\max(1{,}2-\widehat{C_{L,\max}},\,0)^2$ & \code{"lin"} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{definition}[ : probabilité de faisabilité]
+Si le modèle dit $C_{L,\max}(x)\sim\mathcal N(\mu_c,s_c^2)$, la probabilité que le profil tienne la contrainte est
+\[
+\mathrm{PoF}(x)=\mathbb P\big(C_{L,\max}(x)\ge1{,}2\big)=\Phi\!\left(\frac{\mu_c(x)-1{,}2}{s_c(x)}\right).
+\]
+\end{definition}
+
+Le critère $\mathrm{EI}(x)\times\mathrm{PoF}(x)$ est l'amélioration espérée \emph{sous contrainte}, si l'on suppose l'objectif et la contrainte indépendants : on ne gagne quelque chose que si le profil est à la fois meilleur et faisable.
+
+\paragraph{La pénalité de la boucle QUBO.} Dans \code{qubo\_loop.py}, la contrainte devient $P_c\,(\widehat{C_{L,\max}}-1{,}2-s)^2$ avec une variable d'écart $s\ge0$ sur 3 qubits et $P_c=3\times25=75$. Minimisée sur $s$, cette expression vaut à peu près $75\,\max(1{,}2-\widehat{C_{L,\max}},0)^2$ : rien si le profil est prédit faisable, un coût quadratique sinon. Le traitement \code{"lin"} applique directement cette formule. Il sert au \textbf{contrôle} de l'ablation : même modèle affine, même poids, sans encodage binaire.
+
+\begin{piege}
+Ces traitements ne sont pas des variantes de détail. Sur notre problème, le front exact est collé à la contrainte de manœuvre, et le choix du traitement décide du succès ou de l'échec de la méthode, bien plus que le choix du modèle. C'est l'objet du chapitre~\ref{ch:diagnostic}.
+\end{piege}
+
+\section{Deux objectifs : la scalarisation}
+L'amélioration espérée suppose un seul objectif. On se ramène à ce cas par une \emph{scalarisation} : pour chaque poids $w$, on fabrique un objectif unique à partir des deux, et on parcourt plusieurs poids pour couvrir le front. Les objectifs sont d'abord normalisés par leur étendue sur les profils faisables déjà simulés : $\tilde f_1$ pour la traînée, $\tilde f_2$ pour la SER.
+
+\paragraph{Somme pondérée.} $g_w=w\,\tilde f_1+(1-w)\,\tilde f_2$, comme dans la boucle QUBO. Avantage : si les deux objectifs ont chacun leur modèle, de lois $\mathcal N(\mu_1,s_1^2)$ et $\mathcal N(\mu_2,s_2^2)$ supposées indépendantes, alors $g_w$ est lui aussi normal :
+\[
+g_w(x)\sim\mathcal N\Big(w\mu_1+(1-w)\mu_2,\ \ w^2s_1^2+(1-w)^2s_2^2\Big).
+\]
+Deux modèles suffisent pour tous les poids, et l'amélioration espérée de $g_w$ se calcule par la formule du chapitre~\ref{ch:acquisition}. Limite connue (cours d'optimisation, chapitre sur la dominance) : une somme pondérée n'atteint que les points de l'enveloppe convexe du front.
+
+\paragraph{Tchebychev augmenté (ParEGO).} L'algorithme ParEGO (Knowles, 2006) utilise
+\[
+g_w=\max\big(w\,\tilde f_1,\ (1-w)\,\tilde f_2\big)+\rho\,\big(w\,\tilde f_1+(1-w)\,\tilde f_2\big),\qquad\rho=0{,}05,
+\]
+qui atteint aussi les points situés dans les creux du front. Contrepartie : le maximum de deux lois normales n'est pas normal. ParEGO ajuste donc un krigeage directement sur les valeurs scalarisées, \emph{un par poids} : cinq modèles par itération au lieu de deux.
+
+\begin{projet}
+On compare les deux : la somme pondérée pour l'ablation (même scalarisation que la boucle QUBO, donc une seule chose change à la fois), et ParEGO comme variante.
+\end{projet}
+
+\section{Un lot de cinq profils par itération}
+L'algorithme EGO simule un profil par itération. La boucle QUBO en simule cinq, un par poids. Pour comparer à structure égale, on fait de même : pour chaque poids, on classe les candidats selon le critère et on prend le meilleur qui n'est ni déjà simulé, ni déjà retenu pour un autre poids dans la même itération. Le modèle n'est réajusté qu'une fois les cinq profils simulés.
+
+\begin{resultat}
+Les variantes comparées ne diffèrent de la boucle QUBO que par le modèle, la sélection, et le traitement de la contrainte de manœuvre. Points initiaux, poids, taille du lot, compteur et budget sont identiques.
+\end{resultat}
+
+\section{Ce qu'on n'a pas fait : l'amélioration de l'hypervolume}
+Une autre voie évite la scalarisation : choisir le profil qui maximise l'\emph{amélioration espérée de l'hypervolume} du front (EHVI). C'est le critère de référence en optimisation bayésienne multi-objectif ; il se calcule exactement pour deux objectifs. Il n'est pas codé ici : la somme pondérée et ParEGO suffisent à répondre à H1, et gardent la structure « un profil par poids » de la boucle QUBO.
+
+\exercices
+\begin{exercice}
+Un profil a une amélioration espérée de $0{,}04$, et le modèle de contrainte prédit $C_{L,\max}=1{,}15\pm0{,}10$. Calculer sa probabilité de faisabilité et son critère $\mathrm{EI}\times\mathrm{PoF}$. Serait-il candidat avec le traitement en dur ?
+\end{exercice}
+\begin{exercice}
+Pour $w=0{,}5$, $\mu_1=0{,}3$, $s_1=0{,}1$, $\mu_2=0{,}5$, $s_2=0{,}2$, donner la loi de la somme pondérée. Pourquoi l'hypothèse d'indépendance des deux objectifs est-elle discutable pour la traînée et la SER d'un même profil ?
+\end{exercice}
+\begin{exercice}
+Avec la pénalité de la boucle QUBO, quel est le coût d'un profil prédit à $\widehat{C_{L,\max}}=1{,}10$ ? Le comparer à l'étendue des objectifs normalisés (de l'ordre de 1). Même question pour $1{,}15$.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Coder l'amélioration espérée de l'hypervolume et la comparer à ParEGO.
+\item Modéliser la corrélation entre traînée, SER et $C_{L,\max}$ (krigeage multi-sorties) au lieu de les supposer indépendants.
+\item Sélectionner le lot de cinq profils en tenant compte de leur redondance (critère « q-EI ») au lieu d'un profil par poids.
+\end{itemize}
+\end{pistes}

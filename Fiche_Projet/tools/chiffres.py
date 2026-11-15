@@ -69,7 +69,22 @@ if os.path.exists(pm):
     out["VdeuxMonteeTopQuatre"] = fr(last["qaoa"]["4"]["p_top1"], 2)
     out["VdeuxMonteeTopDeux"] = fr(last["qaoa"]["2"]["p_top1"], 2)
 
-with open(os.path.join(HERE, "chiffres_auto.tex"), "w") as f:
+# ---------------------------------------------------------------- V3, lot L1 : optimisation bayésienne
+p3 = os.path.join(RES, "pipeline_L1_V3.json")
+if os.path.exists(p3):
+    D3 = json.load(open(p3))
+    for sc, tag in (("S1", "Sun"), ("S2", "Sdeux")):
+        S = D3[sc]["summary"]
+        for k, name in (("loop_exact", "Boucle"), ("quad_mean", "Controle"), ("gp_mean", "KrigMin"),
+                        ("quad_ei", "QuadEi"), ("gp_ei", "Bayes"), ("parego", "Parego"),
+                        ("quad_mean_pof", "Stricte"), ("gp_ei_dur", "Dur")):
+            if k not in S:
+                continue
+            med = S[k]["full_front"][1]
+            out[f"Vtrois{tag}{name}"] = "---" if not np.isfinite(med) else fr(med, 1 if med % 1 else 0)
+            out[f"Vtrois{tag}{name}Succes"] = fr(100 * S[k]["success"])
+
+with open(os.path.join(HERE, "chiffres_auto.tex"), "w", encoding="utf-8", newline="\n") as f:
     f.write("% généré par tools/chiffres.py : ne pas modifier à la main\n")
     for k, v in out.items():
         f.write(f"\\newcommand{{\\{k}}}{{{v}}}\n")

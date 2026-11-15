@@ -1,0 +1,112 @@
+\chapter{Le krigeage : un modèle qui donne son incertitude}\label{ch:krigeage}
+\iterbanner{V3}
+
+\section{Ce qui manque au modèle quadratique}
+Le modèle quadratique de la boucle QUBO rend une valeur par profil, rien d'autre. Il ne dit pas s'il prédit un profil voisin de dix profils déjà simulés, ou un profil isolé dans un coin de la grille. Or cette information compte : là où le modèle est sûr de lui, simuler n'apprend rien ; là où il ne sait pas, un bon profil peut se cacher.
+
+Le \textbf{krigeage}, ou \emph{régression par processus gaussien}, rend pour chaque profil une prédiction $\mu(x)$ et un écart-type $s(x)$ qui mesure l'incertitude de cette prédiction.
+
+\section{Processus gaussien}
+\begin{definition}[ : processus gaussien]
+Un processus gaussien est une loi de probabilité sur des fonctions $f$, telle que pour tout ensemble fini de points $x_1,\dots,x_n$ le vecteur $(f(x_1),\dots,f(x_n))$ suit une loi normale multivariée. Il est entièrement décrit par une moyenne $m(x)$ et un \emph{noyau} (ou fonction de covariance)
+\[
+k(x,x')=\mathrm{Cov}\big(f(x),f(x')\big).
+\]
+\end{definition}
+
+Le noyau encode l'hypothèse de régularité : deux profils proches ont des valeurs corrélées, deux profils éloignés n'en ont presque pas. On utilise ici le noyau \textbf{Matérn 5/2}, produit sur les $d$ variables de conception :
+\[
+k(x,x')=\sigma^2\prod_{i=1}^{d}\Big(1+\sqrt5\,\theta_i\,|x_i-x_i'|+\tfrac53\,\theta_i^2\,(x_i-x_i')^2\Big)\exp\!\big(-\sqrt5\,\theta_i\,|x_i-x_i'|\big).
+\]
+$\sigma^2$ est la variance du processus. Chaque $\theta_i>0$ règle la vitesse à laquelle la corrélation décroît le long de la variable $i$ : un grand $\theta_i$ signifie que la fonction varie vite selon cette variable. Les fonctions tirées d'un Matérn 5/2 sont deux fois dérivables, ce qui est moins exigeant que le noyau gaussien (infiniment dérivable) et convient mieux à des sorties de simulation.
+
+\section{Conditionner sur les simulations}
+On a simulé $n$ profils : $X=(x_1,\dots,x_n)$, valeurs $\vect y=(y_1,\dots,y_n)$. On suppose $y_j=f(x_j)+\varepsilon_j$, avec un bruit $\varepsilon_j\sim\mathcal N(0,\sigma_n^2)$ indépendant. Notons
+\[
+K=\big[k(x_j,x_l)\big]_{j,l}+\sigma_n^2 I,\qquad \vect k_\star(x)=\big[k(x_j,x)\big]_j .
+\]
+Avec une moyenne constante $m$, la loi de $f(x)$ sachant les simulations est normale, de moyenne et de variance
+\begin{equation}\label{eq:krigeage}
+\mu(x)=m+\vect k_\star(x)^{\!\top}K^{-1}(\vect y-m\vect 1),\qquad
+s^2(x)=k(x,x)-\vect k_\star(x)^{\!\top}K^{-1}\vect k_\star(x).
+\end{equation}
+
+\begin{resultat}
+\begin{itemize}
+\item $\mu(x)$ est une combinaison linéaire des valeurs simulées, pondérée par la corrélation avec $x$.
+\item $s^2(x)$ part de la variance a priori $k(x,x)=\sigma^2$ et \emph{diminue} de ce que les simulations voisines apprennent sur $x$. Elle ne dépend pas des valeurs $\vect y$, seulement de la position des points.
+\item Sans bruit ($\sigma_n=0$), le krigeage interpole : $\mu(x_j)=y_j$ et $s(x_j)=0$.
+\end{itemize}
+\end{resultat}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/gp_1d}
+\caption{Krigeage sur un exemple à une variable, $f(x)=0{,}6\sin(6x)+x^2$. En haut : la fonction (tirets), six simulations (points), la prédiction $\mu$ (trait bleu) et la bande $\mu\pm2s$. L'incertitude s'annule presque aux points simulés et devient grande dans l'intervalle de gauche, où rien n'a été simulé. En bas : l'amélioration espérée du chapitre~\ref{ch:acquisition}.}\label{fig:gp1d}
+\end{figure}
+
+\section{Les hyperparamètres}
+Le modèle dépend de $m$, $\sigma^2$, des $\theta_i$ et du bruit $\sigma_n^2$. On les choisit par \textbf{maximum de vraisemblance} : on retient les valeurs pour lesquelles les simulations observées sont les plus probables,
+\[
+\log p(\vect y\mid X)=-\tfrac12(\vect y-m\vect 1)^{\!\top}K^{-1}(\vect y-m\vect 1)-\tfrac12\log\det K-\tfrac n2\log 2\pi .
+\]
+Le premier terme récompense l'accord avec les données, le deuxième pénalise les modèles trop souples. Pour $m$ et $\sigma^2$, le maximum a une forme explicite ; pour les $\theta_i$ et le bruit, il faut une optimisation numérique, refaite à chaque itération de la boucle.
+
+\begin{piege}
+Chaque entraînement demande plusieurs factorisations de $K$, en $O(n^3)$. Avec 250 profils et 4 variables, c'est environ 1~s par modèle sur un ordinateur portable, contre quelques millisecondes pour un modèle quadratique. Sur la campagne complète, les variantes à krigeage coûtent 25 à 30 fois plus de calcul que les variantes quadratiques (chapitre~\ref{ch:resultats}).
+\end{piege}
+
+\section{Pourquoi estimer un bruit}
+XFOIL est déterministe : relancer un profil donne le même résultat. Pourtant, on estime un bruit $\sigma_n^2$. La raison est que la traînée n'est pas une fonction lisse des paramètres : la position de la transition laminaire-turbulent bascule d'un profil à l'autre, et $C_{L,\max}$ est estimé sur une rampe d'incidence discrète. Vues à l'échelle de la grille, ces irrégularités se comportent comme un bruit. Sans terme de bruit, le krigeage chercherait à interpoler chaque bascule, avec des $\theta_i$ très grands et une prédiction dégradée entre les points.
+
+\section{Le modèle quadratique vu comme un krigeage}
+Le modèle quadratique peut lui aussi fournir une incertitude. Notons $\varphi(x)$ le vecteur des monômes de degré au plus 2 (15 monômes pour 4 variables). On suppose $y=\varphi(x)^{\!\top}\vect c+\varepsilon$, avec un a priori $\vect c\sim\mathcal N(0,\lambda^{-1}I)$ sur les coefficients et un bruit de variance $\alpha^{-1}$. C'est la \textbf{régression bayésienne}. La prédiction en $x$ est normale, de moyenne $\varphi(x)^{\!\top}\hat{\vect c}$ et de variance
+\[
+s^2(x)=\alpha^{-1}+\varphi(x)^{\!\top}\Sigma\,\varphi(x),\qquad \Sigma=\big(\lambda I+\alpha\,\Phi^{\!\top}\Phi\big)^{-1},
+\]
+où $\Phi$ est la matrice des monômes aux points simulés. Les deux précisions $\alpha$ et $\lambda$ sont réglées par maximum de vraisemblance, comme pour le krigeage.
+
+\begin{resultat}
+La régression quadratique bayésienne \emph{est} un processus gaussien, de noyau $k(x,x')=\lambda^{-1}\varphi(x)^{\!\top}\varphi(x')$. La différence avec le krigeage n'est donc pas « bayésien ou non », mais la famille de fonctions : 15 coefficients d'un côté, une famille bien plus large de l'autre.
+\end{resultat}
+
+Cette remarque rend l'ablation possible : la case « modèle quadratique + amélioration espérée » du chapitre~\ref{ch:question} utilise cette variance.
+
+\begin{codebox}[ : \code{optim/bayes.py}]
+\begin{lstlisting}
+class GPModel:      # krigeage SMT : Matern 5/2, moyenne constante, bruit estime
+    def __init__(self, Z, y):
+        self.gp = KRG(theta0=[0.5] * d, corr="matern52", poly="constant",
+                      eval_noise=True, noise0=[1e-3], n_start=1, hyper_opt="Cobyla")
+        self.gp.set_training_values(Z, ((y - self.mu) / self.sd).reshape(-1, 1))
+        self.gp.train()
+    def predict(self, Z):                    # -> (moyenne, ecart-type)
+        m = self.gp.predict_values(Z)[:, 0] * self.sd + self.mu
+        v = np.maximum(self.gp.predict_variances(Z)[:, 0], 0.0)
+        return m, np.sqrt(v) * self.sd
+
+class QuadModel:    # regression quadratique bayesienne (sklearn BayesianRidge)
+    def predict(self, Z):
+        return self.br.predict(quadratic_features(Z)[:, 1:], return_std=True)
+\end{lstlisting}
+Les deux classes ont la même interface : la boucle ne sait pas lequel des deux modèles elle utilise. Les variables sont normalisées dans $[-1,1]$, comme dans la boucle QUBO. Avec moins de 4 points ou une sortie constante, on se replie sur un modèle constant.
+\end{codebox}
+
+\exercices
+\begin{exercice}[un seul point simulé]
+On a simulé un seul profil $x_1$, de valeur $y_1$, sans bruit, avec $m=0$. Écrire $\mu(x)$ et $s^2(x)$ en fonction de $k$. Que valent-ils en $x=x_1$ ? Et très loin de $x_1$, quand $k(x_1,x)\to0$ ?
+\end{exercice}
+\begin{exercice}
+Dans l'équation~\eqref{eq:krigeage}, pourquoi $s^2(x)$ ne dépend-il pas de $\vect y$ ? Est-ce encore vrai une fois les hyperparamètres réglés par maximum de vraisemblance ?
+\end{exercice}
+\begin{exercice}[noyau polynomial]
+Montrer que si $\vect c\sim\mathcal N(0,\lambda^{-1}I)$ et $f(x)=\varphi(x)^{\!\top}\vect c$, alors $\mathrm{Cov}(f(x),f(x'))=\lambda^{-1}\varphi(x)^{\!\top}\varphi(x')$.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Utiliser les noyaux de SMT prévus pour les variables entières (relaxation continue, distance de Gower) au lieu de traiter les indices comme des réels.
+\item Krigeage avec réduction de dimension (KPLS) si la grille grandit en nombre de variables.
+\item Mettre à jour le krigeage sans le réentraîner entièrement à chaque itération (hyperparamètres gelés quelques itérations), pour réduire le coût de calcul.
+\end{itemize}
+\end{pistes}

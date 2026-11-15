@@ -21,7 +21,7 @@
 \maketitle
 
 \section*{Comment lire cette fiche}
-Le projet avance par \textbf{itérations}. Chacune a une couleur, utilisée ici et dans les quatre cours du projet (aérodynamique, quantique, SER, optimisation) : un chapitre de cours porte le bandeau de l'itération qui l'a écrit, et un ajout ultérieur apparaît dans un encadré « Évolution » de la couleur de l'itération qui l'a fait.
+Le projet avance par \textbf{itérations}. Chacune a une couleur, utilisée ici et dans les cours du projet (aérodynamique, quantique, SER, optimisation, puis optimisation bayésienne en V3) : un chapitre de cours porte le bandeau de l'itération qui l'a écrit, et un ajout ultérieur apparaît dans un encadré « Évolution » de la couleur de l'itération qui l'a fait.
 \legendeiterations
 Pour chaque itération, la fiche donne : l'\textbf{objectif}, ce qui a été \textbf{fait}, les \textbf{résultats}, ce qu'on en a \textbf{appris}, et la \textbf{décision} qui a déclenché l'itération suivante. Le code de chaque itération close est figé dans \texttt{Code/archives/} (index : \texttt{Code/archives/README.md}).
 
@@ -47,7 +47,7 @@ Pour chaque itération, la fiche donne : l'\textbf{objectif}, ce qui a été \te
 \iterbadge{V0} & Peut-on construire un modèle aéro rapide et un QUBO à partir de lui ? & Oui : 10~ms par profil, QUBO à 9 qubits, la boucle trouve le minimum de $C_D$ en 25 simulations contre 256 au hasard. \\
 \iterbadge{V1} & La chaîne complète de la note d'intention donne-t-elle un compromis traînée/SER exploitable, et la boucle quantique bat-elle NSGA-II ? & La chaîne fonctionne et la boucle bat NSGA-II (de 1,2 à 3 fois moins de simulations), mais le compromis est dégénéré (tout le front à $t_{\min}$), le gain vient du modèle de substitution et non du solveur, et le modèle aéro déplace l'optimum par rapport à XFOIL. \\
 \iterbadge{V2} & Un problème reformulé (rayon de bord d'attaque libre, manœuvre, XFOIL, SER exacte) donne-t-il un vrai compromis, et que vaut alors la boucle ? & Oui : un front qui mêle épaisseur et rayon de bord d'attaque ; la boucle retrouve le front quand NSGA-II n'y parvient presque jamais dans le budget, mais le gain vient toujours du modèle de substitution. \\
-\iterbadge{V3} & Face à l'optimisation bayésienne et sur une grille de 16\,384 profils, que reste-t-il de l'avantage de la boucle QUBO, et le front est-il robuste aux hypothèses physiques ? & À venir : itération ouverte le 6 novembre 2026, menée en équipe (chapitre~\ref{ch:v3}). \\
+\iterbadge{V3} & Face à l'optimisation bayésienne et sur une grille de 16\,384 profils, que reste-t-il de l'avantage de la boucle QUBO, et le front est-il robuste aux hypothèses physiques ? & En cours (chapitre~\ref{ch:v3}). Lot L1 : l'optimisation bayésienne ne bat pas la boucle ; ni le krigeage ni le QUBO n'expliquent le gain, qui tient au traitement de la contrainte de manœuvre. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -186,7 +186,7 @@ Clore la V2 (6 novembre 2026, code et résultats figés dans \path{Code/archives
 
 % =====================================================================
 \iterchapter{V3}{Visée : un concurrent équitable, un problème plus grand}\label{ch:v3}
-\paragraph{Statut.} Ouverte le 6 novembre 2026. Ce chapitre fixe la visée ; il sera complété au fil de l'itération (tableau des lots, puis résultats, enseignements et décision, comme pour les itérations précédentes).
+\paragraph{Statut.} Ouverte le 6 novembre 2026. Au 15 novembre, le lot L1 est traité (section~\ref{sec:v3-l1}) ; L2 à L5 ne sont pas commencés. Ce chapitre fixe la visée et sera complété au fil de l'itération (résultats, enseignements et décision, comme pour les itérations précédentes).
 
 \paragraph{Fait.} Point de départ commun de l'équipe : chaque cours se termine par un chapitre « Le code actuel » \iterbadge{V3}, qui décrit le code de fin de V2, ce que la partie utilise, reçoit et fournit, avec le même schéma de la chaîne (\path{Fiche_Projet/chaine_code.tex}, à tenir à jour si la chaîne change).
 
@@ -230,6 +230,56 @@ L5 & Interface avec le groupe SER & Fonction d'interface unique \texttt{evaluer\
 \paragraph{Critère de clôture.} La V3 est close quand la fiche contient : le tableau de comparaison sur la grande grille avec l'optimisation bayésienne, le front recalculé avec le nouveau critère de décrochage, une réponse argumentée à H1, H2 et H3, et la décision qui ouvre la V4 ou prépare la présentation finale.
 
 \paragraph{Ce que la V3 ne pourra pas montrer.} À l'échelle du hackathon, le QUBO restera énumérable : aucun solveur quantique ne battra l'énumération. Le message défendable devant un jury reste la \emph{formulation} (un problème d'ingénierie bi-objectif sous contraintes mis sous forme de QUBO), la \emph{qualité} des candidats et l'\emph{évolution des ressources} avec la taille.
+
+\section{Avancement des lots}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{c>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.6cm}}
+\toprule
+Lot & Ce qui a été fait & Résultat & Statut \\
+\midrule
+L1 & boucle bayésienne, comparaison sur 20 graines, diagnostics ; cours \emph{Optimisation bayésienne} & H1 non confirmée ; le traitement de la contrainte de manœuvre décide du succès (section~\ref{sec:v3-l1}) & fait \newline(15 nov.) \\
+L2 & --- & --- & à faire \\
+L3 & --- & --- & à faire \\
+L4 & --- & --- & à faire \\
+L5 & --- & --- & à faire \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Lot L1 : la boucle face à l'optimisation bayésienne}\label{sec:v3-l1}
+\paragraph{Ce qui a été fait.} Une boucle à modèle de substitution de même structure que la boucle QUBO (mêmes points initiaux par graine, mêmes 5 poids, un profil par poids, même compteur), où l'on choisit séparément le \textbf{modèle} (quadratique bayésien ou krigeage SMT) et la \textbf{sélection} (minimum de la prédiction ou amélioration espérée), plus ParEGO et deux traitements stricts de la contrainte. Protocole V2 : SER par méthode des moments, budget 250, 20 graines. La boucle QUBO de la V2 est relancée sur les mêmes graines et redonne exactement ses médianes. Le détail est dans le cours \emph{Optimisation bayésienne}.
+
+\paragraph{Résultats.} Nombre médian de simulations pour retrouver tout le front exact, et taux de réussite dans le budget :
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{S1} & \multicolumn{2}{c}{S2} \\
+\midrule
+boucle QUBO (V2) & \VtroisSunBoucle & \VtroisSunBoucleSucces~\% & \VtroisSdeuxBoucle & \VtroisSdeuxBoucleSucces~\% \\
+quadratique + minimum (contrôle, sans QUBO) & \VtroisSunControle & \VtroisSunControleSucces~\% & \VtroisSdeuxControle & \VtroisSdeuxControleSucces~\% \\
+krigeage + minimum & \VtroisSunKrigMin & \VtroisSunKrigMinSucces~\% & \VtroisSdeuxKrigMin & \VtroisSdeuxKrigMinSucces~\% \\
+quadratique + amélioration espérée & \VtroisSunQuadEi & \VtroisSunQuadEiSucces~\% & \VtroisSdeuxQuadEi & \VtroisSdeuxQuadEiSucces~\% \\
+krigeage + amélioration espérée (optim. bayésienne) & \VtroisSunBayes & \VtroisSunBayesSucces~\% & \VtroisSdeuxBayes & \VtroisSdeuxBayesSucces~\% \\
+ParEGO & \VtroisSunParego & \VtroisSunParegoSucces~\% & \VtroisSdeuxParego & \VtroisSdeuxParegoSucces~\% \\
+quadratique + minimum, contrainte stricte & \VtroisSunStricte & \VtroisSunStricteSucces~\% & \VtroisSdeuxStricte & \VtroisSdeuxStricteSucces~\% \\
+krigeage + EI, contrainte en dur & \VtroisSunDur & \VtroisSunDurSucces~\% & \VtroisSdeuxDur & \VtroisSdeuxDurSucces~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Ce qu'on a appris.}
+\begin{enumerate}
+\item \textbf{H1 n'est pas confirmée.} L'optimisation bayésienne ne bat pas la boucle : nettement plus lente dans S1 (test de Wilcoxon apparié, $p<0{,}001$), écart non significatif dans S2.
+\item \textbf{Ni le krigeage ni l'amélioration espérée n'améliorent la boucle.} Un modèle quadratique et le minimum de sa prédiction suffisent ; le krigeage coûte 25 à 30 fois plus de calcul.
+\item \textbf{L'encodage QUBO n'apporte pas de gain.} Le contrôle sans qubits fait aussi bien dans S1, et mieux dans S2 ($p<0{,}001$) ; la cause de cet écart (variable d'écart discrète, régularisation, filtre d'épaisseur) n'est pas encore isolée.
+\item \textbf{Le traitement de la contrainte de manœuvre décide du succès.} Le front est au bord de $C_{L,\max}\ge1{,}2$. Les modèles quadratique et krigeage, les plus précis en moyenne, prédisent les 4 profils du front de S1 infaisables ; seul le modèle affine imposé par la formulation QUBO les laisse passer. Les variantes strictes échouent ; la boucle QUBO avec une pénalité dix fois plus forte tombe à 25~\% de réussite dans S2.
+\end{enumerate}
+
+\paragraph{Conséquences pour la V3.} L3 devient prioritaire : $C_{L,\max}$ est la grandeur dont tout dépend, et la moins bien prédite. L2 doit reprendre l'ablation et vérifier d'abord que le poids de pénalité reste dans la bonne zone sur la grande grille.
+
+\paragraph{Où trouver.} Code : \path{Code/optim/bayes.py}, \path{Code/optim/experiences_l1.py}, \path{Code/optim/diagnostic_l1.py} ; résultats : \path{Code/resultats/pipeline_L1_V3.json}, \path{Code/resultats/diagnostic_L1_V3.json}. Cours : \path{Cours/5_Optimisation_Bayesienne/} (bandeaux \iterbadge{V3}) et encadré « Évolution V3 » du chapitre V2 du cours d'optimisation bi-objectif.
 
 \appendix
 \chapter{Tenir la fiche à jour}

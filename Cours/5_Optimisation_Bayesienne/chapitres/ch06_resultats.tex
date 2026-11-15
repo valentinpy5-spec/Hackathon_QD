@@ -1,0 +1,145 @@
+\chapter{Résultats : la boucle QUBO face à l'optimisation bayésienne}\label{ch:resultats}
+\iterbanner{V3}
+
+\section{Les méthodes comparées}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.9cm}llX}
+\toprule
+Méthode & Modèle & Sélection & Contrainte de manœuvre \\
+\midrule
+boucle QUBO (V2) & quadratique & minimum (QUBO exact) & modèle affine, pénalité à qubits d'écart \\
+quadratique + minimum & quadratique & minimum & modèle affine, même pénalité, sans qubits \\
+krigeage + minimum & krigeage & minimum & idem \\
+quadratique + EI & quadratique & amélioration espérée & probabilité de faisabilité \\
+krigeage + EI & krigeage & amélioration espérée & probabilité de faisabilité \\
+ParEGO & krigeage par poids & amélioration espérée & probabilité de faisabilité \\
+\midrule
+quadratique + minimum, contrainte stricte & quadratique & minimum & pénalité probabiliste $1-\mathrm{PoF}$ \\
+krigeage + EI, contrainte en dur & krigeage & amélioration espérée & $\mu_c\ge1{,}2$ exigé \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Les quatre lignes « quadratique/krigeage $\times$ minimum/EI » forment l'ablation du chapitre~\ref{ch:question}. Les deux dernières lignes ne changent que le traitement de la contrainte.
+
+\section{Retrouver tout le front exact}
+\begin{figure}[htbp]
+\centering
+\input{figures/l1_sims}
+\caption{Nombre de simulations pour retrouver tout le front exact : médiane (point) et quartiles (trait) sur 20 graines, budget de 250. Deux variantes à contrainte stricte échouent.}\label{fig:l1-sims}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{S1 (front de 4 profils)} & \multicolumn{3}{c}{S2 (front de 10 profils)} \\
+ & médiane & réussite & $p$ & médiane & réussite & $p$ \\
+\midrule
+boucle QUBO (V2) & \textbf{75} & 100~\% & & 142,5 & 100~\% & \\
+quadratique + minimum & \textbf{75} & 100~\% & 0,35 & \textbf{95} & 100~\% & $<0{,}001$ \\
+krigeage + minimum & 87,5 & 100~\% & 0,18 & 110 & 100~\% & 0,002 \\
+quadratique + EI & 85 & 100~\% & 0,11 & 117,5 & 100~\% & 0,03 \\
+krigeage + EI & 125 & 100~\% & $<0{,}001$ & 127,5 & 100~\% & 0,06 \\
+ParEGO & 157,5 & 100~\% & $<0{,}001$ & 170 & 95~\% & 0,07 \\
+\midrule
+quadratique + minimum, stricte & --- & 0~\% & $<0{,}001$ & --- & 0~\% & $<0{,}001$ \\
+krigeage + EI, en dur & --- & 5~\% & $<0{,}001$ & 167,5 & 70~\% & 0,18 \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize Médianes en simulations distinctes sur 20 graines ; « --- » : médiane non atteinte dans le budget de 250.\\ $p$ : test de Wilcoxon apparié contre la boucle QUBO (un échec compte pour 251 simulations), sans correction pour comparaisons multiples.}
+\end{center}
+
+\begin{definition}[ : test de Wilcoxon apparié]
+Les méthodes partent des mêmes points pour une graine donnée : on dispose donc, pour chaque graine, de la \emph{différence} entre les deux nombres de simulations. Le test des rangs signés de Wilcoxon demande si ces 20 différences sont réparties symétriquement autour de zéro. Il ne suppose pas qu'elles suivent une loi normale. Une petite valeur de $p$ signifie qu'un tel écart serait rare si les deux méthodes se valaient.
+\end{definition}
+
+\begin{piege}
+Le tableau contient 14 tests. Au seuil de 5~\%, on attend en moyenne près d'un faux positif parmi 14 tests même si aucune méthode ne différait. Les valeurs proches du seuil (0,03 ; 0,06 ; 0,07) ne permettent donc pas de conclure. Celles inférieures à 0,002 résistent à la correction la plus sévère (Bonferroni : $0{,}05/14\approx0{,}0036$).
+\end{piege}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/l1_convergence}
+\caption{Fraction du front exact trouvée selon le nombre de simulations (médiane sur 20 graines).}\label{fig:l1-conv}
+\end{figure}
+
+\section{Avec un arrêt réaliste}
+Sans connaître le front exact, on s'arrête quand l'hypervolume ne progresse plus depuis 3 itérations (même règle que la V2). Médianes au moment de l'arrêt :
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{S1} & \multicolumn{3}{c}{S2} \\
+ & simulations & front & HV & simulations & front & HV \\
+\midrule
+boucle QUBO (V2) & 52,5 & 50~\% & 0,943 & 67,5 & 55~\% & 0,962 \\
+quadratique + minimum & 65 & 50~\% & 0,937 & 100 & 100~\% & 1,000 \\
+krigeage + minimum & 50 & 50~\% & 0,937 & 95 & 90~\% & 0,994 \\
+quadratique + EI & 57,5 & 50~\% & 0,937 & 70 & 55~\% & 0,968 \\
+krigeage + EI & 55 & 50~\% & 0,937 & 100 & 90~\% & 0,987 \\
+ParEGO & 57,5 & 50~\% & 0,937 & 100 & 55~\% & 0,985 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Dans S1, toutes les méthodes s'arrêtent au même point : la moitié du front et 94~\% de l'hypervolume, en 50 à 65 simulations. Dans S2, la boucle QUBO s'arrête plus tôt (67,5 simulations) mais avec 55~\% du front ; trois variantes continuent jusqu'à environ 100 simulations et s'arrêtent avec 90 à 100~\% du front.
+
+\section{Le coût de calcul}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & S1 & S2 \\
+\midrule
+boucle QUBO (V2), énumération de $2^{14}$ états & 2,8~s & 6,0~s \\
+quadratique + minimum & 0,9~s & 0,6~s \\
+quadratique + EI & 0,4~s & 0,8~s \\
+krigeage + minimum & 24~s & 27~s \\
+krigeage + EI & 34~s & 32~s \\
+ParEGO & 84~s & 104~s \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize Temps moyen par graine, hors simulations (qui sont lues dans la table), sur un ordinateur portable.}
+\end{center}
+Ces temps restent négligeables devant une simulation réelle (XFOIL : environ 3~s par profil ; un calcul de mécanique des fluides 3D : des heures). Ils ne deviennent un critère que si deux méthodes demandent le même nombre de simulations.
+
+\section{Lecture}
+\paragraph{1. H1 n'est pas confirmée.} L'optimisation bayésienne (krigeage + EI) retrouve le front à chaque fois, mais elle ne bat pas la boucle QUBO (figures~\ref{fig:l1-sims} et~\ref{fig:l1-conv}). Dans S1, elle demande nettement plus de simulations (125 contre 75, $p<0{,}001$). Dans S2, l'écart en sa faveur (127,5 contre 142,5) n'est pas significatif.
+
+\paragraph{2. Le krigeage n'apporte rien sur ce problème.} À sélection égale, le modèle quadratique fait aussi bien ou mieux que le krigeage dans les quatre comparaisons (75 contre 87,5 et 85 contre 125 dans S1 ; 95 contre 110 et 117,5 contre 127,5 dans S2), pour un coût de calcul 25 à 30 fois plus faible. Le chapitre~\ref{ch:diagnostic} regarde pourquoi.
+
+\paragraph{3. L'amélioration espérée non plus.} À modèle égal, le minimum de la prédiction fait aussi bien ou mieux que l'amélioration espérée. L'exploration que celle-ci ajoute n'est pas utile ici, parce que la pénalité lâche sur la contrainte en fournit déjà (chapitre~\ref{ch:diagnostic}). Réserve : les deux sélections ne traitent pas la contrainte de la même façon (pénalité de la boucle QUBO pour le minimum, probabilité de faisabilité pour l'amélioration espérée). L'écart mesuré mêle donc les deux effets.
+
+\paragraph{4. Le traitement de la contrainte domine.} Les deux variantes à contrainte stricte échouent, quel que soit le modèle : 0~\% et 5~\% de réussite dans S1. Aucun autre choix du tableau n'a un effet de cette taille.
+
+\paragraph{5. Dans S2, le contrôle bat la boucle QUBO.} La variante « quadratique + minimum » reprend le modèle, la sélection et la pénalité de la boucle QUBO, sans encodage binaire. Elle devait se comporter comme elle. C'est le cas dans S1 (75 et 75), mais dans S2 elle retrouve le front en 95 simulations contre 142,5 ($p<0{,}001$), et s'arrête avec tout le front au lieu de 55~\%.
+
+\begin{piege}
+Ce dernier résultat ne permet pas encore de dire que « l'encodage en QUBO coûte ». Le contrôle diffère de la boucle QUBO par trois choses à la fois : l'absence de qubits d'écart (la variable d'écart n'a que 8 valeurs, ce qui biaise la pénalité), la régularisation du modèle quadratique (bayésienne ici, ridge fixe à $10^{-6}$ dans la boucle), et l'épaisseur minimale traitée par filtre au lieu d'une pénalité. On ne sait pas laquelle explique l'écart. C'est la première piste de ce chapitre.
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item L'optimisation bayésienne n'égale la boucle QUBO que dans un scénario sur deux : H1 n'est pas confirmée.
+\item Ni le krigeage ni l'amélioration espérée n'améliorent la boucle. Un modèle quadratique et le minimum de sa prédiction suffisent.
+\item Le choix qui compte est le traitement de la contrainte de manœuvre.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Dans S1, le krigeage + EI demande 125 simulations contre 75 pour la boucle QUBO, mais avec l'arrêt réaliste les deux s'arrêtent vers 55 simulations avec la moitié du front. Ces deux constats sont-ils contradictoires ?
+\end{exercice}
+\begin{exercice}
+Sur 20 graines, une méthode A retrouve le front plus vite que B pour 15 graines, plus lentement pour 5. Sans calcul de rangs, quelle est la probabilité d'un résultat au moins aussi déséquilibré si A et B se valaient (test du signe) ? Conclure au seuil de 5~\%.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item \textbf{Identifier la cause de l'écart dans S2} entre le contrôle et la boucle QUBO, en changeant un seul des trois éléments à la fois (qubits d'écart, régularisation, filtre d'épaisseur).
+\item Remplacer le critère « tout le front exact », fragile pour des fronts de 4 et 10 profils, par l'hypervolume ou la distance au front en fonction du budget.
+\item Corriger les valeurs de $p$ pour comparaisons multiples (Holm), et ajouter des intervalles de confiance par rééchantillonnage sur les médianes.
+\end{itemize}
+\end{pistes}
