@@ -1,0 +1,166 @@
+\chapter{V3 : pourquoi QAOA n'apporte rien à notre boucle}\label{ch:pourquoi}
+\iterbanner{V3}
+
+\begin{evolution}{V3}{pourquoi ce chapitre}La V2 a montré que la boucle QUBO retrouve le front avec peu de simulations, et le lot L1 de la V3 que ce gain ne vient pas de la formulation QUBO. Ce chapitre explique pourquoi, sur notre problème, le solveur quantique ne peut rien apporter. Il précise d'abord ce que veut dire « résoudre exactement le QUBO », puis pourquoi la comparaison décisive est l'optimisation bayésienne, et donne enfin les raisons, chiffrées sur les QUBO que la boucle construit réellement. Les mesures viennent de \texttt{Code/quantique/anatomie\_qubo.py} (résultats dans \texttt{anatomie\_qubo\_V3.json}, figure par \texttt{tools/make\_figures\_v3.py}).\end{evolution}
+
+\section{Que veut dire « résoudre exactement le QUBO » ?}\label{sec:exact}
+Résoudre exactement le QUBO, c'est trouver la chaîne de 14 bits d'énergie minimale, avec la certitude que c'est bien elle. À 14 qubits, on le fait par \textbf{énumération} : la branche \texttt{"exact"} de \texttt{ranked\_candidates} calcule $E(\mathbf b)=\mathbf b^\top Q\,\mathbf b+c$ pour les $2^{14}=16\,384$ chaînes, les trie, et décode les meilleures en profils. Cela prend \textbf{3,7~ms}. Le recuit simulé et QAOA, eux, ne garantissent rien : ils tirent des chaînes, en espérant que l'optimum en fasse partie.
+
+Mais « exact » ne porte que sur le QUBO. Il y a trois problèmes emboîtés, et chacun n'est qu'une approximation du suivant :
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{4.2cm}}
+\toprule
+Problème & Ce qu'il minimise & Écart avec le niveau suivant \\
+\midrule
+1. le QUBO & somme pondérée du modèle $+$ pénalités, sur 14 bits (10 de conception, 1 auxiliaire, 3 d'écart) & pénalités douces, variable d'écart discrète \\
+2. le problème de substitution & somme pondérée du modèle, sous $\widehat{C_{L,\max}}\ge1{,}2$ et $t\ge8~\%$, sur les 1\,024 profils & erreur des modèles quadratiques et affine \\
+3. le vrai problème & $C_D$ et SER simulés, sous $C_{L,\max}\ge1{,}2$ simulé & --- \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le solveur exact résout le niveau~1 sans erreur. Le niveau~1 ne coïncide pourtant pas avec le niveau~2. Sur les QUBO de la boucle (modèles ajustés sur 30 profils, 10 graines, 5 poids, soit 50 QUBO par secteur), le minimum du QUBO est le minimum du problème de substitution dans \textbf{34~\%} des cas pour S1 et \textbf{56~\%} pour S2. Le plus souvent, l'écart vient de ce que le minimum du QUBO est un profil que le modèle affine lui-même prédit \emph{infaisable} (40~\% des cas pour S1) : la pénalité est assez douce pour qu'un bon objectif paie une petite violation.
+
+\begin{piege}
+\textbf{« Exact » ne veut pas dire « le bon profil ».} Le solveur exact donne l'optimum d'un problème qui en approche un autre, qui en approche un troisième. Et cette inexactitude est \emph{utile} : le front est au bord de la contrainte de manœuvre, et le lot L1 a montré que c'est justement la souplesse de la pénalité du QUBO qui laisse passer ses profils. Les variantes qui imposent la contrainte en dur échouent (cours \emph{Optimisation bayésienne}, chapitre sur le diagnostic).
+\end{piege}
+
+\section{Pourquoi comparer à l'optimisation bayésienne}\label{sec:pourquoi-bayes}
+La boucle QUBO est une méthode \emph{à modèle de substitution} : à chaque itération, elle ajuste un modèle peu coûteux sur les profils déjà simulés, puis s'en sert pour choisir les suivants. En V2, elle battait NSGA-II nettement. Mais NSGA-II n'a pas de modèle : il recombine les meilleurs profils connus. Battre NSGA-II ne dit donc pas \emph{ce qui} a gagné : le modèle, ou la formulation QUBO et son solveur ?
+
+Pour isoler l'apport du QUBO, il faut un concurrent qui a lui aussi un modèle. L'optimisation bayésienne est la méthode de référence de cette famille, en particulier en conception aéronautique (krigeage, EGO, bibliothèque SMT de l'ONERA et de l'ISAE). Surtout, elle permet une \textbf{ablation} : toute méthode à modèle fait deux choix, le \emph{modèle} (quadratique ou krigeage) et la \emph{sélection} (minimum de la prédiction ou amélioration espérée), qu'on peut croiser. La case « quadratique $+$ minimum » est la boucle QUBO \emph{sans} qubits : elle énumère directement les 1\,024 profils, c'est le \textbf{contrôle}. Si la boucle QUBO bat le contrôle, le QUBO apporte quelque chose ; sinon, non.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+Simulations pour retrouver tout le front (médiane, 20 graines) & S1 & S2 \\
+\midrule
+boucle QUBO, solveur exact & 75 & 142,5 \\
+\textbf{contrôle} : quadratique $+$ minimum, sans QUBO & \textbf{75} & \textbf{95} \\
+krigeage $+$ minimum & 87,5 & 110 \\
+quadratique $+$ amélioration espérée & 85 & 117,5 \\
+krigeage $+$ amélioration espérée (optimisation bayésienne) & 125 & 127,5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le contrôle fait aussi bien que la boucle QUBO dans S1 et mieux dans S2 (différence significative dans S2, test de Wilcoxon apparié). L'encodage QUBO n'apporte donc rien sur ce problème, même résolu exactement. \emph{A fortiori}, un solveur quantique du QUBO ne peut rien y ajouter. La cause de l'écart dans S2 (variable d'écart discrète, régularisation ou filtre d'épaisseur) n'est pas encore isolée.
+
+\begin{projet}
+Ce résultat ne dit pas que la boucle est mauvaise : elle reste bien meilleure que NSGA-II. Il dit que son gain vient du \emph{modèle de substitution} (un polynôme quadratique suffit) et du \emph{traitement souple de la contrainte}, pas de la formulation QUBO ni de son solveur.
+\end{projet}
+
+\section{Ce qu'a fait QAOA dans la boucle}
+La V2 a fait tourner la boucle avec les trois solveurs (QAOA $p=2$, 3 départs, 512 tirs, sur 5 graines seulement car le simulateur est lent) :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{S1} & \multicolumn{2}{c}{S2} \\
+solveur du QUBO & front complet & réussite & front complet & réussite \\
+\midrule
+exact (énumération) & 75 & 100~\% & 142,5 & 100~\% \\
+recuit simulé & 97,5 & 100~\% & 235 & 55~\% \\
+QAOA & 105 & 100~\% & --- & 60~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+QAOA fait moins bien que l'énumération, et c'est logique : la suite explique pourquoi il ne pouvait pas faire mieux.
+
+\section{Six raisons, chiffrées}
+
+\subsection{L'énumération est imbattable, par construction}
+La boucle demande au solveur les profils de plus basse énergie. L'énumération les donne exactement. Un solveur heuristique, quantique ou non, peut au mieux les retrouver ; s'il les manque, il propose un profil moins bon selon le modèle, ce qui coûte en moyenne des simulations. Il n'existe aucun cas où il fait mieux, sauf par hasard : un mauvais candidat peut se révéler bon à la simulation, ce qui relève de l'exploration et que le recuit fait aussi.
+
+Dans notre code, c'est même visible dans l'implémentation : la branche \texttt{"qaoa"} commence par calculer les $2^{14}$ énergies (exactement le travail de l'énumération), puis règle les angles, tire 512 chaînes, et les \emph{retrie par leur énergie exacte}. QAOA simulé, c'est l'énumération plus du travail : 6 à 16~s par QUBO contre 3,7~ms.
+
+\subsection{Le problème est minuscule, et le QUBO l'agrandit}
+Il n'y a que 1\,024 profils. Le QUBO les représente sur 14 qubits, soit 16\,384 états : les 4 qubits auxiliaire et d'écart multiplient l'espace par 16 sans ajouter un seul profil. Le contrôle, lui, cherche directement parmi les 1\,024. Et même en grandissant, le problème resterait dans la zone où l'énumération est instantanée : le coût double à chaque qubit ajouté, et à partir de 3,7~ms pour 14 qubits il reste sous la seconde jusqu'à 22 qubits et sous quelques minutes jusqu'à 30. La montée en taille (chapitre~\ref{ch:montee}) montre en outre que la probabilité de l'optimum décroît exponentiellement avec $n$ à profondeur fixée, seulement un peu moins vite que le hasard.
+
+\subsection{Les pénalités écrasent l'objectif}\label{sec:penalites-qaoa}
+C'est la raison propre à QAOA, et la plus instructive.
+\begin{figure}[htbp]
+\centering
+\input{figures/v3_anatomie}
+\caption{À gauche, le spectre d'un QUBO de la boucle (S2, $w=0{,}5$, modèles ajustés sur 30 profils) : les 16\,384 énergies, classées et ramenées à $[0,1]$, en échelles logarithmiques. Toute la variation de l'objectif tient dans les 1,7~\% du bas (pointillés), où se trouvent environ 1\,700 états ; le reste de l'étendue vient des pénalités. À droite, la probabilité de mesurer l'optimum après QAOA, divisée par celle du hasard, pour 6 QUBO de la boucle (médiane, min et max) : avec les contraintes, QAOA ne fait que 5 fois mieux que le hasard ; sur le même objectif sans contraintes, 30 à 400 fois mieux.}\label{fig:anatomie}
+\end{figure}
+
+\paragraph{Ce qu'on mesure.} Sur les 100 QUBO construits en début de boucle :
+\begin{itemize}
+\item la variation de l'objectif ne représente que \textbf{1,7~\%} (0,9 à 3,4~\%) de l'étendue des énergies ; en fin de boucle, avec des modèles ajustés sur toute la grille, 1~\% ;
+\item les plus grands coefficients de $Q$ viennent des pénalités : environ \textbf{50 fois} ceux de l'objectif, 100 fois en fin de boucle ;
+\item les deux meilleurs profils ne sont séparés que de $10^{-4}$ de l'étendue (médiane $1{,}6\cdot10^{-4}$ pour S1, $3{,}4\cdot10^{-4}$ pour S2).
+\end{itemize}
+
+\paragraph{Pourquoi cela bloque QAOA.} Les angles sont réglés en minimisant l'énergie \emph{moyenne} $\expval{H_C}$ (chapitre~\ref{ch:qaoa}). Quand les pénalités font 98~\% de l'étendue, cette moyenne ne dépend presque que d'elles : l'optimiseur apprend à éviter les états fortement pénalisés, et c'est tout. Il ne « voit » pas l'objectif. Pour séparer deux états d'énergies $E$ et $E+\delta$, il faut que leurs phases $\gamma E$ diffèrent d'une fraction de tour, soit $\gamma\delta\sim1$ ; avec $\delta\approx10^{-4}$ de l'étendue, cela demande $\gamma$ de l'ordre de $10^4$ fois l'inverse de l'étendue, et la phase fait alors des milliers de tours sur le reste du spectre (le piège de l'échelle, chapitre~\ref{ch:qaoa}). À faible profondeur, QAOA est un \textbf{filtre grossier} : il favorise le bas du spectre, pas l'optimum.
+
+La mesure le confirme (figure~\ref{fig:anatomie}, à droite). Sur les 6 QUBO testés, à $p=2$ et $p=3$, la probabilité de l'optimum vaut environ $3\cdot10^{-4}$, \emph{la même} quel que soit le secteur et le poids : seule la structure des pénalités, commune à tous, a été apprise. Avec 512 tirs, l'optimum n'est vu qu'une fois sur sept environ. Sur le même objectif \emph{sans} contraintes (10 qubits), la probabilité monte à 0,13 à 0,39 à $p=3$, et l'optimum est vu à coup sûr.
+
+\begin{piege}
+La comparaison avec et sans contraintes ne dit pas qu'il suffit d'enlever les contraintes : sans elles, l'optimum du QUBO est un autre profil, souvent infaisable. Elle dit que \emph{la façon} d'imposer les contraintes, par des pénalités, est ce qui rend le QUBO difficile pour QAOA. C'est pourquoi la recherche développe des mélangeurs qui restent dans l'espace faisable (section~\ref{sec:recherche}).
+\end{piege}
+
+\subsection{L'erreur du modèle domine l'erreur du solveur}
+Le QUBO minimise un modèle. Celui de $C_{L,\max}$ se trompe de 0,14 (quadratique) à 0,19 (affine) en moyenne quadratique, pour un seuil de 1,2 et un front situé juste au-dessus. Trouver l'optimum exact d'un modèle aussi incertain n'a pas grande valeur : le profil choisi sera de toute façon simulé, et c'est la simulation qui tranche. Le contrôle du lot L1 le montre : supprimer l'encodage ne coûte rien, et un modèle plus précis (krigeage) n'aide pas non plus.
+
+\subsection{Le temps de calcul est ailleurs}
+Une simulation XFOIL coûte environ 0,34~s par profil, et la méthode des moments bien davantage. Une itération de la boucle simule 5 profils (au moins 1,7~s) et résout 5 QUBO ($5\times3{,}7=19$~ms) : la résolution pèse environ 1~\% du temps avec XFOIL seul, moins avec la méthode des moments. Même un solveur quantique instantané ne ferait gagner que ce 1~\%, et \emph{aucune} simulation, puisque l'énumération trouve déjà le meilleur candidat. C'est la loi d'Amdahl : on n'accélère pas un calcul en optimisant ce qui ne coûte rien.
+
+\subsection{Sur une vraie machine, ce serait pire}
+Le QUBO de la boucle a 81 couplages sur les 91 possibles entre 14 qubits : le graphe d'Ising est presque complet. Chaque couplage coûte une porte $R_{ZZ}$, soit 2 CNOT : 162 CNOT par couche, 324 pour $p=2$, \emph{avant} le routage sur une puce où chaque qubit n'a que 2 ou 3 voisins, qui en ajoute plusieurs fois autant. Avec une erreur de $10^{-3}$ par CNOT, la fidélité du circuit tombe à $e^{-0{,}32}\approx0{,}7$ avant routage, bien moins après. Les résultats de ce chapitre, obtenus par simulation exacte sans bruit, sont donc le meilleur cas possible.
+
+\section{À quoi s'intéresse la recherche sur QAOA}\label{sec:recherche}
+Personne ne cherche à battre l'énumération sur un problème de 14 qubits. Les travaux actuels visent autre chose :
+\begin{itemize}
+\item \textbf{Un avantage de croissance}, pas de temps à taille donnée. Sur le problème LABS (suites binaires de faible autocorrélation, très difficile classiquement), Shaydulin et al. (\emph{Science Advances}, 2024) ont mesuré, par simulation jusqu'à une quarantaine de qubits, un temps de résolution de QAOA croissant moins vite avec $N$ que celui du meilleur algorithme classique connu. L'avantage, s'il se confirme, n'apparaîtrait qu'à grande taille.
+\item \textbf{Des garanties à profondeur fixée}, et leurs limites : QAOA dépasse certains algorithmes classiques \emph{locaux} sur des familles de graphes, mais une profondeur faible ne « voit » qu'un voisinage de chaque variable, ce qui l'empêche d'atteindre l'optimum sur certains problèmes aléatoires (Farhi, Gamarnik et Gutmann, 2020). Pour les problèmes génériques, on n'attend au mieux qu'un gain polynomial, que le coût de la correction d'erreurs peut absorber (Babbush et al., 2021).
+\item \textbf{Les contraintes sans pénalités} : l'\emph{opérateur alterné quantique} (Hadfield et al., 2019) remplace le mélangeur $\sum X_k$ par un mélangeur qui ne quitte jamais l'espace faisable, ce qui supprime qubits d'écart et pénalités, c'est-à-dire exactement le défaut mesuré à la section~\ref{sec:penalites-qaoa}.
+\item \textbf{Le réglage des angles} : les angles optimaux se ressemblent d'une instance à l'autre, ce qui permet de les transférer au lieu de les réoptimiser.
+\end{itemize}
+Une revue de l'état de l'art est donnée par Abbas et al., « Challenges and opportunities in quantum optimization », \emph{Nature Reviews Physics}, 2024.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+Il faudrait, pour que QAOA serve & Notre problème \\
+\midrule
+un QUBO trop grand pour l'énumération et difficile pour les heuristiques classiques & 14 qubits, énumérés en 4~ms \\
+une résolution du QUBO qui pèse dans le coût total & 1~\% du temps, 0 simulation à gagner \\
+des contraintes portées par le mélangeur & pénalités qui font 98~\% de l'étendue \\
+un modèle assez précis pour que son optimum exact compte & erreur sur $C_{L,\max}$ comparable à la marge \\
+un matériel corrigé des erreurs & 324 CNOT avant routage pour $p=2$ \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ce que le projet peut défendre}
+\begin{itemize}
+\item \textbf{Un résultat négatif propre}, qui est un vrai résultat : dans un optimiseur à modèle de substitution, le goulot est la simulation et la qualité du modèle, pas la recherche du minimum du modèle. L'ablation du lot L1 le démontre.
+\item \textbf{La formulation} : un problème d'ingénierie bi-objectif sous contraintes, mis sous forme de QUBO, avec un solveur interchangeable qui pourra être remplacé si un solveur quantique devient utile.
+\item \textbf{Un diagnostic précis de ce qui manque} : le traitement des contraintes par pénalités est l'obstacle principal pour QAOA ; les mélangeurs qui respectent les contraintes sont la piste à tester, avec l'estimation des ressources (qubits, CNOT, tirs) en fonction de la taille.
+\end{itemize}
+
+\begin{resultat}
+\begin{itemize}
+\item « Résoudre exactement le QUBO » veut dire énumérer les $2^{14}$ chaînes et prendre la meilleure (3,7~ms). C'est l'optimum du QUBO, pas celui du problème de substitution (34 à 56~\% de coïncidence), ni celui du vrai problème.
+\item L'optimisation bayésienne sert de comparaison parce qu'elle a, comme la boucle, un modèle de substitution : l'ablation isole l'apport du QUBO. Il est nul ici, le contrôle sans QUBO faisant aussi bien ou mieux.
+\item QAOA ne peut pas battre l'énumération dans la boucle, et nos pénalités, qui font 98~\% de l'étendue des énergies, le réduisent à un filtre grossier : 5 fois le hasard, contre 30 à 400 fois sans contraintes.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:gamma-ecart}
+Les énergies d'un QUBO de la boucle sont normalisées (moyenne nulle, écart-type 1) avant QAOA. Sur le QUBO de la figure~\ref{fig:anatomie}, l'étendue vaut alors 6,7 ; on suppose que les deux meilleurs profils soient séparés de $10^{-4}$ de cette étendue. Quel $\gamma$ faut-il pour que leurs phases diffèrent d'un radian ? Combien de tours la phase fait-elle alors entre le bas et le haut du spectre ? Qu'en conclure pour un QAOA de faible profondeur ?
+\end{exercice}
+\begin{exercice}\label{ex:amdahl}
+Une itération de la boucle simule 5 profils et résout 5 QUBO (3,7~ms chacun par énumération). On remplace XFOIL ($0{,}34$~s par profil) par un simulateur 1\,000 fois plus rapide. La résolution des QUBO devient-elle le poste dominant ? Un solveur quantique rapide serait-il alors utile ? Que faire de plus simple ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Écrire un QAOA à mélangeur qui respecte les contraintes (au moins $t\ge8~\%$ sur les bits de $t$) et mesurer le gain sur le hasard, à comparer aux 5 et 30 à 400 de la figure~\ref{fig:anatomie}.
+\item Réduire le poids des pénalités au minimum qui garde l'optimum du QUBO faisable, et mesurer l'effet sur QAOA et sur la boucle.
+\item Remplacer la variable d'écart discrète par la contrainte imposée au décodage, et vérifier si l'écart avec le contrôle dans S2 disparaît.
+\end{itemize}
+\end{pistes}
