@@ -169,7 +169,7 @@ Pour le lot L2 (16\,384 profils), on ne veut plus tout simuler à l'avance. Comm
 
 \begin{pistes}
 \begin{itemize}
-\item Ajouter l'optimisation bayésienne comme sixième méthode (lot L1) : une fonction \code{run("bayes", ...)} qui remplit la même trace.
+\item \iterbadge{V3}~\textbf{Fait} (lot L1), sous une autre forme : un module séparé, \code{optim/bayes.py} (\code{bayes\_loop}), lancé par \code{optim/experiences\_l1.py}, qui réutilise \code{setup}, \code{state}, \code{summary} et \code{CONS} d'\code{experiences\_v2} et écrit \code{pipeline\_L1\_V3.json}.
 \item Rendre \code{CountedProblem} paresseux, avec un cache disque, pour les grandes grilles (lot L2).
 \item Sortir les réglages (\code{CONS}, budgets, nombre de graines) dans un fichier de configuration par itération.
 \end{itemize}

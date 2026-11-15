@@ -81,8 +81,8 @@ On veut estimer l'énergie moyenne d'un circuit QAOA à $\pm0{,}01$ près, l'én
 
 \begin{pistes}
 \begin{itemize}
-\item Mesurer la boucle avec un critère d'arrêt réaliste (stagnation de l'hypervolume) plutôt qu'avec le front exact.
+\item \iterbadge{V2}~\textbf{Fait} : arrêt à la stagnation de l'hypervolume, en plus du critère « front exact » (chapitre~\ref{ch:v2}).
 \item Réutiliser les angles optimaux de QAOA d'une itération à l'autre : le nombre d'évaluations diminuerait fortement.
-\item Ajouter l'optimisation bayésienne multi-objectif comme concurrent classique de même nature que la boucle.
+\item \iterbadge{V3}~\textbf{Fait} (lot L1) : l'optimisation bayésienne ne bat pas la boucle (cours \emph{Optimisation bayésienne}).
 \end{itemize}
 \end{pistes}

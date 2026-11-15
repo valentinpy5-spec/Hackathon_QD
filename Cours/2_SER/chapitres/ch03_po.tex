@@ -77,7 +77,7 @@ Un cylindre elliptique de demi-axes $a$ (selon $x$) et $b$ (selon $y$) est vu se
 \begin{pistes}
 \begin{itemize}
 \item Ajouter la \textbf{théorie physique de la diffraction} (PTD, Ufimtsev) ou les coefficients de diffraction d'arête (GTD/UTD, Keller) pour représenter le bord de fuite.
-\item Distinguer les polarisations TM et TE avec une méthode qui tient compte des ondes rampantes, au moins au bord d'attaque.
-\item Calculer la solution exacte par une méthode des moments 2D (équation intégrale du champ électrique, en TM) : quelques centaines d'inconnues suffisent, et cela donnerait une référence pour valider la PO sur les profils eux-mêmes.
+\item Distinguer les polarisations TM et TE avec une méthode qui tient compte des ondes rampantes, au moins au bord d'attaque (la TE est le lot L3 de la V3).
+\item \iterbadge{V2}~\textbf{Fait} : méthode des moments 2D en TM (\code{ser/mom2d.py}), sur toute la grille. Il faut plutôt 1\,000 à 1\,140 segments que quelques centaines ; la PO sous-estime la SER d'environ 1~dB mais garde le classement (corrélation de rang 0,999, chapitre~\ref{ch:v2}).
 \end{itemize}
 \end{pistes}
