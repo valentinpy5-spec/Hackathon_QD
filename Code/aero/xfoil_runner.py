@@ -42,9 +42,12 @@ def xfoil_available(exe="xfoil"):
 
 def xfoil_env():
     """Environnement d'exécution avec un écran X (réel si présent, sinon Xvfb local)."""
+    if os.name=="nt": # Windows : xfoil.exe a sa propre fenêtre graphique
+        return env
+    
     env = dict(os.environ)
     if env.get("DISPLAY"):
-        return env
+        return envS
     xvfb = shutil.which("Xvfb") or (LOCAL_XVFB if os.path.exists(LOCAL_XVFB) else None)
     if xvfb is None:
         raise RuntimeError("ni écran X ni Xvfb : XFOIL ne peut pas tourner en visqueux")
