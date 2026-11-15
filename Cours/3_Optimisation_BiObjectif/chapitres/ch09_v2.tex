@@ -103,6 +103,8 @@ boucle, QAOA & 75 & 50~\% & 0,937 & 105 & 80~\% & 1,000 \\
 \end{itemize}
 \end{resultat}
 
+\begin{evolution}{V3}{la boucle face à l'optimisation bayésienne (lot L1)}La première piste de ce chapitre est traitée dans le cours \emph{Optimisation bayésienne} (\path{Cours/5_Optimisation_Bayesienne/}). Sur le même problème et avec le même protocole, l'optimisation bayésienne (krigeage et amélioration espérée) ne bat pas la boucle : 125 simulations contre 75 dans S1, 127,5 contre 142,5 dans S2 (écart non significatif). Une ablation modèle $\times$ sélection montre que ni le krigeage ni l'amélioration espérée n'améliorent la boucle, et qu'une variante sans encodage binaire fait aussi bien (75 dans S1) ou mieux (95 dans S2). Ce qui décide du succès est le traitement de la contrainte de manœuvre : le front est à son bord, et seul le modèle \emph{affine} de $C_{L,\max}$, imposé par la formulation QUBO, y prédit les profils du front faisables. Le message « le gain vient du modèle de substitution » se précise donc en : un modèle simple, et une contrainte traitée avec souplesse.\end{evolution}
+
 \exercices
 \begin{exercice}
 Pourquoi le profil $(4~\%;\ 0{,}55;\ 12~\%;\ I=2)$ est-il sur le front de S1 alors que sa portance maximale (1,20) est juste à la limite de l'exigence ? Que deviendrait le front si l'on exigeait $C_{L,\max}\ge1{,}3$ ?

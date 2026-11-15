@@ -1,0 +1,67 @@
+\chapter{Bilan, limites et pistes}\label{ch:bilan}
+\iterbanner{V3}
+
+\section{Réponse à H1}
+\begin{resultat}[ : H1 n'est pas confirmée]
+Sur le problème V2, l'optimisation bayésienne retrouve le front à chaque fois, mais elle ne bat pas la boucle QUBO : elle demande nettement plus de simulations dans S1 (125 contre 75), et l'écart en sa faveur dans S2 (127,5 contre 142,5) n'est pas significatif. Son modèle plus souple ne l'aide pas.
+\end{resultat}
+
+L'ablation dit pourquoi, élément par élément :
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.2cm}X}
+\toprule
+Élément & Effet mesuré \\
+\midrule
+solveur du QUBO (V2) & aucun gain : le solveur exact reste le meilleur \\
+encodage binaire & aucun gain : le contrôle sans qubits fait aussi bien dans S1, mieux dans S2 \\
+modèle (quadratique ou krigeage) & le krigeage n'améliore aucune des quatre comparaisons \\
+sélection (minimum ou EI) & l'amélioration espérée n'améliore aucune des quatre comparaisons \\
+traitement de la contrainte de manœuvre & décide du succès : de 0~\% à 100~\% de réussite \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le message pour le jury}
+La V2 disait : « le gain vient du modèle de substitution, pas du solveur quantique ». Le lot L1 précise :
+\begin{enumerate}
+\item le gain vient d'un modèle de substitution \emph{simple} ; un modèle plus riche ne fait pas mieux ;
+\item il dépend de la façon dont on approche la contrainte de manœuvre, parce que les meilleurs compromis traînée/SER sont au bord de cette contrainte ;
+\item la formulation QUBO n'apporte pas de gain en nombre de simulations. Elle intervient une fois, indirectement : c'est elle qui impose un modèle affine de la contrainte, et ce modèle grossier se trouve être le bon choix ici.
+\end{enumerate}
+Ce message est moins flatteur pour le quantique que celui de la note d'intention, mais il est défendable : chaque affirmation renvoie à une expérience contrôlée, avec son contrôle et son test statistique. Ce qui reste à la formulation QUBO est ce que la fiche projet annonçait : la mise sous forme de QUBO d'un problème d'ingénierie sous contraintes, la qualité des candidats de QAOA, et l'évolution des ressources avec la taille.
+
+\section{Limites}
+\begin{itemize}
+\item \textbf{Un seul problème, petit.} 1\,024 profils, deux scénarios radar, des fronts de 4 et 10 profils. Le critère « tout le front exact » est sensible au hasard à cette taille. Rien ne dit que les conclusions tiennent sur la grille de 16\,384 profils du lot L2.
+\item \textbf{Un krigeage peu réglé.} Un seul départ pour les hyperparamètres, des variables entières traitées comme des réels, une incertitude sous-estimée sur $C_{L,\max}$. « Le krigeage n'apporte rien » veut dire « ce krigeage-ci, sur ce problème-ci ».
+\item \textbf{Une ablation imparfaite sur la sélection.} Les variantes « minimum » et « amélioration espérée » ne traitent pas la contrainte de la même manière ; leur comparaison mêle deux effets.
+\item \textbf{Un écart non expliqué.} Dans S2, le contrôle bat la boucle QUBO, et trois différences peuvent l'expliquer.
+\item \textbf{Vingt graines, quatorze tests.} Seuls les écarts les plus nets ($p<0{,}002$) sont établis.
+\item \textbf{Pas d'amélioration de l'hypervolume.} Le critère multi-objectif de référence n'a pas été essayé.
+\end{itemize}
+
+\section{Ce que ce lot change pour la suite de la V3}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Lot & Conséquence \\
+\midrule
+L2 (grande grille) & reprendre l'ablation à l'identique ; \code{bayes\_loop} accepte déjà d'autres tailles de grille. Vérifier d'abord si le poids de pénalité 25 reste dans la bonne zone. \\
+L3 (robustesse physique) & devient prioritaire : $C_{L,\max}$ est la grandeur dont tout dépend, et c'est la moins bien prédite. Un $C_{L,\max}$ plus régulier peut changer tout le classement des méthodes. \\
+L4 (QAOA bruité) & inchangé. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{pistes}[ : par ordre de priorité]
+\begin{enumerate}
+\item Expliquer l'écart dans S2 entre le contrôle et la boucle QUBO (un élément à la fois).
+\item Refaire le chapitre~\ref{ch:diagnostic} avec le $C_{L,\max}$ du lot L3.
+\item Régler le poids de la pénalité au fil de la boucle, plutôt qu'à la main.
+\item Compléter l'ablation : « amélioration espérée + pénalité de la boucle QUBO », pour séparer sélection et contrainte.
+\item Mieux régler le krigeage (plusieurs départs, noyaux pour variables entières de SMT) avant de conclure définitivement sur le modèle.
+\item Coder l'amélioration espérée de l'hypervolume.
+\end{enumerate}
+\end{pistes}

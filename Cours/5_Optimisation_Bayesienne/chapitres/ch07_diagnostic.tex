@@ -1,0 +1,143 @@
+\chapter{Ce qui explique les résultats : la contrainte de manœuvre}\label{ch:diagnostic}
+\iterbanner{V3}
+
+Le chapitre précédent laisse deux questions. Pourquoi les variantes à contrainte stricte échouent-elles ? Et pourquoi le krigeage, plus précis sur un cas jouet, n'aide-t-il pas ? Les deux diagnostics de \code{optim/diagnostic\_l1.py} y répondent.
+
+\section{Le front est au bord de la contrainte}
+Les 4 profils du front de S1 ont un $C_{L,\max}$ de 1,20 à 1,34, pour une exigence de 1,2. Ce n'est pas un hasard : un nez aigu réduit la SER et décroche tôt, donc les meilleurs compromis sont ceux qui tiennent la manœuvre de justesse (cours d'optimisation, chapitre V2).
+
+Or les modèles de $C_{L,\max}$ sont imprécis à cet endroit. Entraînons les trois modèles sur \emph{toute} la table (le cas le plus favorable) et regardons ce qu'ils prédisent pour ces 4 profils :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{ccccc}
+\toprule
+profil $(m;\ p;\ t;\ I)$ & simulé & modèle affine & modèle quadratique & krigeage \\
+\midrule
+2~\% ; 0,45 ; 8~\% ; 4 & 1,30 & 1,24 & $1{,}11\pm0{,}15$ & $1{,}17\pm0{,}02$ \\
+2~\% ; 0,55 ; 8~\% ; 4 & 1,32 & 1,23 & $1{,}13\pm0{,}15$ & $1{,}16\pm0{,}03$ \\
+4~\% ; 0,55 ; 12~\% ; 2 & 1,20 & 1,26 & $1{,}12\pm0{,}15$ & $1{,}04\pm0{,}03$ \\
+5~\% ; 0,45 ; 10~\% ; 2 & 1,34 & 1,33 & $1{,}06\pm0{,}15$ & $1{,}06\pm0{,}03$ \\
+\midrule
+verdict sur le front & faisables & faisables & infaisables & infaisables \\
+pénalité subie & & 0 & 0,69 à 0,83 & 0,92 à 1,00 \\
+erreur moyenne sur la grille & & 0,19 & 0,14 & \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize Pénalité : $75\max(1{,}2-\widehat{C_{L,\max}},0)^2$ pour le modèle affine (boucle QUBO), $1-\mathrm{PoF}$ pour les deux autres ; à comparer à l'étendue des objectifs normalisés, de l'ordre de 1.}
+\end{center}
+
+\begin{resultat}
+Le modèle affine est le plus grossier des trois (erreur moyenne de 0,19 contre 0,14 pour le quadratique), mais c'est le seul qui laisse passer les quatre profils du front. Les deux modèles plus précis en moyenne les prédisent infaisables ; le krigeage en est même presque certain. Une méthode qui leur fait confiance ne simule jamais ces profils, donc ne les trouve jamais.
+\end{resultat}
+
+\begin{projet}
+La boucle QUBO utilise un modèle affine de $C_{L,\max}$ par \emph{nécessité} : une contrainte doit être de degré~1 pour que sa pénalité reste quadratique (cours d'optimisation, chapitre sur la boucle). Cette limitation de la formulation se trouve être un avantage ici : le modèle affine est optimiste près du front (il prédit 84~\% de profils faisables sur la grille, contre 77~\% en réalité). On parlera dans la suite de traitement \emph{lâche} de la contrainte.
+\end{projet}
+
+\section{Premier diagnostic : combien de profils infaisables faut-il oser simuler ?}
+Sur la grille, 23~\% des profils violent la contrainte de manœuvre. Pour chaque méthode, on mesure la part des profils \emph{proposés} (hors les 10 initiaux) qui la violent, et le nombre de simulations pour retrouver le front. Pour la boucle QUBO, on fait varier le poids de la pénalité (25 dans la V2).
+
+\begin{figure}[htbp]
+\centering
+\input{figures/diag_contrainte}
+\caption{Part des profils proposés qui violent la contrainte de manœuvre, et nombre médian de simulations pour retrouver le front (20 graines). Carrés : boucle QUBO, pénalité de poids 2,5 (1), 25 (2, réglage V2), 250 (3), sans contrainte (4). Disques : quadratique + minimum, avec la pénalité de la boucle QUBO (5), la pénalité probabiliste stricte (6), sans contrainte (7). Triangles : quadratique + EI, avec probabilité de faisabilité (8), sans contrainte (9). Tirets : part des profils infaisables sur la grille (23~\%).}\label{fig:diag-contrainte}
+\end{figure}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{S1} & \multicolumn{3}{c}{S2} \\
+ & violent & médiane & réussite & violent & médiane & réussite \\
+\midrule
+boucle QUBO, sans contrainte & 71~\% & 112,5 & 100~\% & 52~\% & 147,5 & 100~\% \\
+boucle QUBO, poids 2,5 & 55~\% & 85 & 100~\% & 44~\% & \textbf{110} & 100~\% \\
+boucle QUBO, poids 25 (V2) & 45~\% & \textbf{75} & 100~\% & 33~\% & 142,5 & 100~\% \\
+boucle QUBO, poids 250 & 32~\% & 107,5 & 75~\% & 24~\% & --- & 25~\% \\
+\midrule
+quadratique + minimum, sans contrainte & 70~\% & 120 & 100~\% & 56~\% & 125 & 100~\% \\
+quadratique + minimum, pénalité QUBO & 41~\% & \textbf{75} & 100~\% & 38~\% & \textbf{95} & 100~\% \\
+quadratique + minimum, stricte & 8~\% & --- & 0~\% & 8~\% & --- & 0~\% \\
+\midrule
+quadratique + EI, sans contrainte & 78~\% & 115 & 100~\% & 53~\% & 152,5 & 100~\% \\
+quadratique + EI, probabilité de faisabilité & 58~\% & 85 & 100~\% & 41~\% & 117,5 & 100~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Lecture.}
+\begin{itemize}
+\item \textbf{Trop strict, on échoue.} La variante qui ne propose que 8~\% de profils infaisables ne retrouve jamais le front. La boucle QUBO avec une pénalité dix fois plus forte tombe à 75~\% de réussite dans S1 et 25~\% dans S2.
+\item \textbf{Sans contrainte, on réussit, mais plus lentement.} Ignorer la manœuvre dans le modèle coûte 30 à 60~\% de simulations en plus dans cinq cas sur six (la boucle QUBO dans S2 fait exception : 147,5 contre 142,5) : on gaspille des simulations sur des profils nettement infaisables.
+\item \textbf{Les méthodes qui réussissent le mieux proposent 33 à 58~\% de profils infaisables}, soit une fois et demie à deux fois et demie leur part sur la grille. Elles vont chercher au bord de la contrainte, là où est le front.
+\item \textbf{Le réglage V2 n'est pas optimal partout.} Le poids 25 est le meilleur dans S1, mais dans S2 un poids dix fois plus faible donne 110 simulations au lieu de 142,5.
+\end{itemize}
+
+\begin{resultat}
+Le succès de la boucle QUBO tient à deux choses qui ne doivent rien au calcul quantique : un modèle affine de la contrainte, optimiste près du front, et un poids de pénalité dans la bonne zone. Ce poids a été choisi en V1 pour une autre contrainte ($C_L\ge0{,}3$) ; qu'il convienne à la V2 n'était pas garanti.
+\end{resultat}
+
+\section{Second diagnostic : le krigeage prédit-il mieux ?}
+On tire $n$ profils au hasard parmi ceux dont XFOIL a convergé, on entraîne les deux modèles, et on mesure l'erreur sur tous les autres profils (scénario S1, 10 tirages par taille). L'erreur est rapportée à l'écart-type de la grandeur : 1 correspond à un modèle qui prédirait la moyenne partout, 0 à un modèle parfait.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/diag_qualite}
+\caption{Erreur de prédiction relative (médiane sur 10 tirages) selon le nombre de profils d'entraînement.}\label{fig:diag-qualite}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{erreur relative, $n=160$} & \multicolumn{2}{c}{erreurs dans $\pm2s$, $n=160$} \\
+ & quadratique & krigeage & quadratique & krigeage \\
+\midrule
+traînée $C_D$ & 0,78 & 0,76 & 98~\% & 91~\% \\
+SER & 0,07 & \textbf{0,02} & 95~\% & 94~\% \\
+$C_{L,\max}$ & \textbf{0,54} & 0,68 & 96~\% & 85~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Lecture.}
+\begin{itemize}
+\item \textbf{La SER} est une fonction lisse : le krigeage la prédit quatre fois mieux. Mais le modèle quadratique la prédit déjà très bien (erreur de 7~\%) : il n'y a presque rien à gagner.
+\item \textbf{La traînée} est mal prédite par les deux modèles (erreur de 76 à 78~\%), et ajouter des données n'y change presque rien. L'erreur est dominée par quelques profils à traînée très élevée (décollement) et par les bascules de transition, qu'aucun des deux modèles ne capture.
+\item \textbf{$C_{L,\max}$}, la grandeur dont tout dépend, est \emph{moins bien} prédite par le krigeage que par le modèle quadratique, et le krigeage y est trop sûr de lui : 85~\% des erreurs dans $\pm2s$ au lieu de 95~\%.
+\end{itemize}
+
+\begin{resultat}
+Le krigeage n'est meilleur que là où ce n'est pas utile. Sur les deux grandeurs irrégulières, sa souplesse ne l'aide pas, et son incertitude est sous-estimée, ce qui fausse l'amélioration espérée et la probabilité de faisabilité.
+\end{resultat}
+
+\begin{piege}
+Ce constat vaut pour le krigeage \emph{tel que réglé ici} : noyau Matérn 5/2, un seul départ pour l'optimisation des hyperparamètres, variables entières traitées comme des réels. Que l'erreur sur $C_{L,\max}$ remonte entre 80 et 160 profils (0,63 puis 0,68) suggère que ce réglage n'est pas robuste. Un krigeage mieux réglé pourrait faire mieux ; on ne l'a pas vérifié.
+\end{piege}
+
+\section{Ce que ces diagnostics changent}
+\begin{itemize}
+\item Ils expliquent pourquoi H1 n'est pas confirmée : sur ce problème, le facteur limitant n'est pas la souplesse du modèle mais la façon d'approcher une contrainte mal prédite.
+\item Ils donnent une lecture plus précise de la V2 : la boucle QUBO réussit parce qu'elle combine des modèles simples et un traitement lâche de la contrainte, bien réglé. L'encodage binaire n'y est pour rien : le contrôle sans qubits fait aussi bien. La seule trace de la formulation QUBO dans ce succès est indirecte : c'est elle qui impose le modèle affine.
+\item Ils désignent le point faible de toute la chaîne : $C_{L,\max}$, estimé par la non-convergence d'XFOIL sur une rampe d'incidence. C'est l'objet du lot L3 de la fiche projet.
+\end{itemize}
+
+\exercices
+\begin{exercice}
+Pour le profil $(4~\%;\ 0{,}55;\ 12~\%;\ I=2)$ du front, le modèle quadratique prédit $C_{L,\max}=1{,}12\pm0{,}15$ et le krigeage $1{,}04\pm0{,}03$. Calculer les deux probabilités de faisabilité. Lequel des deux modèles laisse une chance à ce profil avec le critère $\mathrm{EI}\times\mathrm{PoF}$ ? Qu'en déduire sur le danger d'une incertitude sous-estimée ?
+\end{exercice}
+\begin{exercice}
+Pourquoi une erreur relative de 0,78 sur la traînée n'empêche-t-elle pas les méthodes de retrouver le front ? (Indication : le front se joue parmi les profils de faible traînée ; que mesure l'erreur quadratique moyenne ?)
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item \textbf{Régler automatiquement le poids de la pénalité} au fil de la boucle, par exemple en visant une part cible de profils proposés infaisables, au lieu d'un poids fixe.
+\item Entraîner le modèle de $C_{L,\max}$ sur une grandeur plus régulière (le lot L3 propose le maximum de $C_L(\alpha)$ sur une rampe fine) et refaire ce chapitre.
+\item Remplacer le modèle de régression de $C_{L,\max}$ par un \emph{classifieur} faisable/infaisable, qui est la seule information dont la sélection a besoin.
+\item Mesurer l'erreur des modèles sur les seuls profils proches du front, plutôt que sur toute la grille.
+\end{itemize}
+\end{pistes}

@@ -5,3 +5,6 @@ matplotlib>=3.8
 # optionnel : vérification croisée de NSGA-II (optim/check_pymoo.py)
 pymoo>=0.6
 # hors pip : XFOIL (simulateur aéro de référence depuis la V2), voir README.md
+# lot L1 de la V3 (optim/bayes.py) : krigeage et régression bayésienne
+smt>=2.7
+scikit-learn>=1.4

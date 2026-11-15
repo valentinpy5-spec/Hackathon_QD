@@ -1,0 +1,91 @@
+\chapter{La question : quel est le vrai concurrent de la boucle QUBO ?}\label{ch:question}
+\iterbanner{V3}
+
+\section{Ce que la V2 a laissé ouvert}
+Sur le problème V2 (1\,024 profils, deux objectifs, contrainte de manœuvre), la boucle QUBO à solveur exact retrouve tout le front exact en 75 simulations dans le scénario S1 et 142 dans S2 (médianes sur 20 graines). NSGA-II n'y parvient presque jamais dans un budget de 250. La fiche projet en tire une réserve : cette comparaison oppose deux méthodes qui ne sont pas de même nature.
+
+\begin{definition}[ : méthode à modèle de substitution]
+Une méthode d'optimisation est dite \emph{à modèle de substitution} si, à chaque itération, elle (1) ajuste un modèle peu coûteux de la fonction à optimiser sur les points déjà simulés, puis (2) se sert de ce modèle pour choisir les prochains points à simuler.
+\end{definition}
+
+NSGA-II ne fait ni l'un ni l'autre : il recombine les meilleurs profils connus. La boucle QUBO, elle, est une méthode à modèle de substitution. Quand elle bat NSGA-II, on ne sait donc pas ce qui a gagné : la formulation QUBO, ou le simple fait d'avoir un modèle.
+
+\begin{projet}
+L'optimisation bayésienne est la méthode à modèle de substitution de référence pour les fonctions coûteuses, en particulier en conception aéronautique (krigeage, algorithme EGO, outils de l'ONERA et de l'ISAE comme la bibliothèque SMT). C'est le concurrent qu'un jury attend.
+\end{projet}
+
+\section{Deux choix indépendants}
+Toute méthode à modèle de substitution fait deux choix, qu'on peut séparer.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+ & Boucle QUBO (V2) & Optimisation bayésienne \\
+\midrule
+\textbf{Modèle} & polynôme quadratique ajusté par moindres carrés & krigeage (processus gaussien) : une prédiction \emph{et} une incertitude \\
+\textbf{Sélection} & minimum du modèle, trouvé en résolvant un QUBO & maximum d'un \emph{critère d'acquisition} qui pèse prédiction et incertitude \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.6cm]
+\node[flow] (init) {10 profils\\ tirés au hasard};
+\node[flow,right=of init,fill=cblue!8] (fit) {\textbf{modèle}\\ quadratique\\ ou krigeage};
+\node[flow,right=of fit,fill=corange!8] (sel) {\textbf{sélection}, pour chaque poids $w$ :\\ minimum de la prédiction\\ ou amélioration espérée};
+\node[flow,below=1.0cm of sel] (sim) {simuler les 5 profils\\ choisis (un par poids)};
+\node[flow,below=1.0cm of fit] (arch) {archive des\\ profils simulés};
+\draw[arr] (init) -- (fit); \draw[arr] (fit) -- (sel);
+\draw[arr] (sel) -- (sim); \draw[arr] (sim) -- (arch); \draw[arr] (arch) -- (fit);
+\end{tikzpicture}
+\caption{Le schéma commun. La boucle QUBO et l'optimisation bayésienne ne diffèrent que par les deux cases colorées.}\label{fig:schema}
+\end{figure}
+
+\section{Le plan d'expérience : une ablation}
+Pour savoir lequel des deux choix compte, on les croise. C'est une \emph{ablation} : on ne change qu'un élément à la fois.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{l>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+\toprule
+ & sélection : minimum de la prédiction & sélection : amélioration espérée \\
+\midrule
+modèle quadratique & contrôle (la boucle QUBO, sans encodage binaire) & effet de la sélection seule \\
+krigeage & effet du modèle seul & optimisation bayésienne \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+La case en haut à gauche sert de \textbf{contrôle} : elle fait la même chose que la boucle QUBO résolue exactement, mais par simple énumération de la grille, sans bits ni qubits auxiliaires. Si elle se comporte comme la boucle QUBO, les trois autres cases sont interprétables.
+
+\begin{resultat}[ : l'hypothèse testée]
+\textbf{H1} (fiche projet, V3) : \emph{sur le problème V2, l'optimisation bayésienne égale ou bat la boucle QUBO, parce que son modèle (un processus gaussien) est plus souple qu'un modèle quadratique.}
+\end{resultat}
+
+\section{Ce qui reste identique}
+Pour que la comparaison soit équitable, tout le reste est repris de la V2 (\code{optim/experiences\_v2.py}) :
+\begin{itemize}
+\item la table XFOIL des 1\,024 profils et la SER par méthode des moments ;
+\item le compteur de simulations \code{CountedProblem} : un profil déjà simulé n'est pas recompté ;
+\item les 10 profils initiaux, \emph{les mêmes} que ceux de la boucle QUBO pour une graine donnée ;
+\item les 5 poids $w\in\{0;\ 0{,}25;\ 0{,}5;\ 0{,}75;\ 1\}$ et un profil par poids et par itération ;
+\item le budget de 250 simulations, 20 graines, et les deux critères d'arrêt (front exact retrouvé, arrêt réaliste par stagnation de l'hypervolume).
+\end{itemize}
+Comme les graines et les points initiaux sont communs, les exécutions sont \emph{appariées} : on peut comparer deux méthodes graine par graine (chapitre~\ref{ch:resultats}).
+
+\exercices
+\begin{exercice}
+Classer ces méthodes en « à modèle de substitution » ou non : tirage aléatoire, NSGA-II, recuit simulé appliqué directement aux simulations, boucle QUBO, optimisation bayésienne. Pour celles qui en ont un, dire quel est le modèle.
+\end{exercice}
+\begin{exercice}
+Dans l'ablation, pourquoi ne suffit-il pas de comparer directement la boucle QUBO à l'optimisation bayésienne (les deux cases de la diagonale) ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter à l'ablation un troisième modèle (forêt aléatoire, réseau de neurones) pour voir si la conclusion sur le modèle se généralise.
+\item Refaire l'ablation sur la grande grille du lot L2 (16\,384 profils), où l'énumération de l'acquisition n'est plus gratuite.
+\end{itemize}
+\end{pistes}

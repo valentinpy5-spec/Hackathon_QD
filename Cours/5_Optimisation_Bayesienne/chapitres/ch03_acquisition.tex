@@ -1,0 +1,87 @@
+\chapter{L'amélioration espérée : choisir le prochain profil}\label{ch:acquisition}
+\iterbanner{V3}
+
+\section{Exploiter ou explorer}
+Une fois le modèle ajusté, il faut choisir le profil à simuler. Deux stratégies extrêmes :
+\begin{itemize}
+\item \textbf{exploiter} : simuler le profil dont la prédiction $\mu(x)$ est la plus basse. C'est ce que fait la boucle QUBO. Risque : si le modèle se trompe sur une région jamais visitée, on ne le saura jamais.
+\item \textbf{explorer} : simuler le profil dont l'incertitude $s(x)$ est la plus grande. On améliore le modèle partout, y compris là où il n'y a rien à gagner.
+\end{itemize}
+Un \emph{critère d'acquisition} combine les deux en un seul nombre par profil. On simule le profil qui le maximise.
+
+\section{L'amélioration espérée}
+On minimise une fonction $f$. Soit $f_{\min}$ la meilleure valeur déjà simulée. Pour un profil $x$ non simulé, le modèle dit $f(x)\sim\mathcal N(\mu,s^2)$. L'\emph{amélioration} qu'apporterait sa simulation est $\max(f_{\min}-f(x),\,0)$ : ce qu'on gagne s'il est meilleur, zéro sinon.
+
+\begin{definition}[ : amélioration espérée]
+\[
+\mathrm{EI}(x)=\mathbb E\big[\max(f_{\min}-f(x),\,0)\big]
+=(f_{\min}-\mu)\,\Phi(u)+s\,\varphi_{\mathcal N}(u),\qquad u=\frac{f_{\min}-\mu}{s},
+\]
+où $\Phi$ et $\varphi_{\mathcal N}$ sont la fonction de répartition et la densité de la loi normale centrée réduite.
+\end{definition}
+
+\paragraph{D'où vient la formule.} On écrit $f(x)=\mu+s\,\xi$ avec $\xi\sim\mathcal N(0,1)$. L'amélioration est non nulle quand $\xi<u$, et vaut alors $s(u-\xi)$ :
+\[
+\mathrm{EI}=s\int_{-\infty}^{u}(u-\xi)\,\varphi_{\mathcal N}(\xi)\,\dd\xi
+=s\,u\,\Phi(u)-s\int_{-\infty}^{u}\xi\,\varphi_{\mathcal N}(\xi)\,\dd\xi
+=s\,u\,\Phi(u)+s\,\varphi_{\mathcal N}(u),
+\]
+car $\varphi_{\mathcal N}'(\xi)=-\xi\,\varphi_{\mathcal N}(\xi)$. On retrouve la formule avec $s\,u=f_{\min}-\mu$.
+
+\begin{resultat}
+\begin{itemize}
+\item Le premier terme, $(f_{\min}-\mu)\Phi(u)$, est grand quand la prédiction est \emph{meilleure} que le record : c'est l'exploitation.
+\item Le second, $s\,\varphi_{\mathcal N}(u)$, est grand quand l'incertitude est grande : c'est l'exploration.
+\item $\mathrm{EI}\ge0$, et $\mathrm{EI}=0$ en un point déjà simulé sans bruit ($s=0$, $\mu\ge f_{\min}$) : on ne resimule jamais.
+\item Quand $s\to0$, $\mathrm{EI}\to\max(f_{\min}-\mu,0)$ : sans incertitude, l'amélioration espérée redonne la stratégie « minimum de la prédiction ».
+\end{itemize}
+\end{resultat}
+
+La figure~\ref{fig:gp1d} (en bas) montre le critère sur l'exemple à une variable. Il a deux bosses. Celle de droite entoure le minimum de la prédiction ($x\approx0{,}69$) : c'est l'exploitation. Celle de gauche, la plus haute, est au milieu de l'intervalle sans simulation ($x\approx-0{,}21$) : c'est l'exploration. La stratégie « minimum de la prédiction » simulerait $x\approx0{,}69$, près d'un minimum local déjà bien connu. L'amélioration espérée simule $x\approx-0{,}21$, à côté du vrai minimum global ($x\approx-0{,}24$), que le modèle ne voit pas encore.
+
+\section{L'algorithme EGO}
+L'optimisation bayésienne à un objectif, sous sa forme classique (\emph{Efficient Global Optimization}, Jones, Schonlau et Welch, 1998), est la boucle :
+\begin{enumerate}
+\item simuler quelques points initiaux ;
+\item ajuster le krigeage ;
+\item simuler le point qui maximise l'amélioration espérée ;
+\item recommencer en 2 jusqu'à épuisement du budget.
+\end{enumerate}
+
+\begin{projet}
+En variables continues, l'étape 3 est elle-même une optimisation difficile, car l'amélioration espérée a de nombreux maxima locaux (on la traite par descentes multiples). Notre espace de conception est une grille de 1\,024 profils : on calcule simplement le critère sur \emph{tous} les profils non simulés et on prend le meilleur. L'étape 3 coûte une prédiction du modèle sur la grille, soit quelques centièmes de seconde.
+\end{projet}
+
+\begin{codebox}[ : \code{optim/bayes.py}]
+\begin{lstlisting}
+def expected_improvement(mean, std, best):
+    """E[max(best - Y, 0)], Y ~ N(mean, std^2) : amelioration esperee pour une minimisation."""
+    std = np.maximum(std, 1e-12)
+    u = (best - mean) / std
+    return (best - mean) * norm.cdf(u) + std * norm.pdf(u)
+\end{lstlisting}
+Vérification : pour $\mu=f_{\min}$ et $s=1$, on doit trouver $\varphi_{\mathcal N}(0)=1/\sqrt{2\pi}\approx0{,}3989$.
+\end{codebox}
+
+\section{D'autres critères}
+L'amélioration espérée n'est pas le seul critère. Deux autres sont courants :
+\begin{itemize}
+\item la \textbf{borne de confiance inférieure}, $\mu(x)-\kappa\,s(x)$, à minimiser : simple, mais le poids $\kappa$ de l'exploration est à régler ;
+\item la \textbf{probabilité d'amélioration}, $\Phi(u)$ : elle ignore l'ampleur du gain et tend à trop exploiter.
+\end{itemize}
+On s'en tient à l'amélioration espérée, qui n'a pas de paramètre à régler.
+
+\exercices
+\begin{exercice}
+Deux profils non simulés ont pour prédictions $(\mu,s)=(0{,}50;\ 0{,}02)$ et $(0{,}60;\ 0{,}20)$, et le record est $f_{\min}=0{,}52$. Calculer l'amélioration espérée de chacun. Lequel simule-t-on ? Lequel aurait choisi la stratégie « minimum de la prédiction » ?
+\end{exercice}
+\begin{exercice}
+Montrer que l'amélioration espérée est croissante en $s$ à $\mu$ fixé, et décroissante en $\mu$ à $s$ fixé. (Indication : $\partial\mathrm{EI}/\partial s=\varphi_{\mathcal N}(u)$ et $\partial\mathrm{EI}/\partial\mu=-\Phi(u)$.)
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Essayer les critères de l'ONERA (WB2, WB2S), qui ajoutent à l'amélioration espérée un terme proportionnel à la prédiction pour faciliter sa maximisation en variables continues.
+\item Sur la grande grille du lot L2, mesurer à partir de quelle taille l'énumération du critère devient le poste de calcul dominant : c'est là que l'hypothèse H2 situe l'intérêt d'une sélection par QUBO.
+\end{itemize}
+\end{pistes}

@@ -28,6 +28,7 @@ la fiche projet et dans tous les cours.
    | [`Cours/2_SER/`](Cours/2_SER/Cours_SER.pdf) | SER 2D par optique physique, puis exacte par méthode des moments |
    | [`Cours/3_Optimisation_BiObjectif/`](Cours/3_Optimisation_BiObjectif/Cours_Optimisation_BiObjectif.pdf) | front de Pareto exact, NSGA-II, boucle QUBO bi-objectif, comparaisons |
    | [`Cours/4_Calcul_Quantique/`](Cours/4_Calcul_Quantique/Cours_Calcul_Quantique.pdf) | calcul quantique depuis zéro : qubit, circuits, QUBO, recuit, QAOA, montée en taille |
+   | [`Cours/5_Optimisation_Bayesienne/`](Cours/5_Optimisation_Bayesienne/Cours_Optimisation_Bayesienne.pdf) | V3, lot L1 : krigeage, amélioration espérée, contraintes ; la boucle QUBO face à l'optimisation bayésienne (hypothèse H1) |
 
    Chaque chapitre porte le bandeau de l'itération qui l'a écrit ; un ajout ultérieur
    apparaît dans un encadré « Évolution » de la couleur de l'itération. Exercices corrigés
@@ -43,7 +44,7 @@ la fiche projet et dans tous les cours.
 README.md                  ce fichier
 METHODE_DE_TRAVAIL.md      itérations, git, cours : comment contribuer
 Fiche_Projet/              journal des itérations (PDF + sources LaTeX)
-Cours/                     quatre cours (PDF + sources LaTeX + scripts de figures)
+Cours/                     cinq cours (PDF + sources LaTeX + scripts de figures)
 Code/                      code actif (dernière itération close : V2)
   aero/  ser/  optim/  quantique/   modules
   resultats/               tables et résultats de toutes les itérations
@@ -55,11 +56,14 @@ Documents/                 note d'intention du projet
 
 ```bash
 cd Code
-pip install -r requirements.txt   # NumPy, SciPy, Matplotlib, pymoo
+pip install -r requirements.txt   # NumPy, SciPy, Matplotlib, pymoo, SMT, scikit-learn
 ./installer_outils.sh             # Debian/Ubuntu : XFOIL et Xvfb locaux, sans droits admin
 python3 verifier_installation.py  # XFOIL, SER, boucle QUBO sur un exemple (quelques secondes)
 ```
 Compiler un cours ou la fiche : `tectonic <fichier>.tex` (ou `xelatex`, deux passes).
+Sous Windows, sans XFOIL : les expériences d'optimisation (V2, V3) tournent à partir des tables
+déjà calculées dans `Code/resultats/` ; tectonic s'installe en décompressant l'exécutable de sa
+[page de publication](https://github.com/tectonic-typesetting/tectonic/releases) dans `Code/.tools/`.
 Détails dans [`Code/README.md`](Code/README.md).
 
 ## Contribuer
