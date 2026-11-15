@@ -1,0 +1,176 @@
+\chapter{Le code actuel : la partie optimisation dans la chaîne}\label{ch:code-actuel}
+\iterbanner{V3}
+\input{../../Fiche_Projet/chaine_code}
+
+\begin{evolution}{V3}{pourquoi ce chapitre}Ce chapitre ouvre la V3, travail d'équipe. Il décrit le code d'optimisation \emph{tel qu'il tourne à la fin de la V2} : comment le problème est lu, comment chaque méthode est lancée et comptée, comment la boucle QUBO construit ses 14 qubits, et ce que contient le fichier de résultats. Le même schéma ouvre le chapitre équivalent des trois autres cours.\end{evolution}
+
+\section{La chaîne complète, et la place de l'optimisation}
+\begin{figure}[htbp]
+\centering
+\chainecode{optim}
+\caption{La chaîne de code à la fin de la V2. En trait épais, la partie optimisation. Elle définit la grille et assemble la simulation d'un profil (étape 1), puis compare les méthodes en lisant la table (étape 2). Elle est le seul client de la partie quantique.}\label{fig:chaine-optim}
+\end{figure}
+
+L'optimisation est au centre de la chaîne : c'est elle qui définit la grille (\code{SpaceV2}), qui appelle l'aéro et la SER pour simuler un profil (\code{simulate\_v2}), puis qui lit la table pour comparer les méthodes (\code{experiences\_v2}). Le point à retenir : \textbf{pendant l'optimisation, aucune simulation n'est lancée}. Les 1\,024 profils ont été simulés une fois ; une méthode « simule » un profil en lisant sa ligne, et le compteur enregistre qu'elle l'a fait. C'est ce qui rend la comparaison exacte (même table pour tous, front exact connu) et rapide (20 graines par méthode).
+
+\begin{projet}
+L'optimisation reçoit de l'aéro $C_D$, $C_{L,\max}$ et la faisabilité ; de la SER, la SER moyenne d'un secteur. Elle confie au quantique un QUBO $(Q,c)$ et en reçoit une liste de profils classés. Elle produit \code{pipeline\_V2.json}, que relisent les figures des cours et la fiche projet.
+\end{projet}
+
+\section{Les fichiers}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}X}
+\toprule
+Fichier & Contenu \\
+\midrule
+\code{optim/problem\_v2.py} & grille \code{SpaceV2}, point de vol \code{CaseV2}, \code{simulate\_v2}, \code{build\_table\_v2}, \code{with\_objective}, \code{KEYS} \\
+\code{optim/problem.py} & \code{CountedProblem}, le compteur (le reste du fichier est le problème V1) \\
+\code{optim/pareto.py} & dominance, tri non dominé, encombrement, \code{pareto\_front}, \code{hypervolume\_2d}, \code{Normalizer} \\
+\code{optim/nsga2.py} & NSGA-II pour variables entières (chapitre~\ref{ch:nsga}) \\
+\code{optim/qubo\_loop.py} & boucle QUBO : modèles, pénalités, \code{build\_qubo}, \code{ranked\_candidates}, \code{qubo\_loop} (chapitre~\ref{ch:boucle}) \\
+\code{optim/experiences\_v2.py} & comparaison V2 : toutes les méthodes, 20 graines, deux critères d'arrêt \\
+\code{optim/experiences\_pipeline.py}, \code{check\_pymoo.py} & comparaison V1 et vérification contre pymoo, gardées pour les figures V1 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le problème vu par une méthode}
+\subsection{La table et l'objectif}
+\code{build\_table\_v2()} rend une liste de 1\,024 dictionnaires, un par profil (colonnes décrites dans le cours d'aérodynamique). \code{with\_objective(table, "S1", "MoM")} en fait une copie où la colonne \code{SER\_db} contient la SER par méthode des moments du secteur choisi. Les deux objectifs, tous deux à minimiser, sont alors \code{CD\_counts} et \code{SER\_db} ; la violation des contraintes est \code{cv}.
+
+\subsection{Le compteur}
+\begin{lstlisting}
+class CountedProblem:
+    def __init__(self, table, space=None, keys=("im", "ip", "it")):
+        self.table = {tuple(r[k] for k in keys): r for r in table}
+        self.seen = []          # ordre des simulations distinctes
+        self._set = set()
+
+    def __call__(self, idx):    # "simuler" le profil idx = lire sa ligne
+        idx = tuple(int(i) for i in idx)
+        if idx not in self._set:
+            self._set.add(idx)
+            self.seen.append(idx)
+        return self.table[idx]
+
+    def F(self, idx):           # objectifs et violation, pour NSGA-II
+        r = self(idx)
+        return np.array([r["CD_counts"], r["SER_db"]]), r["cv"]
+\end{lstlisting}
+En V2, on le crée avec \code{keys=KEYS}, soit \code{("im", "ip", "it", "iI")}. \code{n\_sims} est le nombre de profils \emph{distincts} lus : relire un profil déjà vu ne coûte rien, comme si les résultats étaient gardés en mémoire. C'est la mesure de coût de toute la comparaison.
+
+\begin{piege}
+\code{problem.table} contient tous les profils, y compris ceux qu'une méthode n'a pas encore « simulés ». Une méthode ne doit lire que les profils qu'elle a demandés par \code{problem(idx)} ou \code{problem.F(idx)}. La boucle QUBO respecte cette règle en ne relisant que \code{problem.seen}. Un nouvel algorithme (optimisation bayésienne du lot L1, par exemple) doit faire de même, sinon la comparaison est faussée sans que rien ne le signale.
+\end{piege}
+
+\subsection{La référence : le front exact}
+\code{setup(secteur, source)} prépare tout ce dont les mesures ont besoin :
+\begin{lstlisting}
+def setup(sector, source="MoM"):
+    T = with_objective(build_table_v2(), sector, source)
+    feas = [r for r in T if r["feasible"]]
+    F = np.array([[r["CD_counts"], r["SER_db"]] for r in feas])
+    fr = pareto_front(F)                                  # front exact
+    exact = {tuple(feas[i][k] for k in KEYS) for i in fr} # ses profils
+    norm = Normalizer(F)                                  # objectifs -> [0, 1]
+    ref = np.array([1.1, 1.1])                            # point de reference
+    return T, feas, F, fr, exact, norm, ref, hypervolume_2d(norm(F[fr]), ref)
+\end{lstlisting}
+Après chaque génération ou itération, \code{state} mesure la fraction du front exact déjà simulée et l'hypervolume des profils faisables simulés, rapporté à celui du front exact. Ces deux nombres, avec \code{n\_sims}, forment une ligne de la trace d'une exécution.
+
+\section{Comment chaque méthode est lancée}
+\subsection{Tirage aléatoire}
+\code{run\_random} lit les profils dans un ordre aléatoire jusqu'à avoir vu tout le front exact, et note l'état tous les 8 profils. C'est la référence « sans intelligence ».
+
+\subsection{NSGA-II}
+\begin{lstlisting}
+nsga2(pb, pop_size=N, n_gen=1000 // N + 30, seed=s, n_levels=SP.n_levels,
+      max_sims=budget, callback=lambda g, p: tr.append((p.n_sims, *state(p, ...))))
+\end{lstlisting}
+avec $N=8$ ou 16, \code{n\_levels}$=(8,4,8,4)$ et un budget de 250 profils. Les indices sont relâchés en réels dans $[-0{,}5;\,L-0{,}5]$, croisés (SBX) et mutés, puis arrondis ; un enfant déjà présent est écarté. Les contraintes passent par la règle de Deb sur \code{cv} (chapitre~\ref{ch:nsga}).
+
+\subsection{La boucle QUBO}
+\begin{lstlisting}
+CONS = {"t_min_index": True, "t_var": 2, "cl_min": 1.2}
+qubo_loop(pb, n_init=10, solver=solver, seed=s, budget=budget, cons=CONS,
+          stop_when=cb, bits=SP.bits, levels=SP.n_levels, keys=KEYS, lin_col="CLmax")
+\end{lstlisting}
+\code{solver} vaut \code{"exact"}, \code{"sa"} (recuit simulé) ou \code{"qaoa"}. Une exécution se déroule ainsi :
+\begin{enumerate}
+\item \textbf{Plan initial} : 10 profils tirés au hasard.
+\item \textbf{Modèles.} Sur les profils faisables déjà vus, deux modèles quadratiques à 15 coefficients ($1+4+10$ monômes en $z\in[-1,1]^4$) pour $C_D$ et la SER ; sur ceux dont la croisière a convergé et dont \code{CLmax} est fini, un modèle \emph{linéaire} de $C_{L,\max}$. Chaque objectif est divisé par son étendue observée. S'il y a moins de 4 profils faisables, la boucle explore au hasard (2 profils).
+\item \textbf{Un QUBO par poids.} Pour $w\in\{0;\,0{,}25;\,0{,}5;\,0{,}75;\,1\}$, \code{build\_qubo} écrit $w\,\hat C_D+(1-w)\,\widehat{\rm SER}$ plus deux pénalités (tableau ci-dessous).
+\item \textbf{Candidats.} \code{ranked\_candidates} résout chaque QUBO (partie quantique) et rend les profils classés ; on garde, pour chaque poids, le meilleur qui n'a pas encore été simulé. Une itération simule donc jusqu'à 5 profils.
+\item \textbf{Arrêt.} Budget atteint, ou \code{stop\_when} : dans \code{experiences\_v2}, on continue jusqu'à ce que le front soit complet \emph{et} que l'hypervolume ait stagné 3 itérations, pour pouvoir mesurer les deux critères d'arrêt sur la même exécution.
+\end{enumerate}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{clp{8.2cm}}
+\toprule
+Qubits & Rôle & Origine \\
+\midrule
+0--2 & $i_m$ (3 bits) & variables de conception, poids faible en premier \\
+3--4 & $i_p$ (2 bits) & \\
+5--7 & $i_t$ (3 bits) & \\
+8--9 & $i_I$ (2 bits) & \\
+10 & $y$ auxiliaire & interdit $i_t=0$ ($t=6~\%<t_{\min}$), réduction de Rosenberg, $P=3$ \\
+11--13 & $s$ d'écart & $\hat C_{L,\max}(b)-1{,}2-s=0$ au carré, poids $3\times25=75$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{codebox}[ : ce que la boucle demande au quantique]
+\code{ranked\_candidates(Q, c, solver, rng, bits=SP.bits)} : un QUBO de 14 qubits entre, une liste d'indices $(i_m,i_p,i_t,i_I)$ classés sort ; les qubits 10 à 13 sont simplement ignorés au décodage. Toute autre méthode de résolution (vrai processeur, autre bibliothèque) peut être branchée là sans rien changer d'autre.
+\end{codebox}
+
+\section{La comparaison : \code{experiences\_v2}}
+\code{python3 -m optim.experiences\_v2 [MoM|PO] [rapide]} construit la liste des exécutions (méthode, secteur, source, graine, budget) : 20 graines par méthode et par secteur, 5 pour QAOA, avec un budget de 250 profils (150 pour QAOA, environ 25~s par itération à 14 qubits). Les exécutions tournent sur 10 processus. Pour chaque secteur, le résultat contient :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}X}
+\toprule
+Clé de \code{pipeline\_V2.json} & Contenu \\
+\midrule
+\code{n\_feasible}, \code{n\_front}, \code{front} & 702 profils faisables ; front exact (4 profils en S1, 10 en S2) et ses caractéristiques \\
+\code{feasible} & $(C_D, {\rm SER}, t, I, m)$ de chaque profil faisable, pour les figures \\
+\code{random}, \code{nsga2\_8}, \code{nsga2\_16}, \code{loop\_exact}, \code{loop\_sa}, \code{loop\_qaoa} & une trace par graine : liste de \code{[n\_sims, fraction du front, hypervolume relatif]} \\
+\code{summary} & par méthode : quartiles du nombre de profils pour le front complet (\code{full\_front}) et pour 99~\% de l'hypervolume (\code{hv99}), taux de réussite, et point d'arrêt réaliste (\code{stop\_sims}, \code{stop\_frac}, \code{stop\_hv}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+L'arrêt réaliste (\code{stop\_point}) est le premier relevé où l'hypervolume n'a pas progressé depuis 5 générations (NSGA-II) ou 3 itérations (boucle).
+
+\begin{piege}
+\begin{itemize}
+\item Le mode \code{rapide} \emph{réécrit} \code{pipeline\_V2.json} avec moins de graines : pour tester une installation, utiliser \code{verifier\_installation.py}.
+\item Le front exact n'existe que parce que la table est exhaustive. Sur une grille trop grande pour être simulée entièrement, seul l'arrêt réaliste reste mesurable.
+\item Une médiane « --- » dans les résultats signifie que plus de la moitié des graines n'ont pas complété le front dans le budget, pas que la méthode a planté.
+\end{itemize}
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item Toutes les méthodes lisent la même table à travers \code{CountedProblem}, qui compte les profils distincts : c'est la mesure de coût.
+\item La boucle QUBO V2 travaille sur 14 qubits : 10 de conception, 1 auxiliaire, 3 d'écart. Elle ne dépend du quantique que par \code{ranked\_candidates}.
+\item \code{experiences\_v2} produit les traces et les résumés de \code{pipeline\_V2.json}, relus par les figures et la fiche.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Décrire une itération de la boucle QUBO après 30 simulations : combien de coefficients faut-il ajuster, combien de QUBO sont construits, combien de profils au plus sont ajoutés ? Pourquoi un poids peut-il n'ajouter aucun profil ?
+\end{exercice}
+
+\begin{exercice}
+Pour le lot L2 (16\,384 profils), on ne veut plus tout simuler à l'avance. Comment modifier \code{CountedProblem} pour lancer \code{simulate\_v2} à la demande, sans toucher à \code{nsga2} ni à \code{qubo\_loop} ? Que devient la mesure « front exact retrouvé » ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter l'optimisation bayésienne comme sixième méthode (lot L1) : une fonction \code{run("bayes", ...)} qui remplit la même trace.
+\item Rendre \code{CountedProblem} paresseux, avec un cache disque, pour les grandes grilles (lot L2).
+\item Sortir les réglages (\code{CONS}, budgets, nombre de graines) dans un fichier de configuration par itération.
+\end{itemize}
+\end{pistes}

@@ -188,6 +188,8 @@ Clore la V2 (6 novembre 2026, code et résultats figés dans \path{Code/archives
 \iterchapter{V3}{Visée : un concurrent équitable, un problème plus grand}\label{ch:v3}
 \paragraph{Statut.} Ouverte le 6 novembre 2026. Au 15 novembre, le lot L1 est traité (section~\ref{sec:v3-l1}) ; L2 à L5 ne sont pas commencés. Ce chapitre fixe la visée et sera complété au fil de l'itération (résultats, enseignements et décision, comme pour les itérations précédentes).
 
+\paragraph{Fait.} Point de départ commun de l'équipe : chaque cours se termine par un chapitre « Le code actuel » \iterbadge{V3}, qui décrit le code de fin de V2, ce que la partie utilise, reçoit et fournit, avec le même schéma de la chaîne (\path{Fiche_Projet/chaine_code.tex}, à tenir à jour si la chaîne change).
+
 \paragraph{Pourquoi une V3.} La V2 laisse trois limites :
 \begin{enumerate}
 \item \textbf{Le concurrent n'est pas le bon.} NSGA-II n'utilise aucun modèle ; la boucle QUBO est une méthode \emph{à modèle de substitution}, comme l'optimisation bayésienne. Tant qu'on ne compare pas les deux, on ne sait pas si l'avantage vient de la formulation QUBO ou du simple fait d'avoir un modèle.
