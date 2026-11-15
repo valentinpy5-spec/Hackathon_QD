@@ -1,0 +1,153 @@
+\chapter{Le code actuel : la partie aérodynamique dans la chaîne}\label{ch:code-actuel}
+\iterbanner{V3}
+\input{../../Fiche_Projet/chaine_code}
+
+\begin{evolution}{V3}{pourquoi ce chapitre}Ce chapitre ouvre la V3, travail d'équipe. Il ne présente pas de physique nouvelle : il décrit le code \emph{tel qu'il tourne à la fin de la V2}, ce que la partie aéro utilise réellement, ce qu'elle reçoit et ce qu'elle fournit aux autres parties. Le même schéma de la chaîne ouvre le chapitre équivalent des trois autres cours (SER, optimisation, quantique), avec chaque fois la partie concernée mise en évidence.\end{evolution}
+
+\section{La chaîne complète, et la place de l'aéro}
+\begin{figure}[htbp]
+\centering
+\chainecode{aero}
+\caption{La chaîne de code à la fin de la V2. En trait épais, la partie aérodynamique. Le calcul se fait en deux temps : on simule une fois les 1\,024 profils (étape 1, environ 6~minutes sur 10 cœurs), puis les méthodes d'optimisation lisent la table en comptant les profils qu'elles consultent (étape 2).}\label{fig:chaine-aero}
+\end{figure}
+
+L'organisation en deux temps est le point le plus important pour comprendre le code. On ne relance pas XFOIL pendant l'optimisation : toutes les simulations sont faites une fois, rangées dans \code{resultats/base\_V2.csv}, et l'optimiseur « simule » un profil en lisant sa ligne. Le compteur \code{CountedProblem} (cours d'optimisation) compte chaque profil distinct lu. C'est possible parce que la grille est petite, et c'est ce qui permet de connaître le front \emph{exact} et de rejouer 20 graines de chaque méthode en quelques minutes.
+
+\begin{projet}
+L'aéro fournit trois choses au reste de la chaîne : la traînée de croisière $C_D$ (premier objectif), l'incidence de croisière $\alpha$ (l'attitude sous laquelle le radar voit le profil, entrée de la SER) et la portance maximale $C_{L,\max}$ (contrainte de manœuvre). Elle reçoit seulement les quatre paramètres de forme $(m,p,t,I)$.
+\end{projet}
+
+\section{Ce qui sert, ce qui ne sert plus}
+Le dossier \code{Code/aero/} contient deux modèles : le modèle rapide écrit en V0 (chapitres~\ref{ch:panneaux} à \ref{ch:modele}) et le pilotage d'XFOIL. Depuis la V2, seul le second produit des résultats d'optimisation.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{4.4cm}}
+\toprule
+Fichier & Rôle & Utilisé en V2 par \\
+\midrule
+\code{naca4.py} & géométrie NACA 4 chiffres ; série modifiée \code{naca4\_modified} (chapitre~\ref{ch:v2}) & \code{simulate\_v2}, la SER (optique physique et moments) \\
+\code{xfoil\_runner.py} & écrit le script XFOIL, lance XFOIL, relit la polaire & \code{simulate\_v2} \\
+\code{panel.py}, \code{boundary\_\-layer.py}, \code{model.py} & modèle rapide : panneaux, Thwaites, Michel, Head, Squire-Young & figures V0--V1 de ce cours, problème V1 (\code{optim/problem.py}) \\
+\code{design\_space.py} & grille V1 $8\times8\times8$, encodage 9 bits & V1 seulement \\
+\code{geometry\_export.py} & extrusion 2,5D en STL & personne ; à reprendre pour une SER 3D \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Le modèle rapide n'est pas supprimé : il reste l'outil de développement (10~ms par profil, sans dépendance externe) et la référence pédagogique des chapitres~\ref{ch:panneaux} à \ref{ch:validation}.
+
+\section{Le parcours d'un profil : \code{simulate\_v2}}
+La fonction qui simule un profil est dans \code{optim/problem\_v2.py}, car elle assemble l'aéro et la SER. Voici sa partie aérodynamique, sans les lignes d'écriture du résultat :
+\begin{lstlisting}
+def simulate_v2(idx, space=None, case=None):
+    m, p, t, I = space.values(idx)                   # indices -> valeurs physiques
+    X, Y = naca4_modified(m, p, t, I, case.T, n_half=120)
+    # 1. croisiere : portance imposee C_L = 0,4 -> alpha et C_D
+    cr = run_xfoil(m, p, t, [], case.Re, coords=(X, Y), cls=[case.CL_cruise], timeout=20)
+    ok = len(cr["alpha"]) == 1
+    # 2. manoeuvre : rampe d'incidence 4..14 deg -> C_L,max
+    ma = run_xfoil(m, p, t, list(case.manoeuvre_alphas), case.Re, coords=(X, Y), timeout=30)
+    clmax = float(np.max(ma["CL"])) if len(ma["CL"]) else np.nan
+\end{lstlisting}
+Étape par étape :
+\begin{enumerate}
+\item \textbf{Les indices deviennent des valeurs.} \code{SpaceV2.values} transforme les indices entiers $(i_m,i_p,i_t,i_I)$ en $(m,p,t,I)$ : $m\in\{0,\dots,7~\%\}$, $p\in\{0{,}25;0{,}35;0{,}45;0{,}55\}$, $t\in\{6,8,\dots,20~\%\}$, $I\in\{2,4,6,8\}$. La position d'épaisseur maximale $T=0{,}3$ est fixée dans \code{CaseV2}.
+\item \textbf{La géométrie.} \code{naca4\_modified} rend 241 points (\code{n\_half}=120), du bord de fuite par l'extrados jusqu'au bord de fuite par l'intrados, comme XFOIL l'attend. XFOIL les redistribue lui-même (commande \code{PANE}).
+\item \textbf{La croisière.} Un appel XFOIL à portance imposée $C_L=0{,}4$ rend l'incidence $\alpha$ et la traînée $C_D$. Si XFOIL ne converge pas, la polaire est vide : \code{ok} est faux, $\alpha$ et $C_D$ valent \code{nan}.
+\item \textbf{La manœuvre.} Un second appel parcourt $\alpha=4,6,8,9,\dots,14^\circ$. Les incidences non convergées sont simplement absentes de la polaire. $C_{L,\max}$ est le plus grand $C_L$ \emph{parmi les points convergés} ; il vaut \code{nan} si aucun n'a convergé.
+\item \textbf{La SER.} Avec l'incidence de croisière (ou 0 si la croisière a échoué), on calcule la SER des deux secteurs par optique physique (cours SER). La SER exacte, plus coûteuse, est calculée à part (figure~\ref{fig:chaine-aero}).
+\item \textbf{Les contraintes.} Trois écarts sont calculés, et seule leur partie positive compte :
+\[
+g=\big(t_{\min}-t,\;\; 1{,}2-C_{L,\max},\;\; \text{0 si la croisière a convergé, 1 sinon}\big),\qquad
+\code{cv}=\sum_k\max(0,g_k).
+\]
+Un profil est faisable (\code{feasible}) si $\code{cv}=0$. Un $C_{L,\max}$ manquant compte comme 0, donc comme une violation de 1,2.
+\end{enumerate}
+
+\begin{codebox}[ : \code{CaseV2}, le point de vol]
+$\Re=3\cdot10^6$, $C_L$ de croisière 0,4, exigence $C_{L,\max}\ge1{,}2$, rampe de manœuvre $(4,6,8,9,10,11,12,13,14)^\circ$, $t_{\min}=8~\%$, $T=0{,}3$, secteurs radar S1 $[-20^\circ,20^\circ]$ et S2 $[-60^\circ,0^\circ]$. Changer une de ces valeurs change le problème : il faut alors reconstruire la table (supprimer \code{base\_V2.csv}).
+\end{codebox}
+
+\section{À l'intérieur de \code{run\_xfoil}}
+XFOIL est un programme interactif : on lui envoie des commandes au clavier. \code{run\_xfoil} écrit ces commandes dans un texte et les lui passe sur l'entrée standard, dans un dossier temporaire :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{ll}
+\toprule
+Commande & Effet \\
+\midrule
+\code{LOAD foil.dat}, \code{PANE} & charge le contour, le redécoupe en 160 panneaux \\
+\code{OPER}, \code{VISC 3000000} & mode calcul, visqueux à $\Re=3\cdot10^6$ \\
+\code{ITER 200} & jusqu'à 200 itérations du couplage visqueux par point \\
+\code{VPAR}, \code{N 9}, \code{XTR 1 1} & transition $e^N$ avec $N=9$, sans déclenchement forcé \\
+\code{PACC polar.txt} & écrit chaque point convergé dans \code{polar.txt} \\
+\code{CL 0.4000} ou \code{ALFA 4.000}, \dots & un point à portance ou à incidence imposée \\
+\code{QUIT} & fin \\
+\bottomrule
+\end{tabular}
+\end{center}
+Puis \code{parse\_polar} relit \code{polar.txt} et rend un dictionnaire de tableaux \code{alpha}, \code{CL}, \code{CD}, \code{CDp}, \code{CM}, \code{xtr\_up}, \code{xtr\_lo}, une ligne par point convergé.
+
+\begin{piege}
+\begin{itemize}
+\item \textbf{Les tableaux n'ont pas la longueur demandée.} Un point non convergé n'est pas écrit : demander 9 incidences peut rendre 6 lignes. Toujours relire \code{alpha} avant d'interpréter.
+\item \textbf{XFOIL peut se bloquer.} Le délai (\code{timeout}, 20~s en croisière, 30~s en manœuvre) arrête le processus ; les points déjà écrits sont gardés.
+\item \textbf{L'affichage.} La version Debian d'XFOIL plante en visqueux si sa fenêtre graphique est désactivée. \code{xfoil\_env} fournit donc un écran : le vrai s'il existe (\code{DISPLAY}), sinon un écran virtuel Xvfb lancé sur \code{:97}. Sur un serveur sans Xvfb, \code{run\_xfoil} lève une erreur explicite.
+\item \textbf{Où est XFOIL ?} \code{find\_xfoil} cherche d'abord dans le \code{PATH}, puis dans \code{Code/.tools/} (copie locale installée par \code{installer\_outils.sh}).
+\end{itemize}
+\end{piege}
+
+\section{La table produite : \code{base\_V2.csv}}
+\code{build\_table\_v2} appelle \code{simulate\_v2} sur les 1\,024 profils avec 10 processus en parallèle (\code{multiprocessing.Pool}), puis écrit une ligne par profil. Si le fichier existe déjà, elle se contente de le relire : c'est un \emph{cache}, qu'il faut supprimer pour recalculer.
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}X}
+\toprule
+Colonnes & Contenu \\
+\midrule
+\code{im ip it iI} & indices dans la grille (la clé d'un profil partout dans le code) \\
+\code{m p t I r\_le} & valeurs physiques ; rayon de bord d'attaque en cordes \\
+\code{alpha CL CD CD\_counts xtr\_up} & croisière : incidence (°), $C_L=0{,}4$, traînée (et en counts, $10^4C_D$), transition extrados \\
+\code{CLmax alpha\_clmax n\_man} & manœuvre : portance maximale, son incidence, nombre de points convergés \\
+\code{valid} & la croisière a convergé \\
+\code{SER\_S1 SER\_S2 SER\_db} & SER par optique physique (dBm) des deux secteurs ; \code{SER\_db} = S1 par défaut \\
+\code{cv feasible} & violation totale des contraintes, faisabilité \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Sur les 1\,024 profils, 920 convergent en croisière et 702 sont faisables. La SER utilisée par l'optimisation n'est pas celle de cette table mais celle de la méthode des moments, ajoutée par \code{with\_objective(table, secteur, "MoM")} (cours d'optimisation).
+
+\section{Ce que la partie aéro doit garantir aux autres}
+\begin{itemize}
+\item \textbf{Une clé stable.} Toutes les tables se joignent sur \code{(im, ip, it, iI)} : la table de la SER exacte, l'optimisation, les figures. Changer l'ordre ou le nombre de niveaux de la grille oblige à tout recalculer.
+\item \textbf{Une incidence pour chaque profil faisable.} La SER est calculée sous l'attitude de croisière. Un $\alpha$ faux décale l'écho radar.
+\item \textbf{Une contrainte lisible par la boucle QUBO.} La boucle ajuste un modèle \emph{linéaire} de la colonne \code{CLmax} sur les profils où elle est finie (\code{lin\_col="CLmax"} dans \code{experiences\_v2}). Une colonne bruitée ou très non linéaire dégrade directement les candidats proposés.
+\end{itemize}
+
+\begin{resultat}
+\begin{itemize}
+\item La partie aéro utilisée en V2 tient en deux fonctions : \code{naca4\_modified} et \code{run\_xfoil}, assemblées par \code{simulate\_v2}.
+\item Tout est calculé une fois et rangé dans \code{base\_V2.csv} ; l'optimisation lit cette table.
+\item L'aéro fournit $C_D$ (objectif), $\alpha$ (entrée de la SER) et $C_{L,\max}$ (contrainte) ; les points non convergés donnent des \code{nan}, qui rendent le profil infaisable.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+Un profil converge en croisière, mais aucune incidence de la rampe de manœuvre ne converge. Que valent \code{CLmax}, \code{cv} et \code{feasible} ? Ce profil sert-il à ajuster les modèles de la boucle QUBO ?
+\end{exercice}
+
+\begin{exercice}
+On veut faire de la position d'épaisseur maximale $T$ une cinquième variable, à 4 niveaux. Quels fichiers et quelles fonctions faut-il modifier ? Combien de profils, de bits et de temps de calcul XFOIL cela représente-t-il ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Remplacer « plus grand $C_L$ convergé » par une vraie détection du décrochage : rampe plus fine, maximum de $C_L(\alpha)$ et chute de $\mathrm dC_L/\mathrm d\alpha$ (lot L3 de la V3).
+\item Garder les sorties brutes d'XFOIL (polaire complète, nombre d'itérations) pour diagnostiquer les profils douteux, comme celui du front S2 à 319~counts.
+\item Pour une grille plus grande (lot L2), appeler \code{simulate\_v2} à la demande dans \code{CountedProblem} au lieu de tout précalculer, et mettre les résultats en cache au fur et à mesure.
+\end{itemize}
+\end{pistes}

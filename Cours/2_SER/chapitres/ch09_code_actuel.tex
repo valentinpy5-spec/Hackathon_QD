@@ -1,0 +1,119 @@
+\chapter{Le code actuel : la partie SER dans la chaîne}\label{ch:code-actuel}
+\iterbanner{V3}
+\input{../../Fiche_Projet/chaine_code}
+
+\begin{evolution}{V3}{pourquoi ce chapitre}Ce chapitre ouvre la V3, travail d'équipe. Il décrit le code SER \emph{tel qu'il tourne à la fin de la V2} : les deux calculs de SER (optique physique et méthode des moments), d'où viennent leurs entrées, où vont leurs sorties, et comment brancher à leur place le solveur du groupe SER. Le même schéma ouvre le chapitre équivalent des trois autres cours.\end{evolution}
+
+\section{La chaîne complète, et la place de la SER}
+\begin{figure}[htbp]
+\centering
+\chainecode{ser}
+\caption{La chaîne de code à la fin de la V2. En trait épais, la partie SER. Elle intervient deux fois : l'optique physique pendant la simulation de chaque profil, et la méthode des moments dans un second passage sur toute la grille, qui fournit la SER réellement optimisée.}\label{fig:chaine-ser}
+\end{figure}
+
+Toutes les simulations sont faites une fois, avant l'optimisation, et rangées dans des tables (chapitre équivalent du cours d'aérodynamique). La SER en produit deux :
+\begin{itemize}
+\item \code{resultats/base\_V2.csv}, colonnes \code{SER\_S1} et \code{SER\_S2} : optique physique, calculée dans \code{simulate\_v2} avec l'aéro ;
+\item \code{resultats/ser\_mom\_V2.csv} : optique physique \emph{et} méthode des moments sur les deux secteurs, calculées par \code{python3 -m ser.compare\_po\_mom grille}, qui relit la première table pour connaître l'incidence de chaque profil.
+\end{itemize}
+L'optimisation choisit sa source par \code{with\_objective(table, secteur, source)} : \code{"PO"} lit la première table, \code{"MoM"} la seconde. Depuis la V2, la référence est \code{"MoM"}.
+
+\begin{projet}
+La SER reçoit de l'aéro la forme $(m,p,t,I)$ et l'incidence de croisière $\alpha$, qui fixe l'attitude du profil vue par le radar. Elle fournit à l'optimisation le second objectif : la SER moyenne d'un secteur, en dBm (dB par mètre d'envergure).
+\end{projet}
+
+\section{Les fichiers}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.8cm}}
+\toprule
+Fichier & Contenu & Utilisé par \\
+\midrule
+\code{ser/po2d.py} & \code{facets}, \code{echo\_width} (optique physique), \code{radar\_directions}, \code{to\_db}, \code{wavenumber}, \code{sigma\_3d\_broadside} & tous les calculs de SER \\
+\code{ser/model.py} & \code{RadarCase} (fréquence, corde, secteur), \code{evaluate\_ser} (profil + attitude $\to$ SER) & \code{simulate\_v2} \\
+\code{ser/mom2d.py} & \code{resample}, \code{solve\_tm} (méthode des moments TM), \code{mie\_tm} (cylindre exact) & \code{compare\_po\_mom} \\
+\code{ser/compare\_po\_mom.py} & \code{mom\_contour}, \code{ser\_both}, mode \code{grille} & table \code{ser\_mom\_V2.csv} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le module ne dépend de l'aéro que par la géométrie (\code{aero/naca4.py}). Il ne lance jamais XFOIL : l'incidence lui est toujours passée en argument.
+
+\section{Premier passage : l'optique physique dans \code{simulate\_v2}}
+Pour chaque profil, après les deux appels à XFOIL, \code{simulate\_v2} appelle pour chaque secteur :
+\begin{lstlisting}
+def ser_sector(m, p, t, I, T, alpha, lo, hi):
+    rc = RadarCase(elev_max=0.5 * (hi - lo))
+    return evaluate_ser(m, p, t, alpha=alpha - 0.5 * (hi + lo), case=rc, I=I, T=T).ser_db
+\end{lstlisting}
+\code{RadarCase} décrit un secteur \emph{centré} $[-\varepsilon_{\max},\varepsilon_{\max}]$. Pour un secteur quelconque $[\varepsilon_{lo},\varepsilon_{hi}]$, on prend la demi-largeur comme $\varepsilon_{\max}$ et on décale l'incidence du centre du secteur : comme la direction du radar ne dépend que de $\alpha-\varepsilon$, c'est rigoureusement équivalent (exercice~\ref{ex:secteur}). Ensuite \code{evaluate\_ser} :
+\begin{enumerate}
+\item construit le contour \code{naca4\_modified} avec \code{n\_half}=200 (convergé, chapitre~\ref{ch:code}) et le met à l'échelle de la corde, 1~m ;
+\item forme les 81 directions du secteur, $\shat=-(\cos(\alpha-\varepsilon),\sin(\alpha-\varepsilon))$, par \code{radar\_directions} ;
+\item calcule $\sigma_{2D}$ dans chaque direction par \code{echo\_width} (chapitre~\ref{ch:code}) ;
+\item rend \code{ser\_db} $=10\log_{10}$ de la \emph{moyenne linéaire} des 81 valeurs, plus l'écho dans l'axe et le pire écho du secteur.
+\end{enumerate}
+Si XFOIL n'a pas convergé en croisière, l'incidence vaut \code{nan} et \code{simulate\_v2} passe $\alpha=0$ ; le profil est de toute façon infaisable.
+
+\begin{codebox}[ : \code{RadarCase}, le scénario radar]
+Fréquence 10~GHz (bande X, $\lambda=3$~cm, la corde vaut 33 longueurs d'onde), corde 1~m, 81 directions par secteur, contour à 401 points. Secteurs V2 : S1 $[-20^\circ,20^\circ]$ (approche de face) et S2 $[-60^\circ,0^\circ]$ (radar en contrebas), définis dans \code{CaseV2.sectors} (\code{optim/problem\_v2.py}).
+\end{codebox}
+
+\section{Second passage : la méthode des moments sur la grille}
+\code{python3 -m ser.compare\_po\_mom grille} relit \code{base\_V2.csv} et, pour chaque profil et chaque secteur, appelle \code{ser\_both} :
+\begin{lstlisting}
+def ser_both(m, p, t, I, alpha, lo, hi, n=41, per_lambda=15):
+    eps = np.linspace(lo, hi, n)
+    s = radar_directions(alpha, eps)                 # 41 directions du secteur
+    Xp, Yp = naca4_modified(m, p, t, I, 0.3, n_half=200)
+    po = echo_width(Xp, Yp, s, K)                    # optique physique
+    Xm, Ym = mom_contour(m, p, t, I, per_lambda=per_lambda)
+    mo = solve_tm(Xm, Ym, K, s)                      # methode des moments
+    return float(to_db(po.mean())), float(to_db(mo.mean())), len(Xm) - 1
+\end{lstlisting}
+\begin{enumerate}
+\item \textbf{Le maillage.} \code{mom\_contour} part d'un contour très fin (1\,201 points) et le rééchantillonne par \code{resample} avec des segments de $\lambda/15=2$~mm, raffinés jusqu'à $r_{BA}/4$ au nez (le facteur \code{refine} vaut $r_{BA}/(4h)$ au bord d'attaque et remonte à 1 dès $x/c=3~\%$). Un profil compte ainsi de 1\,013 à 1\,140 segments.
+\item \textbf{Le système.} \code{solve\_tm} remplit la matrice pleine $Z$ ($N\times N$, complexe) : la fonction de Hankel $H_0^{(2)}(kR_{mn})$ hors diagonale, le terme propre analytique sur la diagonale. Le second membre a une colonne par direction radar ; \emph{une seule} factorisation sert aux 41 directions.
+\item \textbf{La SER.} Pour chaque direction, le courant $J$ est sommé avec la phase de retour, puis $\sigma_{2D}=\frac{k\eta^2}4|\sum_nJ_nL_ne^{jk\shat\cdot\vec r_n}|^2$. La moyenne du secteur est prise en linéaire, puis convertie en dBm.
+\end{enumerate}
+La table \code{ser\_mom\_V2.csv} contient, pour chaque profil, \code{SER\_S1\_PO}, \code{SER\_S1\_MoM}, \code{SER\_S2\_PO}, \code{SER\_S2\_MoM} et le nombre de segments \code{N}. Les colonnes PO de cette table (41 directions) diffèrent de celles de \code{base\_V2.csv} (81 directions) de 0,02~dB en médiane, et jusqu'à 0,5~dB : 41 directions échantillonnent moins finement les lobes étroits du diagramme.
+
+\begin{piege}
+\begin{itemize}
+\item \textbf{Une seule polarisation exacte.} L'optique physique 2D donne la même SER en TM et en TE ; la méthode des moments ne traite que la TM. La TE est le lot L3 de la V3.
+\item \textbf{$T$ écrit en dur.} \code{ser\_both} et \code{mom\_contour} utilisent $T=0{,}3$ sans le recevoir de la table. Si $T$ devient variable, il faut le transmettre, sinon la SER est calculée sur une autre géométrie que l'aéro.
+\item \textbf{Moyenne en linéaire, pas en dB.} Moyenner des dB favoriserait les profils à quelques directions très creuses ; la moyenne linéaire est dominée par les directions les plus brillantes, ce qui correspond au risque de détection.
+\item \textbf{Résonances internes.} L'équation EFIE a des fréquences parasites (modes de la cavité intérieure). Elles sont étroites, et le code a été vérifié contre la série de Mie du cylindre de $ka=0{,}5$ à 31 ; mais un résultat isolé aberrant sur un profil doit faire penser à elles.
+\end{itemize}
+\end{piege}
+
+\section{Brancher le solveur du groupe SER}
+La partie SER est la seule de la chaîne qui sera remplacée par le travail d'un autre groupe (lot L5 de la V3). Le contrat le plus simple, qui ne demande de modifier aucune méthode d'optimisation, est de produire une table de même forme que \code{ser\_mom\_V2.csv} :
+\begin{center}
+\code{im, ip, it, iI, SER\_S1\_<source>, SER\_S2\_<source>}
+\end{center}
+pour les 1\,024 profils, avec la géométrie de \code{naca4\_modified} (même $T$), l'incidence \code{alpha} de \code{base\_V2.csv} et les mêmes secteurs, en dBm moyennés en linéaire. Il reste alors à apprendre à \code{with\_objective} à lire cette nouvelle source. Avant de l'utiliser, on compare quelques profils à la méthode des moments : sur les nez ronds, l'écart doit être de quelques dixièmes de dB au plus.
+
+\begin{resultat}
+\begin{itemize}
+\item La SER est calculée deux fois : optique physique pendant la simulation (\code{base\_V2.csv}), méthode des moments dans un second passage (\code{ser\_mom\_V2.csv}).
+\item L'optimisation lit la méthode des moments, via \code{with\_objective(..., "MoM")}.
+\item La SER dépend de l'aéro par l'incidence de croisière ; un secteur décentré est traité en décalant l'incidence.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:secteur}
+Pour le secteur S2 $[-60^\circ,0^\circ]$, quelles valeurs de \code{elev\_max} et d'incidence \code{ser\_sector} passe-t-il à \code{evaluate\_ser} ? Montrer que les directions radar sont bien celles du secteur demandé.
+\end{exercice}
+
+\begin{exercice}
+Estimer la mémoire et le coût de calcul de \code{solve\_tm} pour $N=1\,100$ segments. \code{ser\_both} est appelé deux fois par profil (S1 et S2) : que pourrait-on mettre en commun pour diviser le temps du mode \code{grille} par deux environ ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Résoudre les deux secteurs en un seul appel à \code{solve\_tm} (82 directions, une factorisation).
+\item Ajouter \code{solve\_te} et une SER combinée des deux polarisations (lot L3).
+\item Généraliser \code{with\_objective} à une source quelconque, nommée dans la table, pour brancher le solveur du groupe SER sans toucher au reste.
+\end{itemize}
+\end{pistes}

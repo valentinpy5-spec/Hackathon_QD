@@ -30,3 +30,8 @@
 
 \section*{Chapitre~\ref{ch:v2} \iterbadge{V2}}
 \textbf{Ex.~8.1.} $r_{BA}=1{,}1019\times(0{,}12\times2/6)^2=1{,}76$~mm. $k=3/r=1\,700$~m\textsuperscript{-1}, soit $f=kc_0/(2\pi)\approx81$~GHz et $\lambda\approx3{,}7$~mm. Aucun radar de surveillance usuel n'opère à cette fréquence : pour ces nez, il faut un solveur exact.
+
+\section*{Chapitre~\ref{ch:code-actuel} \iterbadge{V3}}
+\textbf{Ex.~9.1.} $\code{elev\_max}=\tfrac12(0-(-60))=30^\circ$ et l'incidence passée vaut $\alpha'=\alpha-\tfrac12(-60+0)=\alpha+30^\circ$. \code{evaluate\_ser} parcourt $\varepsilon'\in[-30^\circ,30^\circ]$ et forme $\shat=-(\cos(\alpha'-\varepsilon'),\sin(\alpha'-\varepsilon'))$, avec $\alpha'-\varepsilon'=\alpha+30^\circ-\varepsilon'\in[\alpha,\alpha+60^\circ]$. Le secteur demandé, $\varepsilon\in[-60^\circ,0^\circ]$, donne $\alpha-\varepsilon\in[\alpha,\alpha+60^\circ]$ : ce sont les mêmes directions, parcourues dans l'autre sens, ce qui ne change pas la moyenne.
+
+\textbf{Ex.~9.2.} $Z$ contient $N^2=1{,}2\cdot10^6$ nombres complexes de 16 octets, soit environ 19~Mo. Le remplissage demande $1{,}2\cdot10^6$ évaluations de $H_0^{(2)}$ ; la factorisation LU environ $\tfrac{8}{3}N^3\approx3{,}5\cdot10^9$ opérations réelles (facteur 4 du complexe), quelques dixièmes de seconde ; les 41 seconds membres coûtent $41\times8N^2\approx4\cdot10^8$ opérations, beaucoup moins. Or \code{ser\_both} reconstruit le contour, la matrice et la factorisation pour chaque secteur : un seul appel à \code{solve\_tm} avec les $41+41$ directions des deux secteurs ne coûterait qu'un remplissage et une factorisation, d'où un gain proche de 2.

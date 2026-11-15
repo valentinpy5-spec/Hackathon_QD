@@ -1,0 +1,139 @@
+\chapter{Le code actuel : la partie quantique dans la chaîne}\label{ch:code-actuel}
+\iterbanner{V3}
+\input{../../Fiche_Projet/chaine_code}
+
+\begin{evolution}{V3}{pourquoi ce chapitre}Ce chapitre ouvre la V3, travail d'équipe. Il décrit le code quantique \emph{tel qu'il tourne à la fin de la V2} : ce qu'il reçoit de l'optimisation, comment les trois solveurs (énumération, recuit simulé, QAOA) produisent des candidats, et ce qu'il faudra changer pour passer sur un simulateur bruité ou un vrai processeur. Le même schéma ouvre le chapitre équivalent des trois autres cours.\end{evolution}
+
+\section{La chaîne complète, et la place du quantique}
+\begin{figure}[htbp]
+\centering
+\chainecode{quant}
+\caption{La chaîne de code à la fin de la V2. En trait épais, la partie quantique. Elle n'a qu'un client, la boucle QUBO de l'optimisation : elle reçoit un QUBO et rend des profils classés. L'étude de montée en taille est un calcul à part.}\label{fig:chaine-quant}
+\end{figure}
+
+La partie quantique est la plus isolée de la chaîne. Elle ne voit ni XFOIL, ni la SER, ni les profils : seulement une matrice $Q$ et une constante $c$, construites par la boucle QUBO (cours d'optimisation) à partir de modèles quadratiques ajustés sur les profils déjà simulés. Toute la physique est déjà dans ces nombres.
+
+\begin{projet}
+À chaque itération de la boucle, pour chacun des 5 poids $w$, la partie quantique reçoit un QUBO de 14 qubits et doit rendre la liste des profils classés du meilleur au moins bon selon ce QUBO. La boucle simule ensuite le meilleur profil pas encore vu. Un « bon » solveur est donc un solveur qui met les vrais minima en tête de liste.
+\end{projet}
+
+\section{Les fichiers}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}X}
+\toprule
+Fichier & Contenu \\
+\midrule
+\texttt{quantique/qubo.py} & \texttt{affine\_bit\_maps}, \texttt{quadratic\_features}, \texttt{surrogate\_to\_qubo} (modèle $\to$ QUBO), \texttt{qubo\_energy}, \texttt{all\_bitstrings}, \texttt{brute\_force}, \texttt{qubo\_to\_ising} \\
+\texttt{quantique/qaoa.py} & QAOA par vecteur d'état : \texttt{qaoa\_state}, \texttt{apply\_mixer}, \texttt{expectation}, \texttt{normalize}, \texttt{optimize\_qaoa}, \texttt{interp\_init}, \texttt{sample} \\
+\texttt{quantique/recuit.py} & recuit simulé : \texttt{simulated\_annealing} \\
+\texttt{quantique/montee\_en\_taille.py} & étude de 6 à 18 qubits (chapitre~\ref{ch:montee}) \\
+\texttt{quantique/experiences.py} & expériences V0 des chapitres~\ref{ch:qubo} à \ref{ch:projet} \\
+\texttt{optim/qubo\_loop.py} & côté optimisation : \texttt{build\_qubo} (pénalités) et \texttt{ranked\_candidates} (appel des solveurs) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Aucune bibliothèque quantique n'est utilisée : tout est écrit en NumPy, pour que chaque étape soit lisible (chapitre~\ref{ch:outils}).
+
+\section{Ce qui arrive : le QUBO}
+\subsection{Les conventions}
+Un état est un vecteur de bits $b\in\{0,1\}^{14}$ ; son énergie est
+\[
+E(b)=b^{\mathsf T}Qb+c,
+\]
+avec $Q$ \emph{triangulaire supérieure} : la diagonale porte les termes linéaires (puisque $b_i^2=b_i$), le triangle strict les couplages. Les bits sont rangés variable par variable, dans l'ordre $m,p,t,I$, \emph{poids faible en premier} : l'indice de $m$ est $i_m=b_0+2b_1+4b_2$. Viennent ensuite le qubit auxiliaire et les trois qubits d'écart des contraintes :
+\begin{center}
+\begin{tabular}{cccccc}
+\toprule
+$b_0b_1b_2$ & $b_3b_4$ & $b_5b_6b_7$ & $b_8b_9$ & $b_{10}$ & $b_{11}b_{12}b_{13}$ \\
+$i_m$ & $i_p$ & $i_t$ & $i_I$ & auxiliaire $y$ & écart $s$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\texttt{all\_bitstrings(n)} suit la même convention : la ligne $x$ contient les bits de l'entier $x$, bit $k$ égal à $(x \gg k)\,\&\,1$. L'indice d'une amplitude du vecteur d'état est donc directement l'entier qui code la chaîne.
+
+\subsection{Du modèle au QUBO}
+\texttt{surrogate\_to\_qubo} reçoit les coefficients d'un polynôme de degré 2 en variables normalisées $z_i\in[-1,1]$. Chaque $z_i$ est une fonction \emph{affine} des bits de sa variable : $z_i=-1+\sum_j\frac{2\cdot2^j}{L_i-1}b_{ij}$ (\texttt{affine\_bit\_maps}). En substituant $z=a_0+Ab$ dans $f(z)=c_0+g\cdot z+z^{\mathsf T}Mz$, on obtient une forme quadratique en $b$ : c'est la raison profonde pour laquelle un modèle quadratique donne un QUBO exact (chapitre~\ref{ch:qubo}). La boucle y ajoute ensuite deux pénalités, qui créent les qubits 10 à 13.
+
+\section{Ce qui sort : trois solveurs dans \texttt{ranked\_candidates}}
+\begin{lstlisting}
+def ranked_candidates(Q, c, solver, rng, qaoa_p=2, shots=512, bits=BITS):
+    n = Q.shape[0]
+    if solver == "exact":
+        B = all_bitstrings(n)                    # les 2^14 = 16 384 chaines
+        E = qubo_energy(Q, c, B)
+        states = B[np.argsort(E)[:400]]          # les 400 meilleures
+    elif solver == "sa":
+        _, _, fin, st = simulated_annealing(Q, c, n_sweeps=150, n_reads=40, ...,
+                                            return_states=True)
+        states = st[np.argsort(fin)]             # 40 lectures, triees
+    elif solver == "qaoa":
+        B = all_bitstrings(n)
+        E = qubo_energy(Q, c, B)
+        En = qa.normalize(E)
+        r = qa.optimize_qaoa(En, n, qaoa_p, n_restarts=3, ...)
+        psi = qa.qaoa_state(r.x[:qaoa_p], r.x[qaoa_p:], En, n)
+        xs = qa.sample(psi, shots, ...)          # 512 mesures
+        uniq = np.unique(xs)
+        states = B[uniq[np.argsort(E[uniq])]]    # chaines mesurees, triees
+    # puis : decodage des 10 premiers bits en (i_m, i_p, i_t, i_I), sans doublon
+\end{lstlisting}
+
+\begin{description}
+\item[Énumération (\texttt{exact}).] Calcule les 16\,384 énergies et garde les 400 meilleures chaînes. C'est la référence : elle rend toujours le vrai classement du QUBO.
+\item[Recuit simulé (\texttt{sa}).] 40 lectures indépendantes de 150 balayages chacune. Chaque balayage propose de retourner chaque bit, dans un ordre aléatoire, et accepte selon la règle de Metropolis avec la variation d'énergie $\Delta E=(1-2b_i)\big(Q_{ii}+\sum_{j\ne i}S_{ij}b_j\big)$, où $S$ est la partie couplage symétrisée. La température décroît géométriquement de $2\max|Q|$ à $0{,}01\max|Q|$. Les 40 états finaux, triés, forment la liste (chapitre~\ref{ch:recuit}).
+\item[QAOA (\texttt{qaoa}).] Profondeur $p=2$ : 4 angles réglés par COBYLA (3 départs aléatoires), sur l'énergie centrée réduite. On tire 512 mesures de l'état final, on garde les chaînes distinctes et on les trie par leur \emph{vraie} énergie, recalculée classiquement (chapitre~\ref{ch:qaoa}).
+\end{description}
+Les qubits auxiliaires et d'écart sont ignorés au décodage : deux chaînes qui ne diffèrent que par eux donnent le même profil, qui n'apparaît qu'une fois dans la liste.
+
+\begin{piege}
+\textbf{Dans notre code, QAOA calcule d'abord toutes les énergies.} Le simulateur par vecteur d'état applique la phase $e^{-i\gamma E(x)}$ à chacune des $2^n$ amplitudes : il lui faut $E(x)$ pour toutes les chaînes, exactement ce que fait l'énumération. La simulation ne peut donc \emph{jamais} être plus rapide que le solveur exact ; elle sert à mesurer la qualité des candidats que fournirait un vrai processeur. Sur un processeur réel, rien de tout cela n'est calculé : l'hamiltonien de coût devient des portes (section~\ref{sec:materiel-v3}), et seules les chaînes mesurées sont évaluées.
+\end{piege}
+
+\section{À l'intérieur de \texttt{qaoa.py}}
+\begin{itemize}
+\item \texttt{qaoa\_state} part de $\ket+^{\otimes n}$ (toutes les amplitudes égales à $2^{-n/2}$), puis alterne $p$ fois : la phase de coût, simple multiplication élément par élément par $e^{-i\gamma_kE}$, puisque $H_C$ est diagonal ; puis le mélangeur.
+\item \texttt{apply\_mixer} applique $e^{-i\beta X}=\cos\beta\,I-i\sin\beta\,X$ à chaque qubit. Le vecteur est vu comme un tableau $2\times2\times\dots\times2$ ; appliquer $X$ au qubit $k$ revient à inverser l'axe $k$ (\texttt{np.flip}). Coût : $n\cdot2^n$ opérations par couche, sans jamais former de matrice $2^n\times2^n$.
+\item \texttt{normalize} centre et réduit $E$. Sans cela, l'angle $\gamma$ qui convient dépendrait de l'échelle du QUBO, et le paysage vu par COBYLA serait illisible.
+\item \texttt{optimize\_qaoa} minimise $\langle H_C\rangle$ par COBYLA, depuis des départs aléatoires ou depuis \texttt{init} ; \texttt{interp\_init} prolonge des angles optimaux de $p$ à $p+1$ (stratégie INTERP, chapitre~\ref{ch:montee}).
+\item \texttt{sample} tire des indices selon $|\psi_x|^2$ : c'est la règle de Born.
+\end{itemize}
+Mémoire : $2^{14}$ amplitudes complexes, soit 256~ko. Le coût vient du nombre d'évaluations de $\langle H_C\rangle$ demandées par COBYLA ; c'est pourquoi la boucle avec QAOA prend environ 25~s par itération, contre une fraction de seconde pour l'énumération.
+
+\section{Vers un simulateur bruité ou un vrai processeur}\label{sec:materiel-v3}
+Le lot L4 de la V3 remplace le cœur de la branche \texttt{qaoa} par un vrai circuit. Ce qui change :
+\begin{enumerate}
+\item \texttt{qubo\_to\_ising(Q, c)} donne les champs $h_i$ et les couplages $J_{ij}$ de l'hamiltonien d'Ising équivalent (chapitre~\ref{ch:qubo}). La phase de coût devient une porte $R_Z$ par qubit et une porte $R_{ZZ}$ (deux CNOT) par couplage non nul, au lieu des $2^n$ énergies.
+\item Le mélangeur devient une porte $R_X(2\beta)$ par qubit.
+\item \texttt{qaoa\_state} et \texttt{sample} sont remplacés par l'exécution du circuit (Qiskit Aer avec un modèle de bruit, puis éventuellement un processeur réel), qui rend directement des chaînes mesurées.
+\item L'espérance $\langle H_C\rangle$ est estimée à partir des mesures : elle devient bruitée, ce que COBYLA supporte mal (chapitre~\ref{ch:outils}).
+\end{enumerate}
+La suite de \texttt{ranked\_candidates} (énergie des seules chaînes mesurées, tri, décodage) ne change pas, et la boucle non plus.
+
+\section{L'étude de montée en taille}
+\texttt{montee\_en\_taille.py} ne fait pas partie de la boucle. Il reprend un QUBO fixe (somme pondérée $w=0{,}5$ ajustée sur la table V1, scénario S1), affine la grille de 2 à 6 bits par variable (6 à 18 qubits) et mesure, pour $p=1$ à 4 : la probabilité de l'optimum, la part des mesures dans le 1~\% meilleur, le rapport d'approximation, le nombre de tirs pour voir l'optimum avec 95~\% de chances, le nombre de couplages et de CNOT ; et le taux de réussite du recuit simulé. Résultats dans \texttt{resultats/montee\_en\_taille.json} et au chapitre~\ref{ch:montee}.
+
+\begin{resultat}
+\begin{itemize}
+\item La partie quantique reçoit $(Q,c)$ de 14 qubits et rend des profils classés ; elle ne voit jamais la physique.
+\item Trois solveurs : énumération (référence), recuit simulé (40 lectures), QAOA $p=2$ (512 mesures, retriées par la vraie énergie).
+\item Simulé par vecteur d'état, QAOA a besoin de toutes les énergies : il mesure la qualité des candidats, pas un gain de temps. Le passage au matériel ne change que l'intérieur de la branche \texttt{qaoa}.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}
+QAOA mesure la chaîne $b_0\dots b_{13}=\texttt{10101110100100}$. Quel profil $(m,p,t,I)$ est-ce ? Que valent le qubit auxiliaire et la variable d'écart, et la valeur de l'auxiliaire est-elle cohérente avec la réduction de Rosenberg ? (Niveaux V2 : $m=0$ à 7~\% par pas de 1~\%, $p\in\{0{,}25;0{,}35;0{,}45;0{,}55\}$, $t=6$ à 20~\% par pas de 2~\%, $I\in\{2,4,6,8\}$ ; l'auxiliaire vaut $y=(1-b_6)(1-b_7)$ à l'optimum.)
+\end{exercice}
+
+\begin{exercice}
+Combien d'opérations faut-il, à 14 qubits, pour évaluer une fois $\langle H_C\rangle$ avec $p=2$ dans notre simulateur, et pour énumérer le QUBO ? Combien de portes à deux qubits faudrait-il par couche sur un processeur réel, si $Q$ a 60 couplages non nuls ? Qu'en conclure sur ce que la V3 peut et ne peut pas montrer ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Écrire la branche \texttt{qaoa} en circuit (Qiskit), avec et sans bruit, en gardant la même signature (lot L4).
+\item Donner au recuit simulé un budget comparable à celui de QAOA (nombre de lectures, balayages) pour une comparaison équitable.
+\item Initialiser les angles de QAOA d'une itération à l'autre de la boucle (les QUBO successifs se ressemblent), au lieu de 3 départs aléatoires.
+\end{itemize}
+\end{pistes}
