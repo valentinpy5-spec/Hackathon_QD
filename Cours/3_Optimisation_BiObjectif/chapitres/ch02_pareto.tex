@@ -96,7 +96,7 @@ Montrer qu'un point minimisant $w\tilde f_1+(1-w)\tilde f_2$ pour un $w\in\,]0,1
 
 \begin{pistes}
 \begin{itemize}
-\item Ajouter la scalarisation de Tchebycheff, $\min\max_k w_k|\tilde f_k-z_k^\star|$ : elle atteint les points non supportés sans ajouter de contrainte, mais elle n'est pas quadratique (le max), donc pas directement un QUBO.
+\item Ajouter la scalarisation de Tchebycheff, $\min\max_k w_k|\tilde f_k-z_k^\star|$ : elle atteint les points non supportés sans ajouter de contrainte, mais elle n'est pas quadratique (le max), donc pas directement un QUBO. \iterbadge{V3}~\textbf{Fait hors QUBO} (lot L1) : ParEGO, Tchebycheff augmenté avec krigeage (\code{optim/bayes.py}), retrouve le front en 157,5 simulations dans S1 et 170 dans S2, contre 75 et 142,5 pour la boucle QUBO.
 \item Utiliser un troisième objectif (le moment de tangage, ou la SER à une autre fréquence) : le tri non dominé et l'hypervolume se généralisent, la visualisation devient plus difficile.
 \end{itemize}
 \end{pistes}

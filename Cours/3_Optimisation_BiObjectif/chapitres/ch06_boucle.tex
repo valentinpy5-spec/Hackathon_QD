@@ -92,7 +92,7 @@ Combien de qubits faudrait-il si l'on codait la contrainte $i_t\ge1$ par une var
 \begin{itemize}
 \item Remplacer la somme pondérée par une \textbf{$\varepsilon$-contrainte} $\min\widehat{C_D}$ sous $\widehat{\mathrm{SER}}\le\varepsilon$ : elle vise aussi les points non supportés, au prix de qubits d'écart supplémentaires.
 \item Pondérer les moindres carrés vers les meilleurs profils (modèle \emph{local}, région de confiance), pour que le modèle soit précis là où se trouve le front.
-\item Choisir les candidats par un critère d'\emph{amélioration attendue de l'hypervolume}, comme en optimisation bayésienne multi-objectif (ParEGO, EHVI) : c'est le standard actuel des méthodes à modèle de substitution, auquel la boucle QUBO devrait être comparée.
-\item Remplacer la variable d'écart de $C_L$, qui introduit un biais, par une réduction exacte quand la contrainte se ramène à une borne sur une variable (ici, $C_L\ge0{,}3$ équivaut à $m\ge1$~\% sur la grille).
+\item \iterbadge{V3}~\textbf{En partie} (lot L1) : la boucle est comparée à l'optimisation bayésienne (amélioration espérée par poids, ParEGO) dans le cours \emph{Optimisation bayésienne} ; aucune ne la bat. L'amélioration espérée de l'hypervolume (EHVI) reste à coder.
+\item Remplacer la variable d'écart de $C_L$, qui introduit un biais, par une réduction exacte quand la contrainte se ramène à une borne sur une variable (ici, $C_L\ge0{,}3$ équivaut à $m\ge1$~\% sur la grille). \iterbadge{V2}~Dépassé : la contrainte devient $C_{L,\max}\ge1{,}2$, qui n'est plus une borne sur une variable ; elle reste linéarisée avec 3 qubits d'écart. Le lot L1 montre que ce modèle affine est justement ce qui laisse passer le front, mais que la variable d'écart discrète est l'une des causes possibles de l'écart avec le contrôle dans S2.
 \end{itemize}
 \end{pistes}
