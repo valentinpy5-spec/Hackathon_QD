@@ -5,7 +5,7 @@ Le chapitre~\ref{ch:validation} donne les pistes globales. Cette annexe les dét
 
 \section*{Géométrie (ch.~\ref{ch:naca})}
 \begin{itemize}
-\item Ajouter une paramétrisation qui découple le rayon de bord d'attaque de l'épaisseur (NACA 4 chiffres modifiée, CST de Kulfan) : c'est la condition pour que traînée et SER entrent vraiment en conflit (cours d'optimisation, chapitre sur le front exact).
+\item \iterbadge{V2}~\textbf{Fait} : NACA 4 chiffres modifiée avec l'indice de rayon de bord d'attaque $I$ (chapitre~\ref{ch:v2}) ; traînée et SER entrent en conflit. CST de Kulfan reste une option.
 \item Prévoir un bord de fuite d'épaisseur finie en option, plus réaliste pour la fabrication.
 \end{itemize}
 
@@ -36,5 +36,5 @@ Le chapitre~\ref{ch:validation} donne les pistes globales. Cette annexe les dét
 \section*{Validation (ch.~\ref{ch:validation})}
 \begin{itemize}
 \item \iterbadge{V1}~\textbf{Fait} : XFOIL installé localement (\code{Code/.tools/}), test V5 étendu à toute la grille (§\ref{sec:v5}). Reste à caler la transition sur XFOIL.
-\item Corriger aussi la portance (décambrage visqueux) : notre $C_L$ est surestimé de 25~\% en moyenne à $2^\circ$, ce qui rend la contrainte $C_L\ge0{,}3$ trop permissive (392 profils faisables contre 359 avec XFOIL).
+\item Corriger aussi la portance (décambrage visqueux) : notre $C_L$ est surestimé de 25~\% en moyenne à $2^\circ$, ce qui rend la contrainte $C_L\ge0{,}3$ trop permissive (392 profils faisables contre 359 avec XFOIL). \iterbadge{V2}~Contourné : XFOIL est devenu le simulateur de référence ; la correction ne sert plus qu'à un modèle rapide pour une approche multi-fidélité.
 \end{itemize}

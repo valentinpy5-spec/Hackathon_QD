@@ -1,0 +1,107 @@
+\chapter{Le code et sa validation}\label{ch:code}
+\iterbanner{V3}
+
+\section{Trois fichiers}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.4cm}X}
+\toprule
+Fichier & Rôle \\
+\midrule
+\code{optim/bayes.py} & les deux modèles (\code{GPModel}, \code{QuadModel}), l'amélioration espérée, et la boucle \code{bayes\_loop} \\
+\code{optim/experiences\_l1.py} & la comparaison : 8 méthodes $\times$ 2 scénarios $\times$ 20 graines $\to$ \code{resultats/pipeline\_L1\_V3.json} \\
+\code{optim/diagnostic\_l1.py} & les diagnostics du chapitre~\ref{ch:diagnostic} $\to$ \code{resultats/diagnostic\_L1\_V3.json} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Aucun fichier de la V2 n'est modifié : \code{bayes\_loop} réutilise \code{CountedProblem}, la normalisation \code{z\_of} et le protocole de \code{experiences\_v2.py}.
+
+\section{La boucle}
+\code{bayes\_loop} a la même signature et la même structure que \code{qubo\_loop}. Trois arguments choisissent la variante :
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Argument & Valeurs & Chapitre \\
+\midrule
+\code{model} & \code{"gp"} (krigeage), \code{"quad"} (quadratique bayésien) & \ref{ch:krigeage} \\
+\code{selection} & \code{"ei"} (amélioration espérée), \code{"mean"} (minimum de la prédiction) & \ref{ch:acquisition} \\
+\code{scalar} & \code{"sum"} (somme pondérée), \code{"tcheby"} (ParEGO) & \ref{ch:contraintes} \\
+\code{constraint} & \code{"pof"}, \code{"mean"}, \code{"lin"} & \ref{ch:contraintes} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{codebox}[ : le cœur d'une itération (\code{optim/bayes.py}, simplifié)]
+\begin{lstlisting}
+m1, s1 = Model(Z[fit], Fn[fit, 0]).predict(Zall)      # trainee normalisee, sur toute la grille
+m2, s2 = Model(Z[fit], Fn[fit, 1]).predict(Zall)      # SER normalisee
+mc, sc = Model(Z[vl], cl[vl]).predict(Zall)           # C_L,max
+pof = norm.cdf((mc - cl_min) / sc)                    # probabilite de faisabilite
+for w in weights:                                     # 5 poids -> 5 profils
+    y_obs = w * Fn[:, 0] + (1 - w) * Fn[:, 1]
+    mean = w * m1 + (1 - w) * m2
+    std = np.sqrt((w * s1) ** 2 + ((1 - w) * s2) ** 2)
+    if selection == "ei":
+        score = expected_improvement(mean, std, y_obs[ok].min()) * pof
+    else:
+        score = -mean - (1.0 - pof)
+    # meilleur profil non simule, d'epaisseur permise, pas deja retenu pour un autre poids
+\end{lstlisting}
+\end{codebox}
+
+Trois détails comptent pour l'équité de la comparaison :
+\begin{itemize}
+\item le générateur aléatoire est initialisé et consommé comme dans \code{qubo\_loop} : pour une graine donnée, les 10 profils initiaux sont identiques ;
+\item les objectifs sont ajustés sur les profils \emph{faisables} déjà simulés, et $C_{L,\max}$ sur les profils dont la croisière a convergé, comme dans la boucle QUBO ;
+\item tant qu'il y a moins de 4 profils faisables, les deux boucles explorent au hasard, de la même façon.
+\end{itemize}
+
+\section{Validation}
+\paragraph{1. L'amélioration espérée.} Pour $\mu=f_{\min}$ et $s=1$, le code rend $0{,}3989$, soit $1/\sqrt{2\pi}$.
+
+\paragraph{2. Les modèles, sur un cas jouet.} Fonction lisse de 4 variables, $f(z)=\sin(2z_1)+z_2^2-\tfrac12z_3z_4$, 60 points d'entraînement bruités, 500 points de test. L'écart-type de $f$ sur le test est $0{,}88$.
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & erreur quadratique moyenne & erreurs dans $\pm2s$ \\
+\midrule
+krigeage & 0,039 & 99,8~\% \\
+modèle quadratique & 0,18 & 92~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le krigeage est près de cinq fois plus précis sur cette fonction, qui n'est pas quadratique (le sinus). Pour les deux modèles, l'incertitude annoncée est cohérente avec l'erreur réelle (on attend environ 95~\%).
+
+\paragraph{3. La boucle QUBO de la V2 est reproduite.} \code{experiences\_l1.py} relance la boucle QUBO à solveur exact sur les 20 graines. On retrouve exactement les médianes de la fiche projet : 75 simulations dans S1 et 142,5 dans S2. La chaîne tourne donc à l'identique sur une autre machine (Windows, sans XFOIL, à partir de la table \code{base\_V2.csv}).
+
+\paragraph{4. Le contrôle.} La variante « modèle quadratique + minimum de la prédiction + pénalité de la boucle QUBO » doit se comporter comme la boucle QUBO. C'est le cas dans S1 (médiane de 75 simulations pour les deux). Dans S2 elle fait mieux (95 contre 142,5) : le chapitre~\ref{ch:resultats} y revient.
+
+\begin{piege}
+La première version du contrôle imposait la contrainte de manœuvre en dur sur la prédiction. Elle ne retrouvait \emph{jamais} le front, alors que la boucle QUBO y arrive toujours. Ce n'était pas une erreur de code mais une vraie différence de méthode ; la comprendre a donné le résultat principal du lot (chapitre~\ref{ch:diagnostic}). Un contrôle qui échoue est une information : il ne faut pas le retirer du tableau.
+\end{piege}
+
+\section{Lancer les calculs}
+\begin{lstlisting}
+cd Code
+python -m optim.experiences_l1 rapide S1    # essai : 4 graines, un scenario (4 min)
+python -m optim.experiences_l1              # campagne : 20 graines, S1 et S2 (19 min sur 10 processus)
+python -m optim.diagnostic_l1               # diagnostics (5 min)
+cd ../Cours/5_Optimisation_Bayesienne
+python tools/make_figures.py                # figures et chiffres du cours
+\end{lstlisting}
+Dépendances ajoutées par ce lot : \code{smt} (krigeage) et \code{scikit-learn} (régression bayésienne).
+
+\exercices
+\begin{exercice}
+Pourquoi faut-il que les 10 profils initiaux soient les mêmes pour toutes les méthodes à graine donnée ? Que gagne-t-on pour l'analyse statistique ?
+\end{exercice}
+\begin{exercice}
+Dans l'extrait de code, les objectifs normalisés \code{Fn} sont de l'ordre de 0 à 1. Quelle est alors la signification de la pénalité \code{(1.0 - pof)} ajoutée pour la sélection \code{"mean"} ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter des tests automatiques (amélioration espérée, cas jouet, reproduction des médianes V2) à \code{verifier\_installation.py}.
+\item \iterbadge{V3}~\textbf{En partie} : \code{smt} et \code{scikit-learn} sont dans \code{requirements.txt}. Reste \code{installer\_outils.sh}, qui n'installe encore que \code{pymoo} dans \code{.venv}.
+\end{itemize}
+\end{pistes}

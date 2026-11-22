@@ -29,12 +29,12 @@ Le message de la note d'intention reste valable : seuls le simulateur et le nomb
 
 \section{Pistes, par rapport utilité / effort}
 \begin{enumerate}
-\item \textbf{Comparer à une optimisation bayésienne multi-objectif classique} (même modèle de substitution, candidats choisis par amélioration attendue de l'hypervolume, résolue par énumération ou par un algorithme génétique) : c'est le vrai concurrent de la boucle QUBO, et la seule façon d'isoler ce qu'apporte la résolution quantique du QUBO.
+\item \textbf{Comparer à une optimisation bayésienne multi-objectif classique} (même modèle de substitution, candidats choisis par amélioration attendue de l'hypervolume, résolue par énumération ou par un algorithme génétique) : c'est le vrai concurrent de la boucle QUBO, et la seule façon d'isoler ce qu'apporte la résolution quantique du QUBO. \iterbadge{V3}~\textbf{Fait} (lot L1, sans EHVI) : il ne bat pas la boucle, et la formulation QUBO elle-même n'apporte pas de gain.
 \item \textbf{$\varepsilon$-contrainte} dans le QUBO, pour viser les points non supportés.
 \item \textbf{Modèle local} (moindres carrés pondérés autour du front courant).
 \item \textbf{Réutiliser les angles de QAOA} d'une itération à l'autre, et ajouter du bruit pour estimer la dégradation sur machine réelle.
 \item \textbf{NSGA-II à variables entières ou binaires natives}, et réglage systématique (taille de population, taux de mutation).
-\item \textbf{Paramétrisation plus riche} (rayon de bord d'attaque indépendant) pour obtenir un vrai compromis traînée/SER.
+\item \textbf{Paramétrisation plus riche} (rayon de bord d'attaque indépendant) pour obtenir un vrai compromis traînée/SER. \iterbadge{V2}~\textbf{Fait} : indice $I$ (chapitre~\ref{ch:v2}).
 \end{enumerate}
 
 \begin{projet}

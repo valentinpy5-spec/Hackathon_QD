@@ -76,8 +76,8 @@ En mode portance imposée, un profil très cambré vole à $\alpha=-4^\circ$. Da
 
 \begin{pistes}
 \begin{itemize}
-\item Écrire dès maintenant l'adaptateur pour le format d'entrée du solveur choisi par le groupe SER, et le tester avec le modèle PO en guise de solveur factice.
-\item Mettre en cache les résultats SER par profil et par scénario (comme \code{AeroSimulator}), pour que les appels au vrai solveur, plus coûteux, ne soient jamais répétés.
+\item Écrire l'adaptateur pour le format d'entrée du solveur choisi par le groupe SER, et le tester avec le modèle PO en guise de solveur factice (lot L5 ; le contrat de table est décrit au chapitre~\ref{ch:code-actuel}).
+\item \iterbadge{V2}~\textbf{En partie} : la SER de chaque profil et de chaque secteur est calculée une fois et rangée dans \code{base\_V2.csv} (PO) et \code{ser\_mom\_V2.csv} (méthode des moments). Reste un cache rempli à la demande, nécessaire pour la grande grille (lot L2).
 \item Prévoir un mode « multi-fidélité » : PO pour explorer, solveur complet pour confirmer les profils du front.
 \end{itemize}
 \end{pistes}

@@ -1,0 +1,47 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_Optimisation_Bayesienne.tex
+% Figures à données : python tools/make_figures.py (lit Code/resultats/pipeline_L1_V3.json et diagnostic_L1_V3.json,
+% produits par python -m optim.experiences_l1 et python -m optim.diagnostic_l1)
+\input{preambule}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{Optimisation bayésienne}\\[0.4em]\large Krigeage, amélioration espérée et contraintes :\\ le concurrent de même nature de la boucle QUBO (lot L1 de la V3)}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 15 novembre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Objet.} La V2 a montré que la boucle QUBO retrouve le front de Pareto traînée/SER quand NSGA-II n'y parvient presque jamais. Mais NSGA-II n'utilise aucun modèle, alors que la boucle en ajuste un à chaque itération. Le concurrent de même nature est l'\textbf{optimisation bayésienne}. Ce cours la construit depuis le début, l'applique au problème V2 avec le même protocole, et répond à l'hypothèse H1 de la fiche projet : \emph{l'optimisation bayésienne égale-t-elle ou bat-elle la boucle QUBO ?}
+
+\paragraph{Ce qu'on suppose connu.} Le cours d'optimisation bi-objectif (front de Pareto, hypervolume, boucle QUBO, protocole de comparaison) et son chapitre V2. Côté mathématiques : la loi normale, les moindres carrés, un peu d'algèbre linéaire. Le krigeage et l'amélioration espérée sont posés depuis zéro.
+
+\paragraph{Fil conducteur.} La question et le plan d'expérience (ch.~\ref{ch:question}) $\to$ le krigeage, un modèle qui donne son incertitude (ch.~\ref{ch:krigeage}) $\to$ l'amélioration espérée, qui s'en sert pour choisir le prochain profil (ch.~\ref{ch:acquisition}) $\to$ contraintes et deux objectifs (ch.~\ref{ch:contraintes}) $\to$ le code et sa validation (ch.~\ref{ch:code}) $\to$ les résultats de la comparaison (ch.~\ref{ch:resultats}) $\to$ ce qui les explique : la contrainte de manœuvre (ch.~\ref{ch:diagnostic}) $\to$ bilan, limites et pistes (ch.~\ref{ch:bilan}).
+
+\paragraph{Figures et chiffres.} Les courbes sont calculées par le code du projet (\code{Code/optim/bayes.py}) via \code{tools/make\_figures.py}, à partir de \code{resultats/pipeline\_L1\_V3.json} (produit par \code{python -m optim.experiences\_l1}) et de \code{resultats/diagnostic\_L1\_V3.json} (produit par \code{python -m optim.diagnostic\_l1}). Chaque chapitre se termine par des exercices (corrigés en annexe~\ref{annexe:corriges}) et des \textbf{pistes d'amélioration}.
+
+\paragraph{Itérations du projet.} Tout ce cours appartient à l'itération V3 (lot L1) : chaque chapitre porte son bandeau.
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_question}
+\input{chapitres/ch02_krigeage}
+\input{chapitres/ch03_acquisition}
+\input{chapitres/ch04_contraintes}
+\input{chapitres/ch05_code}
+\input{chapitres/ch06_resultats}
+\input{chapitres/ch07_diagnostic}
+\input{chapitres/ch08_bilan}
+
+\appendix
+\input{chapitres/annexe_corriges}
+
+\end{document}

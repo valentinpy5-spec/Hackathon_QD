@@ -1,0 +1,40 @@
+\chapter{Corrigés des exercices}\label{annexe:corriges}
+
+\section*{Chapitre~\ref{ch:question} \iterbadge{V3}}
+\textbf{Ex.~1.1.} Sans modèle : tirage aléatoire, NSGA-II, recuit simulé appliqué aux simulations (il ne garde que l'état courant). Avec modèle : la boucle QUBO (polynômes quadratiques des objectifs, modèle affine de la contrainte) et l'optimisation bayésienne (un krigeage par grandeur). Attention : dans la boucle QUBO, le recuit simulé sert à minimiser le \emph{modèle}, pas à choisir directement des simulations.
+
+\textbf{Ex.~1.2.} Les deux méthodes diffèrent par le modèle \emph{et} par la sélection (et par le traitement de la contrainte). Si l'une gagne, on ne sait pas à quel élément l'attribuer. Les deux cases hors diagonale changent un seul élément à la fois ; la case de contrôle vérifie en plus que la réécriture sans QUBO ne change rien.
+
+\section*{Chapitre~\ref{ch:krigeage} \iterbadge{V3}}
+\textbf{Ex.~2.1.} $K=k(x_1,x_1)=\sigma^2$, donc $\mu(x)=y_1\,k(x_1,x)/\sigma^2$ et $s^2(x)=\sigma^2-k(x_1,x)^2/\sigma^2$. En $x=x_1$ : $\mu=y_1$ et $s^2=0$, le modèle interpole. Loin de $x_1$ : $\mu\to0$ (la moyenne a priori) et $s^2\to\sigma^2$ (la variance a priori) : une simulation n'apprend rien sur un profil très différent.
+
+\textbf{Ex.~2.2.} $s^2(x)$ ne fait intervenir que $k$, $K$ et $\vect k_\star$, donc les positions des points et les hyperparamètres. C'est une propriété de la loi normale : la variance conditionnelle ne dépend pas de la valeur observée. Ce n'est plus vrai en pratique : les hyperparamètres ($\sigma^2$, $\theta_i$, bruit) sont réglés sur $\vect y$, donc $s$ dépend des valeurs simulées à travers eux. Des données très irrégulières donnent de grands $\theta_i$, donc une incertitude qui remonte vite entre les points.
+
+\textbf{Ex.~2.3.} $\mathrm{Cov}(f(x),f(x'))=\mathbb E\big[\varphi(x)^{\!\top}\vect c\,\vect c^{\top}\varphi(x')\big]=\varphi(x)^{\!\top}\,\mathbb E[\vect c\,\vect c^{\top}]\,\varphi(x')=\lambda^{-1}\varphi(x)^{\!\top}\varphi(x')$, car $\vect c$ est centré de covariance $\lambda^{-1}I$. Une combinaison linéaire de variables normales étant normale, $f$ est bien un processus gaussien.
+
+\section*{Chapitre~\ref{ch:acquisition} \iterbadge{V3}}
+\textbf{Ex.~3.1.} Premier profil : $u=(0{,}52-0{,}50)/0{,}02=1$, $\mathrm{EI}=0{,}02\times\Phi(1)+0{,}02\times\varphi_{\mathcal N}(1)=0{,}02\times0{,}841+0{,}02\times0{,}242\approx0{,}0217$. Second : $u=(0{,}52-0{,}60)/0{,}20=-0{,}4$, $\mathrm{EI}=-0{,}08\times\Phi(-0{,}4)+0{,}20\times\varphi_{\mathcal N}(-0{,}4)=-0{,}08\times0{,}345+0{,}20\times0{,}368\approx0{,}0461$. On simule le second, bien que sa prédiction soit moins bonne : son incertitude lui donne une chance de gain plus grande. Le minimum de la prédiction aurait choisi le premier.
+
+\textbf{Ex.~3.2.} En écrivant $\mathrm{EI}=s\,[u\,\Phi(u)+\varphi_{\mathcal N}(u)]$ et en utilisant $\varphi_{\mathcal N}'(u)=-u\,\varphi_{\mathcal N}(u)$, la dérivée du crochet par rapport à $u$ vaut $\Phi(u)$. Comme $\partial u/\partial s=-u/s$ et $\partial u/\partial\mu=-1/s$ : $\partial\mathrm{EI}/\partial s=u\Phi(u)+\varphi_{\mathcal N}(u)-u\Phi(u)=\varphi_{\mathcal N}(u)>0$ et $\partial\mathrm{EI}/\partial\mu=-\Phi(u)<0$. Plus d'incertitude ou une meilleure prédiction augmentent toujours le critère.
+
+\section*{Chapitre~\ref{ch:contraintes} \iterbadge{V3}}
+\textbf{Ex.~4.1.} $\mathrm{PoF}=\Phi\big((1{,}15-1{,}2)/0{,}10\big)=\Phi(-0{,}5)\approx0{,}309$. Critère : $0{,}04\times0{,}309\approx0{,}012$. Avec le traitement en dur, $\mu_c=1{,}15<1{,}2$ : le profil est écarté, alors qu'il a près d'une chance sur trois d'être faisable.
+
+\textbf{Ex.~4.2.} Moyenne $0{,}5\times0{,}3+0{,}5\times0{,}5=0{,}4$ ; variance $0{,}25\times0{,}01+0{,}25\times0{,}04=0{,}0125$, écart-type $\approx0{,}112$. L'indépendance est discutable parce que les deux grandeurs dépendent des mêmes paramètres de forme : un nez aigu réduit la SER et modifie la traînée. Si le modèle se trompe sur l'effet du rayon de bord d'attaque, il se trompe sur les deux à la fois. Des erreurs corrélées positivement donneraient une variance plus grande que celle calculée.
+
+\textbf{Ex.~4.3.} Pour $1{,}10$ : $75\times0{,}10^2=0{,}75$, soit les trois quarts de l'étendue d'un objectif normalisé : le profil est pratiquement exclu. Pour $1{,}15$ : $75\times0{,}05^2\approx0{,}19$ : pénalisé, mais il peut encore être choisi si son objectif prédit est bon. La pénalité est donc tolérante sur une marge d'environ 0,05 en dessous de l'exigence.
+
+\section*{Chapitre~\ref{ch:code} \iterbadge{V3}}
+\textbf{Ex.~5.1.} Le nombre de simulations dépend beaucoup du tirage initial : certaines graines tombent près du front, d'autres non. Avec les mêmes points initiaux, cette source de variation est commune aux deux méthodes et s'élimine dans la différence graine par graine. On peut alors utiliser un test apparié, plus puissant : il détecte un écart donné avec moins de graines.
+
+\textbf{Ex.~5.2.} $1-\mathrm{PoF}$ est la probabilité que le profil soit infaisable. L'ajouter à un objectif normalisé revient à dire qu'un profil sûrement infaisable « coûte » autant que le pire profil faisable observé, et qu'un profil douteux coûte en proportion de son risque. C'est une pénalité sans paramètre, mais elle se révèle trop sévère sur notre problème (chapitre~\ref{ch:diagnostic}).
+
+\section*{Chapitre~\ref{ch:resultats} \iterbadge{V3}}
+\textbf{Ex.~6.1.} Non. L'arrêt réaliste se déclenche quand l'hypervolume stagne, bien avant que le front soit complet : les deux méthodes ont alors la moitié du front. Le critère « front complet » mesure le temps qu'il faut pour trouver les \emph{derniers} profils, et c'est là que les méthodes diffèrent. Pour un usage industriel, où l'on s'arrête sans connaître le front, les deux méthodes sont équivalentes dans S1.
+
+\textbf{Ex.~6.2.} Sous l'hypothèse d'égalité, le nombre de graines où A gagne suit une loi binomiale $\mathcal B(20;\ 0{,}5)$. $\mathbb P(X\ge15)=\big[\binom{20}{15}+\binom{20}{16}+\binom{20}{17}+\binom{20}{18}+\binom{20}{19}+\binom{20}{20}\big]/2^{20}=21\,700/1\,048\,576\approx0{,}021$. En test bilatéral (A ou B nettement meilleur), on double : $0{,}041<0{,}05$. On rejette l'égalité, de justesse.
+
+\section*{Chapitre~\ref{ch:diagnostic} \iterbadge{V3}}
+\textbf{Ex.~7.1.} Modèle quadratique : $\mathrm{PoF}=\Phi\big((1{,}12-1{,}2)/0{,}15\big)=\Phi(-0{,}53)\approx0{,}30$. Krigeage : $\Phi\big((1{,}04-1{,}2)/0{,}03\big)=\Phi(-5{,}3)\approx5\cdot10^{-8}$. Avec le modèle quadratique, le profil garde 30~\% de son amélioration espérée et peut être choisi. Avec le krigeage, son critère est pratiquement nul : il ne sera jamais simulé, alors qu'il est faisable ($C_{L,\max}=1{,}20$) et sur le front. Le krigeage se trompe deux fois plus sur la valeur (0,16 contre 0,08), mais ce qui condamne le profil, c'est surtout qu'il annonce une incertitude cinq fois plus petite que celle du modèle quadratique. Une incertitude sous-estimée est plus dangereuse qu'une prédiction fausse.
+
+\textbf{Ex.~7.2.} L'erreur quadratique moyenne est dominée par les grandes erreurs, donc par les quelques profils à traînée très élevée (jusqu'à 319 counts), que le modèle prédit mal. Ces profils ne sont pas sur le front. Parmi les profils de faible traînée, où le front se joue, il suffit que le modèle \emph{classe} à peu près correctement les profils pour que la sélection soit bonne. L'erreur sur toute la grille n'est donc pas la bonne mesure ; d'où la dernière piste du chapitre.

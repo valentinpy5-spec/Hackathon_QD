@@ -45,6 +45,6 @@ Avec $N=48$ et 512 profils dans l'espace, quelle fraction de l'espace est simul�
 \begin{pistes}
 \begin{itemize}
 \item Utiliser une population initiale construite (hypercube latin sur la grille) plutôt qu'aléatoire.
-\item Arrêter NSGA-II avec un critère réaliste, qui n'utilise pas le front exact : stagnation de l'hypervolume pendant $k$ générations. C'est ce qu'il faudrait faire sur un cas industriel, où le front exact n'est pas connu.
+\item \iterbadge{V2}~\textbf{Fait} : arrêt quand l'hypervolume de l'archive stagne 5 générations (3 itérations pour la boucle), dans \code{optim/experiences\_v2.py} ; on mesure alors la fraction du front exact obtenue (chapitre~\ref{ch:v2}).
 \end{itemize}
 \end{pistes}
