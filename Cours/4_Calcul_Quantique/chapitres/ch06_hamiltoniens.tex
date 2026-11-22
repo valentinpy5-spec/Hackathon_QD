@@ -10,16 +10,47 @@ En mécanique classique, l'énergie totale d'un système (cinétique + potentiel
 \end{itemize}
 Le hamiltonien joue un double rôle : il \emph{définit l'énergie} et il \emph{génère l'évolution dans le temps}.
 
-\section{L'équation de Schrödinger}
+\section{L'équation de Schrödinger}\label{sec:schrodinger}
+\begin{evolution}{V3}{section développée}Cette section démontre désormais pas à pas pourquoi $e^{-iHt}$ résout l'équation, pourquoi son action sur un état propre se réduit à une phase, et pourquoi elle conserve les probabilités. La section~\ref{sec:cout} détaille les propriétés du hamiltonien de coût qui servent à QAOA.\end{evolution}
+
 \begin{definition}[ (évolution temporelle)]
 \[ i\frac{d}{dt}\ket{\psi(t)}=H\ket{\psi(t)}\qquad\Longrightarrow\qquad \ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}\quad(H\text{ constant}). \]
 \end{definition}
-C'est une EDO linéaire du premier ordre, comme $\dot y=Ay$ en dynamique des systèmes, mais avec $-iH$. Comme $H$ est hermitienne, $e^{-iHt}$ est \emph{unitaire} : on retrouve le postulat d'évolution. En décomposant $\ket{\psi(0)}=\sum_kc_k\ket{E_k}$ :
-\[\ket{\psi(t)}=\sum_kc_k\,e^{-iE_kt}\ket{E_k}.\]
-Chaque composante \emph{tourne en phase} à la vitesse de son énergie ; les modules $|c_k|$ ne bougent pas. Un état propre ne fait que tourner d'une phase globale : il est \emph{stationnaire}.
+C'est une EDO linéaire du premier ordre, $\dot{\mathbf y}=A\mathbf y$ avec $A=-iH$, exactement comme en dynamique des systèmes. Trois questions se posent : que veut dire l'exponentielle d'une matrice, pourquoi elle résout l'équation, et ce qu'elle fait concrètement à un état.
+
+\subsection{L'exponentielle d'une matrice, et pourquoi elle résout l'équation}
+On la définit par la même série que l'exponentielle scalaire, qui converge pour toute matrice :
+\[ e^{-iHt}=\sum_{m=0}^{\infty}\frac{(-it)^m}{m!}H^m=\Id-itH-\frac{t^2}{2}H^2+\cdots \]
+En dérivant terme à terme (le terme $m=0$, constant, disparaît, et l'on pose $m'=m-1$) :
+\[ \frac{d}{dt}e^{-iHt}=\sum_{m\ge1}\frac{m\,(-i)^m\,t^{m-1}}{m!}H^m=-iH\sum_{m'\ge0}\frac{(-it)^{m'}}{m'!}H^{m'}=-iH\,e^{-iHt}. \]
+Donc $\ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}$ vérifie $i\frac{d}{dt}\ket{\psi(t)}=H\ket{\psi(t)}$, et vaut $\ket{\psi(0)}$ en $t=0$. Comme pour toute EDO linéaire à coefficients constants, la solution est unique (Cauchy-Lipschitz) : c'est \emph{la} solution.
+
+\begin{piege}
+$e^{-iHt}$ n'est \emph{pas} la matrice des $e^{-iH_{jk}t}$ (exponentielle coefficient par coefficient). Les deux ne coïncident que si $H$ est diagonale. Et $e^{A+B}=e^Ae^B$ n'est vrai que si $A$ et $B$ commutent (section~\ref{sec:trotter}).
+\end{piege}
+
+\subsection{Action sur un état propre : une simple phase}
+$H$ est hermitienne. Par le théorème spectral, elle a des valeurs propres \textbf{réelles} $E_k$ et une base \textbf{orthonormée} de vecteurs propres $\ket{E_k}$ : $H=\sum_kE_k\ket{E_k}\bra{E_k}$. Sur un vecteur propre, chaque puissance agit comme un nombre : $H\ket{E_k}=E_k\ket{E_k}$, donc $H^m\ket{E_k}=E_k^m\ket{E_k}$. Dans la série, la matrice $H$ est donc simplement remplacée par le nombre $E_k$ :
+\[ e^{-iHt}\ket{E_k}=\sum_m\frac{(-it)^m}{m!}E_k^m\ket{E_k}=e^{-iE_kt}\ket{E_k}. \]
+Un état quelconque se décompose dans cette base, $\ket{\psi(0)}=\sum_kc_k\ket{E_k}$ avec $c_k=\braket{E_k}{\psi(0)}$, et $e^{-iHt}$ est linéaire, d'où :
+\[ \boxed{\ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}=\sum_kc_k\,e^{-iE_kt}\ket{E_k}.} \]
+Autrement dit, $e^{-iHt}=U\,\mathrm{diag}(e^{-iE_0t},e^{-iE_1t},\dots)\,U^\dagger$, où $U$ a pour colonnes les $\ket{E_k}$. Pour calculer l'évolution, on passe dans la base propre, on multiplie chaque composante par sa phase, et on revient. C'est la même démarche que la décomposition modale d'un système linéaire : chaque mode évolue seul, à sa fréquence propre.
+
+\subsection{Pourquoi l'évolution conserve les probabilités}
+Comme $E_k$ est réel, $|e^{-iE_kt}|=1$ : chaque mode \emph{tourne} dans le plan complexe sans grandir ni décroître. Les modules $|c_k|$ ne changent pas, et la norme $\sum_k|c_k|^2=1$ est conservée. De façon équivalente, $(e^{-iHt})^\dagger=e^{iH^\dagger t}=e^{iHt}$, inverse de $e^{-iHt}$ : l'opérateur est \emph{unitaire}, et l'on retrouve le postulat d'évolution (ch.~\ref{ch:algebre}).
+
+Comparez avec $\dot{\mathbf y}=A\mathbf y$ pour $A$ réelle : des valeurs propres réelles y donnent des modes qui croissent ou s'amortissent en $e^{\lambda t}$. Le facteur $-i$ fait tourner toutes les valeurs propres de $-iH$ sur l'axe imaginaire : l'évolution quantique est purement oscillante, sans dissipation, comme un schéma numérique dont le facteur d'amplification est de module 1 en analyse de von Neumann.
+
+\paragraph{Ce que l'on mesure, et ce qui change.} Dans la base propre de $H$, rien ne change : la probabilité de trouver $\ket{E_k}$ reste $|c_k|^2$. Un état propre ne fait que tourner d'une phase globale, sans effet observable : il est \emph{stationnaire}. En revanche, dans une \emph{autre} base, les probabilités évoluent, parce que les phases relatives font interférer les composantes. Exemple à un qubit, avec $H=\omega X$, non diagonal en base de calcul. Comme $X^2=\Id$, la série se sépare en termes pairs et impairs : $e^{-i\omega tX}=\cos(\omega t)\Id-i\sin(\omega t)X$, d'où
+\[ e^{-i\omega tX}\ket0=\cos(\omega t)\ket0-i\sin(\omega t)\ket1,\qquad P(1)=\sin^2(\omega t). \]
+Le qubit oscille entre $\ket0$ et $\ket1$ : c'est l'oscillation de Rabi. La population change parce que $\ket0$ n'est pas un état propre de $X$ ; ses deux composantes sur $\ket\pm$ tournent à des vitesses opposées ($E=\pm\omega$) et interfèrent.
 
 \begin{resultat}
-Faire évoluer sous un hamiltonien diagonal $H_C$ pendant un « temps » $\gamma$ multiplie chaque état de base par $e^{-i\gamma E(x)}$. \textbf{La fonction de coût est inscrite dans les phases.} Les probabilités ne changent pas : il faudra un second hamiltonien, qui ne commute pas avec $H_C$, pour transformer ces phases en différences de probabilité.
+\begin{itemize}
+\item $e^{-iHt}$ se calcule dans la base propre de $H$ : chaque composante $c_k$ est multipliée par $e^{-iE_kt}$.
+\item Ces facteurs sont de module 1 (énergies réelles) : l'évolution est unitaire et conserve les probabilités.
+\item Les probabilités ne changent que dans une base où $H$ n'est pas diagonal, par interférence des phases.
+\end{itemize}
 \end{resultat}
 
 \section{État fondamental et principe variationnel}
@@ -27,8 +58,10 @@ Pour tout état normé $\ket\psi$ :
 \[\bra\psi H\ket\psi=\sum_kE_k|c_k|^2\ \ge\ E_0,\]
 avec égalité si et seulement si $\ket\psi$ est un état fondamental. C'est le quotient de Rayleigh d'une matrice symétrique, que vous connaissez en algèbre linéaire. Conséquence : \textbf{minimiser $\expval{H}$ sur une famille d'états paramétrés donne une borne supérieure de $E_0$}, et l'atteint si la famille est assez riche. C'est le principe des algorithmes \emph{variationnels}, dont QAOA (ch.~\ref{ch:qaoa}).
 
-\section{Un hamiltonien diagonal est une fonction de coût}
-Si $H_C=\sum_xE(x)\ket x\bra x$ (ch.~\ref{ch:multi}), ses niveaux d'énergie sont les valeurs $E(x)$ sur les $2^n$ chaînes de bits, et son état fondamental est la meilleure chaîne. La figure~\ref{fig:niveaux} montre le problème « jouet » à 3 bits du chapitre suivant.
+\section{Un hamiltonien diagonal est une fonction de coût}\label{sec:cout}
+À une fonction de coût $E:\{0,1\}^n\to\R$ on associe le hamiltonien
+\[ H_C=\sum_{x\in\{0,1\}^n}E(x)\ket x\bra x=\mathrm{diag}\big(E(0\cdots0),\dots,E(1\cdots1)\big) \]
+(ch.~\ref{ch:multi}). Il est diagonal dans la base de calcul : ses vecteurs propres sont les chaînes $\ket x$, ses niveaux d'énergie sont les valeurs $E(x)$, et son état fondamental est la meilleure chaîne. La figure~\ref{fig:niveaux} montre le problème « jouet » à 3 bits du chapitre suivant.
 
 \begin{figure}[htbp]
 \centering
@@ -43,7 +76,22 @@ Si $H_C=\sum_xE(x)\ket x\bra x$ (ch.~\ref{ch:multi}), ses niveaux d'énergie son
 \caption{Niveaux d'énergie du hamiltonien diagonal associé au QUBO jouet du chapitre~\ref{ch:qubo} (pas deux bits voisins à 1). Plusieurs chaînes partagent le même niveau : on dit que le niveau est \emph{dégénéré}.}\label{fig:niveaux}
 \end{figure}
 
-\section{Deux hamiltoniens qui ne commutent pas : la formule de Trotter}
+Les résultats de la section~\ref{sec:schrodinger} prennent ici une forme très simple. Ce sont eux qu'utilise QAOA.
+\begin{enumerate}
+\item \textbf{L'évolution est une multiplication par des phases.} La base propre est la base de calcul ($U=\Id$), donc $e^{-i\gamma H_C}=\mathrm{diag}\big(e^{-i\gamma E(x)}\big)$ et
+\[ e^{-i\gamma H_C}\sum_x\psi_x\ket x=\sum_x\psi_x\,e^{-i\gamma E(x)}\ket x. \]
+Le paramètre $\gamma$ joue le rôle du temps. Dans le simulateur du projet, c'est une seule ligne : \texttt{psi = psi * np.exp(-1j * g * E)} (\texttt{quantique/qaoa.py}).
+\item \textbf{Les probabilités de mesure ne changent pas.} $|\psi_xe^{-i\gamma E(x)}|=|\psi_x|$ : partant de la superposition uniforme, toutes les chaînes restent équiprobables. Le coût est inscrit dans les phases, invisible à la mesure.
+\item \textbf{Seules les différences d'énergie comptent.} La phase relative entre deux chaînes vaut $\gamma\,(E(y)-E(x))$. Ajouter une constante à $E$ multiplie l'état par une phase globale, sans effet observable : la constante d'un QUBO peut être ignorée. Multiplier $E$ par $\lambda$ revient à remplacer $\gamma$ par $\lambda\gamma$ : l'échelle de $E$ fixe celle de $\gamma$. Si les énergies sont entières, $\gamma\mapsto\gamma+2\pi$ ne change rien (périodicité).
+\item \textbf{L'énergie moyenne est le coût moyen.} Pour tout état, $\expval{H_C}=\sum_xE(x)\,|\psi_x|^2$ : c'est la moyenne de la fonction de coût sur la distribution des mesures. La minimiser concentre donc la probabilité sur les bonnes chaînes, et c'est ce que fait QAOA.
+\item \textbf{Pour un QUBO, $e^{-i\gamma H_C}$ se réalise exactement avec des portes à 1 et 2 qubits.} Écrit en variables d'Ising (ch.~\ref{ch:qubo}), $H_C=\sum_ih_iZ_i+\sum_{i<j}J_{ij}Z_iZ_j+\text{cte}$. Tous ces termes sont diagonaux, donc commutent : l'exponentielle de la somme est le produit des exponentielles, sans erreur de Trotter. Chaque champ $h_i$ donne une porte $R_Z$, chaque couplage $J_{ij}$ une porte $R_{ZZ}$ (ch.~\ref{ch:qaoa}).
+\end{enumerate}
+
+\begin{resultat}
+Faire évoluer sous un hamiltonien diagonal $H_C$ pendant un « temps » $\gamma$ multiplie chaque état de base par $e^{-i\gamma E(x)}$. \textbf{La fonction de coût est inscrite dans les phases.} Les probabilités ne changent pas : il faudra un second hamiltonien, qui ne commute pas avec $H_C$, pour transformer ces phases en différences de probabilité, comme $X$ dans l'exemple de Rabi. C'est le rôle du mélangeur $H_M=\sum_kX_k$ dans QAOA.
+\end{resultat}
+
+\section{Deux hamiltoniens qui ne commutent pas : la formule de Trotter}\label{sec:trotter}
 Si $[A,B]=AB-BA\neq0$, alors $e^{-i(A+B)t}\neq e^{-iAt}e^{-iBt}$. Mais en découpant le temps en $N$ petits pas :
 \[e^{-i(A+B)t}=\lim_{N\to\infty}\big(e^{-iAt/N}e^{-iBt/N}\big)^N,\qquad \text{erreur d'un pas}\sim\tfrac{t^2}{2N^2}\|[A,B]\|.\]
 C'est l'analogue exact du \emph{splitting d'opérateurs} (Lie-Trotter, Strang) utilisé en CFD pour séparer convection et diffusion. QAOA est une telle alternance, entre $e^{-i\gamma H_C}$ et $e^{-i\beta H_M}$, mais où l'on laisse \emph{libres} les durées de chaque pas.
@@ -51,6 +99,9 @@ C'est l'analogue exact du \emph{splitting d'opérateurs} (Lie-Trotter, Strang) u
 \exercices
 \begin{exercice}
 Calculer $e^{-i\gamma Z}\ket+$. Montrer que c'est, à une phase globale près, $\tfrac1{\sqrt2}(\ket0+e^{2i\gamma}\ket1)$. Quelle rotation de la sphère de Bloch a-t-on effectuée ? Les probabilités en base de calcul ont-elles changé ?
+\end{exercice}
+\begin{exercice}
+Soit le QUBO à 2 bits $E(x)=x_0+x_1-3x_0x_1$. Écrire $H_C$ et $e^{-i\gamma H_C}$, puis l'état obtenu à partir de $\ket+\ket+$. Pour quelle valeur de $\gamma$ la phase relative entre la solution et la chaîne $\ket{00}$ vaut-elle $\pi$ ? Les probabilités de mesure ont-elles changé ?
 \end{exercice}
 \begin{exercice}
 Montrer que l'état fondamental de $H_M=-\sum_{k=0}^{n-1}X_k$ est $\ket+^{\otimes n}=H^{\otimes n}\ket{0\cdots0}$, d'énergie $-n$. Pourquoi cet état est-il appelé « superposition uniforme » ?

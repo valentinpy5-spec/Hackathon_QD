@@ -38,6 +38,8 @@
 
 \textbf{Ex.~7.2.} $-X_k$ a pour fondamental $\ket+$ (valeur propre $-1$). Les $X_k$ agissent sur des qubits différents et commutent, donc le fondamental de la somme est le produit des fondamentaux, $\ket+^{\otimes n}$, d'énergie $-n$. En développant, $\ket+^{\otimes n}=2^{-n/2}\sum_x\ket x$ : toutes les chaînes ont la même amplitude.
 
+\textbf{Ex.~7.3.} Énergies : $E(00)=0$, $E(01)=E(10)=1$, $E(11)=1+1-3=-1$ ; la solution est $\ket{11}$. Donc $H_C=\mathrm{diag}(0,1,1,-1)$ dans l'ordre $00,01,10,11$, et $e^{-i\gamma H_C}=\mathrm{diag}(1,e^{-i\gamma},e^{-i\gamma},e^{i\gamma})$. À partir de $\ket+\ket+=\tfrac12\sum_x\ket x$ : $\tfrac12\big(\ket{00}+e^{-i\gamma}\ket{01}+e^{-i\gamma}\ket{10}+e^{i\gamma}\ket{11}\big)$. La phase relative entre $\ket{11}$ et $\ket{00}$ vaut $\gamma\,(E(00)-E(11))=\gamma$, soit $\pi$ pour $\gamma=\pi$. Les quatre probabilités restent $\tfrac14$ : seul un mélangeur pourra transformer ces phases en probabilités.
+
 \section*{Chapitre~\ref{ch:qubo} — QUBO et Ising}
 \textbf{Ex.~8.1.} $h_0=-\tfrac{-1}2-\tfrac14(2)=0$, $h_1=\tfrac12-\tfrac14(2+2)=-\tfrac12$, $h_2=0$ ; $J_{01}=J_{12}=\tfrac24=\tfrac12$ ; constante $=0+\tfrac12(-3)+\tfrac14(4)=-\tfrac12$. Pour $\mathbf s=(-1,1,-1)$ : $E=-\tfrac12\cdot1+\tfrac12(-1)(1)+\tfrac12(1)(-1)-\tfrac12=-2$. On retrouve bien $E(101)$.
 
