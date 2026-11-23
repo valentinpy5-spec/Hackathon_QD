@@ -81,10 +81,38 @@ Les résultats de la section~\ref{sec:schrodinger} prennent ici une forme très 
 \item \textbf{L'évolution est une multiplication par des phases.} La base propre est la base de calcul ($U=\Id$), donc $e^{-i\gamma H_C}=\mathrm{diag}\big(e^{-i\gamma E(x)}\big)$ et
 \[ e^{-i\gamma H_C}\sum_x\psi_x\ket x=\sum_x\psi_x\,e^{-i\gamma E(x)}\ket x. \]
 Le paramètre $\gamma$ joue le rôle du temps. Dans le simulateur du projet, c'est une seule ligne : \texttt{psi = psi * np.exp(-1j * g * E)} (\texttt{quantique/qaoa.py}).
-\item \textbf{Les probabilités de mesure ne changent pas.} $|\psi_xe^{-i\gamma E(x)}|=|\psi_x|$ : partant de la superposition uniforme, toutes les chaînes restent équiprobables. Le coût est inscrit dans les phases, invisible à la mesure.
-\item \textbf{Seules les différences d'énergie comptent.} La phase relative entre deux chaînes vaut $\gamma\,(E(y)-E(x))$. Ajouter une constante à $E$ multiplie l'état par une phase globale, sans effet observable : la constante d'un QUBO peut être ignorée. Multiplier $E$ par $\lambda$ revient à remplacer $\gamma$ par $\lambda\gamma$ : l'échelle de $E$ fixe celle de $\gamma$. Si les énergies sont entières, $\gamma\mapsto\gamma+2\pi$ ne change rien (périodicité).
-\item \textbf{L'énergie moyenne est le coût moyen.} Pour tout état, $\expval{H_C}=\sum_xE(x)\,|\psi_x|^2$ : c'est la moyenne de la fonction de coût sur la distribution des mesures. La minimiser concentre donc la probabilité sur les bonnes chaînes, et c'est ce que fait QAOA.
-\item \textbf{Pour un QUBO, $e^{-i\gamma H_C}$ se réalise exactement avec des portes à 1 et 2 qubits.} Écrit en variables d'Ising (ch.~\ref{ch:qubo}), $H_C=\sum_ih_iZ_i+\sum_{i<j}J_{ij}Z_iZ_j+\text{cte}$. Tous ces termes sont diagonaux, donc commutent : l'exponentielle de la somme est le produit des exponentielles, sans erreur de Trotter. Chaque champ $h_i$ donne une porte $R_Z$, chaque couplage $J_{ij}$ une porte $R_{ZZ}$ (ch.~\ref{ch:qaoa}).
+\item \textbf{Les probabilités de mesure ne changent pas.} Mesurer dans la base de calcul donne la chaîne $x$ avec la probabilité $P(x)=|\braket{x}{\psi}|^2=|\psi_x|^2$ (règle de Born). Après l'évolution, l'amplitude devient $\psi_xe^{-i\gamma E(x)}$ et, comme $E(x)$ est réel, $|e^{-i\gamma E(x)}|=1$ :
+\[ P_\gamma(x)=|\psi_x|^2\,|e^{-i\gamma E(x)}|^2=|\psi_x|^2=P(x). \]
+Partant de la superposition uniforme $\psi_x=2^{-n/2}$, toutes les chaînes restent donc équiprobables : mesurer juste après $e^{-i\gamma H_C}$ revient à tirer au hasard. L'information sur le coût est bien là, mais dans les \emph{arguments} des amplitudes, que la mesure ignore.
+
+\smallskip
+Elle devient visible si une opération non diagonale \emph{mélange} les amplitudes avant la mesure. Exemple à un qubit : $\tfrac1{\sqrt2}(\ket0+e^{i\varphi}\ket1)$ donne $P(0)=\tfrac12$ quel que soit $\varphi$. Après une porte de Hadamard, l'amplitude de $\ket0$ vaut $\tfrac12(1+e^{i\varphi})$, d'où $P(0)=\tfrac14|1+e^{i\varphi}|^2=\cos^2\tfrac\varphi2$ : la phase s'est convertie en probabilité, par interférence. C'est exactement le rôle du mélangeur de QAOA.
+
+\item \textbf{Seules les différences d'énergie comptent.} On factorise la phase d'une chaîne de référence $x_0$ :
+\[ e^{-i\gamma H_C}\ket\psi=e^{-i\gamma E(x_0)}\sum_x\psi_x\,e^{-i\gamma\,(E(x)-E(x_0))}\ket x. \]
+Le facteur en tête est une \textbf{phase globale}. Elle n'est jamais observable : elle disparaît dans $|\cdot|^2$, et comme toute opération ultérieure $U$ est linéaire, $U(e^{i\theta}\ket\psi)=e^{i\theta}U\ket\psi$ la conserve en facteur jusqu'à la mesure. Ce qui compte, ce sont les \textbf{phases relatives} $\gamma\,(E(x)-E(x_0))$. Trois conséquences pratiques :
+\begin{itemize}
+\item \emph{La constante ne sert à rien.} $H_C+c\,\Id$ donne $e^{-i\gamma(H_C+c\Id)}=e^{-i\gamma c}\,e^{-i\gamma H_C}$ (car $\Id$ commute avec tout) : une phase globale. La constante d'un QUBO, ou celle de la transformation vers Ising, peut être ignorée dans le circuit.
+\item \emph{L'échelle de $E$ fixe celle de $\gamma$.} $e^{-i\gamma(\lambda H_C)}=e^{-i(\lambda\gamma)H_C}$ : multiplier les énergies par $\lambda$ contracte le paysage en $\gamma$ d'un facteur $\lambda$. Si $E$ vaut quelques centaines (un $C_D$ en counts), un pas de $10^{-2}$ sur $\gamma$ fait déjà tourner les phases de plusieurs radians, et l'optimiseur se perd. D'où la normalisation des énergies avant QAOA (\texttt{qa.normalize}). Plus généralement, deux états d'énergies proches, $E$ et $E+\delta$, ne se distinguent que si $\gamma\delta$ atteint l'ordre du radian (ch.~\ref{ch:pourquoi}).
+\item \emph{Périodicité.} Si toutes les différences d'énergie sont des multiples entiers d'un même $\Delta$, les phases relatives sont inchangées quand $\gamma$ augmente de $2\pi/\Delta$ : le paysage de QAOA est périodique en $\gamma$, de période $2\pi$ pour des énergies entières. On peut alors restreindre la recherche de $\gamma$ à une période.
+\end{itemize}
+
+\item \textbf{L'énergie moyenne est le coût moyen.} Comme $H_C\ket\psi=\sum_xE(x)\psi_x\ket x$ et que les $\ket x$ sont orthonormés,
+\[ \expval{H_C}=\bra\psi H_C\ket\psi=\sum_{x,y}\overline{\psi_y}\,E(x)\,\psi_x\braket{y}{x}=\sum_xE(x)\,|\psi_x|^2. \]
+C'est l'espérance de $E(X)$, où $X$ est la chaîne tirée à la mesure, de loi $P(x)=|\psi_x|^2$. Sur machine, on l'estime donc par la moyenne de $E$ sur $N$ tirs, avec une erreur statistique $\sigma_E/\sqrt N$. Et comme $E(x)\ge E_{\min}$ pour tout $x$, on a $\expval{H_C}\ge E_{\min}$, avec égalité si et seulement si toute la probabilité est sur des chaînes optimales : c'est le principe variationnel de la section précédente, appliqué à un hamiltonien diagonal.
+
+\smallskip
+Minimiser la moyenne concentre donc la probabilité vers les bonnes chaînes, mais ce n'est \emph{pas} la même chose que maximiser la probabilité de l'optimum. Avec trois chaînes d'énergies 0 (l'optimum), 1 et 10, la distribution $(\tfrac12,0,\tfrac12)$ a une moyenne de 5 et trouve l'optimum une fois sur deux ; la distribution $(0,1,0)$ a une moyenne de 1, bien meilleure, mais ne le trouve jamais. QAOA optimise la moyenne : il favorise les chaînes \og bonnes en moyenne\fg{} et évite d'abord les plus coûteuses, ce qui, dans notre projet, revient à éviter les pénalités (ch.~\ref{ch:pourquoi}).
+
+\item \textbf{Pour un QUBO, $e^{-i\gamma H_C}$ se réalise exactement avec des portes à 1 et 2 qubits.} On procède en trois étapes.
+\begin{itemize}
+\item \emph{Des bits aux spins.} $Z\ket0=\ket0$ et $Z\ket1=-\ket1$ : la valeur propre de $Z_i$ sur $\ket x$ est $s_i=1-2x_i$, donc $x_i=(1-s_i)/2$. Dans un QUBO, on remplace chaque bit $x_i$ par l'opérateur $(\Id-Z_i)/2$, et chaque produit $x_ix_j$ par $(\Id-Z_i)(\Id-Z_j)/4$. En développant, on obtient le hamiltonien d'Ising du chapitre~\ref{ch:qubo}, $H_C=\sum_ih_iZ_i+\sum_{i<j}J_{ij}Z_iZ_j+\text{cte}\cdot\Id$, avec $J_{ij}=Q_{ij}/4$. Il ne contient que des termes à un et deux qubits, parce que le coût est quadratique.
+\item \emph{Factoriser l'exponentielle.} Tous ces termes sont diagonaux dans la base de calcul, donc commutent deux à deux. Or, si $AB=BA$, on a $e^{A+B}=e^Ae^B$ (la formule du binôme s'applique dans la série, ce qui est faux sinon). D'où, à une phase globale près :
+\[ e^{-i\gamma H_C}=\prod_ie^{-i\gamma h_iZ_i}\ \prod_{i<j}e^{-i\gamma J_{ij}Z_iZ_j}, \]
+et cette égalité est \emph{exacte}, sans erreur de Trotter. L'ordre des facteurs est libre. C'est la différence avec $H_C+H_M$, dont les termes ne commutent pas, et qu'il faut alterner (section~\ref{sec:trotter}).
+\item \emph{Chaque facteur est une porte.} $e^{-i\gamma h_iZ_i}=\mathrm{diag}(e^{-i\gamma h_i},e^{i\gamma h_i})$ sur le qubit $i$, soit $R_Z(2\gamma h_i)$. Pour un couplage, $Z_iZ_j$ vaut $+1$ si les deux bits sont égaux et $-1$ s'ils diffèrent : $e^{-i\gamma J_{ij}Z_iZ_j}$ applique la phase $e^{\mp i\gamma J_{ij}}$ selon la \emph{parité} $x_i\oplus x_j$, c'est la porte $R_{ZZ}(2\gamma J_{ij})$. On la construit en écrivant la parité sur le qubit $j$ par un CNOT, en appliquant $R_Z(2\gamma J_{ij})$ au qubit $j$, puis en défaisant le CNOT (figure~\ref{fig:rzz}).
+\end{itemize}
+Une couche de coût compte donc une porte $R_Z$ par champ non nul et deux CNOT par couplage non nul. Le nombre de couplages, c'est-à-dire le nombre de coefficients hors diagonale non nuls de $Q$, fixe le coût matériel : 81 couplages pour les QUBO à 14 qubits de la boucle, soit 162 CNOT par couche avant routage (ch.~\ref{ch:pourquoi}).
 \end{enumerate}
 
 \begin{resultat}
