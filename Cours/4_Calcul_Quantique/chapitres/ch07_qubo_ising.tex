@@ -376,6 +376,26 @@ Un QUBO n'a qu'une énergie. Pour viser plusieurs compromis traînée/SER, on r�
 \[ f_w(\mathbf b)=w\,\frac{\widehat{C_D}(\mathbf b)}{s_{C_D}}+(1-w)\,\frac{\widehat{\rm SER}(\mathbf b)}{s_{\rm SER}}, \]
 où $s_{C_D}$ et $s_{\rm SER}$ sont les étendues (max $-$ min) des valeurs simulées faisables. Sans cette normalisation, la traînée (des dizaines de counts) écraserait la SER (quelques dB), et $w$ n'aurait pas de sens. $w=1$ ne regarde que la traînée, $w=0$ que la SER.
 
+\paragraph{Ce que l'on minimise, et ce que donnent les cinq poids.} Le mot « énergie » désigne ici une valeur \emph{par chaîne de bits} : l'énergie d'une chaîne $\mathbf b$ est $f_w(\mathbf b)$ plus les pénalités de contraintes. Chaque QUBO a un minimum, une seule chaîne, donc \textbf{un seul profil} : le meilleur compromis pour ce poids, selon les modèles. Ce n'est pas l'« énergie moyenne » $\expval{H_C}$ de la section~\ref{sec:cout} : celle-ci est la moyenne de ces énergies sur les chaînes qu'un état quantique fait sortir à la mesure. QAOA minimise cette moyenne, mais seulement comme \emph{moyen} de concentrer la probabilité sur les chaînes de basse énergie (chapitre~\ref{ch:qaoa}). Le but reste la chaîne d'énergie minimale.
+
+Les cinq poids ne donnent donc pas cinq fronts, mais au plus \textbf{cinq profils candidats} par itération, chacun visé vers une autre partie du front. Géométriquement, dans le plan (traînée normalisée $x$, SER normalisée $y$), les lignes de niveau de $wx+(1-w)y$ sont des droites, dont $w$ fixe la pente. Minimiser revient à faire glisser une telle droite jusqu'au premier profil qu'elle touche (figure~\ref{fig:pareto}). Exemple avec trois profils, d'objectifs normalisés $P_1=(0;\,1)$ (le moins traînant), $P_2=(0{,}3;\,0{,}4)$ (un compromis), $P_3=(1;\,0)$ (le plus discret) :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{cccccc}
+\toprule
+$w$ & $f_w(P_1)$ & $f_w(P_2)$ & $f_w(P_3)$ & minimum & ce que vise le poids \\
+\midrule
+0 & 1 & 0,4 & \textbf{0} & $P_3$ & la SER seule \\
+0,25 & 0,75 & 0,375 & \textbf{0,25} & $P_3$ & surtout la SER \\
+0,5 & 0,5 & \textbf{0,35} & 0,5 & $P_2$ & l'équilibre \\
+0,75 & \textbf{0,25} & 0,325 & 0,75 & $P_1$ & surtout la traînée \\
+1 & \textbf{0} & 0,3 & 1 & $P_1$ & la traînée seule \\
+\bottomrule
+\end{tabular}
+\end{center}
+Deux poids voisins peuvent désigner le même profil : la boucle prend alors le suivant du classement, pour ne pas le simuler deux fois (section~\ref{sec:boucle-v2}). Le front de Pareto n'est jamais calculé par un QUBO : à la fin, on trie tous les profils \emph{simulés} et l'on garde ceux qu'aucun autre ne bat sur les deux objectifs à la fois. Les QUBO ne servent qu'à choisir lesquels simuler.
+
 $f_w$ est une combinaison linéaire de deux polynômes quadratiques en $\mathbf z$, donc un polynôme quadratique en $\mathbf z$, de coefficients $\mathbf c=w\,\mathbf c_{C_D}/s_{C_D}+(1-w)\,\mathbf c_{\rm SER}/s_{\rm SER}$. On l'écrit $f=c_0+\mathbf g^\top\mathbf z+\mathbf z^\top M\mathbf z$ ($M$ symétrique : $M_{ii}$ est le coefficient de $z_i^2$, $M_{ij}=M_{ji}$ la moitié de celui de $z_iz_j$), puis on substitue $\mathbf z=\mathbf a_0+A\mathbf b$ :
 \[ f=\underbrace{c_0+\mathbf g^\top\mathbf a_0+\mathbf a_0^\top M\mathbf a_0}_{\text{constante}}+\underbrace{(\mathbf g+2M\mathbf a_0)^\top A}_{\boldsymbol\ell^\top}\,\mathbf b+\mathbf b^\top\underbrace{A^\top MA}_{R}\,\mathbf b. \]
 Il reste à ranger le tout dans une matrice triangulaire supérieure. Comme $b_k^2=b_k$, le terme $R_{kk}b_k^2$ est linéaire et va sur la diagonale avec $\ell_k$ ; chaque paire $k<l$ apparaît deux fois dans $\mathbf b^\top R\mathbf b$ ($R_{kl}$ et $R_{lk}$) :
