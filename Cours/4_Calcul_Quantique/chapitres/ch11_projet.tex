@@ -113,6 +113,99 @@ Deux enseignements à présenter :
 \item Les ressources quantiques croissent en $O(n^2)$ portes par couche pour un QUBO dense. C'est l'argument à confronter au matériel actuel (NISQ).
 \end{enumerate}
 
+\section{La boucle V2, racontée sur une exécution réelle}\label{sec:boucle-v2}
+\begin{evolution}{V3}{section ajoutée}Cette section suit pas à pas une exécution réelle de la boucle telle qu'elle tourne depuis la V2 : scénario S2 (radar en contrebas, secteur $[-60^\circ,0^\circ]$), graine 0, solveur exact. L'exécution est rejouée par \texttt{Code/quantique/trace\_boucle\_v2.py}, qui vérifie qu'elle simule exactement les mêmes profils que \texttt{optim/qubo\_loop.py}. Avec cette graine, la boucle retrouve tout le front en 185 simulations, au-dessus de la médiane de 142,5 sur 20 graines : c'est une exécution ordinaire, pas une vitrine.\end{evolution}
+
+\subsection{L'algorithme exact}
+\begin{tcolorbox}[coursbox,colback=white,colframe=cink,title={Boucle QUBO bi-objectif (V2, \texttt{qubo\_loop}).}]
+\begin{enumerate}
+\item Simuler 10 profils tirés au hasard parmi les 1\,024.
+\item À chaque itération :
+\begin{enumerate}
+\item ajuster $\widehat{C_D}$ et $\widehat{\rm SER}$ (quadratiques, 15 coefficients) sur les profils simulés faisables, et $\widehat{C_{L,\max}}$ (affine) sur les profils où XFOIL a convergé. S'il y a moins de 4 profils faisables, tirer 2 profils au hasard à la place ;
+\item pour chacun des 5 poids $w$, construire le QUBO à 14 qubits (section~\ref{sec:qubo-v2}), le résoudre, classer les profils par énergie, et retenir le premier qui n'a été ni simulé, ni déjà retenu pour un autre poids à cette itération ;
+\item simuler les 5 profils retenus.
+\end{enumerate}
+\item S'arrêter au budget de 250 simulations, ou quand l'hypervolume ne progresse plus depuis 3 itérations (arrêt réaliste). Pour mesurer, on note aussi quand tout le front exact est retrouvé.
+\end{enumerate}
+Le front rendu ne contient que des profils \emph{simulés} : les modèles ne servent qu'à proposer.
+\end{tcolorbox}
+
+\subsection{La première itération en détail}
+Sur les 10 profils initiaux, 6 sont faisables. Les modèles quadratiques ont donc 15 coefficients pour 6 points. Voici les 5 candidats proposés, ce que les modèles en prédisaient, et ce que la simulation a donné :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{c c ccc ccc c}
+\toprule
+& profil & \multicolumn{3}{c}{prédiction} & \multicolumn{3}{c}{simulation} & \\
+$w$ & $(m,p,t,I)$ & $C_D$ & SER & $C_{L,\max}$ & $C_D$ & SER & $C_{L,\max}$ & faisable \\
+\midrule
+0 & (7~\%, 0,55, 10~\%, 2) & 50,4 & $-17{,}3$ & 1,55 & --- & $-17{,}3$ & 1,11 & non \\
+0,25 & (7~\%, 0,55, 8~\%, 2)\textsuperscript{*} & 46,2 & $-17{,}7$ & 1,57 & 232,9 & $-19{,}0$ & --- & non \\
+0,5 & (2~\%, 0,55, 8~\%, 2) & 27,5 & $-14{,}7$ & 1,18 & 49,0 & $-16{,}9$ & --- & non \\
+0,75 & (3~\%, 0,45, 8~\%, 2)\textsuperscript{*} & 22,1 & $-9{,}0$ & 1,21 & 43,9 & $-17{,}7$ & 1,01 & non \\
+1 & (4~\%, 0,25, 8~\%, 2) & 20,0 & $-5{,}0$ & 1,18 & --- & $-18{,}8$ & --- & non \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small --- : XFOIL n'a pas convergé (en croisière pour $C_D$, sur la rampe de manœuvre pour $C_{L,\max}$). \textsuperscript{*} : le minimum du QUBO était le profil déjà retenu pour le poids précédent ; la boucle a pris le suivant dans le classement.}
+
+\medskip
+Les cinq candidats sont infaisables, et les prédictions sont très loin de la réalité : 20 counts prédits pour un profil où XFOIL ne converge pas, une SER prédite à $-5$~dBm pour $-18{,}8$ mesurés. Tous les candidats sont aux bords de la grille ($I=2$, le nez le plus fin ; $t=8$ ou $10~\%$, au plus près de l'épaisseur minimale permise) : un modèle quadratique ajusté sur trop peu de points \emph{extrapole}, et ses minima partent vers les coins. Le QUBO a pourtant fait exactement son travail : il a trouvé le minimum de ces modèles. C'est le modèle qui se trompe.
+
+Ces simulations ne sont pas perdues : le profil du poids 0,75, où XFOIL a convergé en croisière et sur la rampe de manœuvre, ajoute un point au modèle de $C_{L,\max}$, et la règle « jamais deux fois le même profil » oblige les itérations suivantes à proposer autre chose.
+
+\subsection{Les trois phases de la boucle}
+\begin{figure}[htbp]
+\centering
+\input{figures/boucle_trace_v2}
+\caption{L'exécution tracée (S2, graine 0). En haut, le nombre de profils du front exact (10 au total) parmi les profils déjà simulés. En bas, le nombre de candidats faisables parmi les 5 de chaque itération.}\label{fig:boucle-trace}
+\end{figure}
+\begin{enumerate}
+\item \textbf{Phase 1, modèle sous-déterminé} (itérations 1 à 4, 10 à 30 simulations) : 4 candidats faisables sur 20. Les modèles extrapolent vers les bords de la grille ; la boucle explore surtout la frontière de faisabilité.
+\item \textbf{Phase 2, apprentissage} (itérations 5 à 18, jusqu'à 100 simulations) : les profils faisables s'accumulent (10 au début de la phase, 15 à l'itération 6, soit autant que de coefficients, 29 à l'itération 12), et les modèles deviennent fiables dans la bonne région ; la plupart des candidats sont faisables, et 8 des 10 profils du front sont trouvés.
+\item \textbf{Phase 3, les derniers points} (itérations 19 à 35, jusqu'à 185 simulations) : les deux derniers profils du front demandent 85 simulations de plus.
+\end{enumerate}
+
+\subsection{Les points non supportés : trouvés quand même}
+Le front exact de S2 compte 10 profils. En normalisant les deux objectifs sur les profils faisables, on vérifie lesquels minimisent la somme pondérée pour au moins un poids $w$ (points \emph{supportés}) :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{cccccc}
+\toprule
+profil $(m,p,t,I)$ & $C_D$ & SER & supporté & trouvé à l'itération & poids $w$ \\
+\midrule
+(2~\%, 0,45, 8~\%, 4) & 38,0 & $-15{,}11$ & oui & 11 & 0,5 \\
+(2~\%, 0,35, 8~\%, 4) & 40,4 & $-15{,}25$ & non & 13 & 0,5 \\
+(3~\%, 0,45, 8~\%, 4) & 44,3 & $-15{,}61$ & non & 14 & 0,5 \\
+(3~\%, 0,35, 8~\%, 4) & 44,4 & $-15{,}85$ & non & \textbf{31} & 0,5 \\
+(5~\%, 0,55, 8~\%, 4) & 47,0 & $-16{,}23$ & oui & 5 & 0,25 \\
+(5~\%, 0,45, 8~\%, 4) & 50,9 & $-16{,}40$ & non & 12 & 0,25 \\
+(6~\%, 0,55, 8~\%, 4) & 53,5 & $-16{,}48$ & non & 18 & 0,5 \\
+(6~\%, 0,45, 8~\%, 4) & 55,8 & $-16{,}70$ & non & \textbf{35} & 0,25 \\
+(5~\%, 0,45, 10~\%, 2) & 58,7 & $-17{,}40$ & oui & 10 & 0,25 \\
+(7~\%, 0,25, 10~\%, 2) & 318,8 & $-18{,}52$ & oui & 12 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Six des dix profils sont \emph{non supportés} : aucune somme pondérée des vrais objectifs ne les désigne (figure~\ref{fig:pareto}). Les deux derniers trouvés, aux itérations 31 et 35, en font partie. La boucle les trouve quand même, pour deux raisons :
+\begin{itemize}
+\item \textbf{le modèle n'est pas la vérité} : un point non supporté pour les vrais objectifs peut être le minimum de la somme pondérée des \emph{modèles}, dont le front n'a pas la même forme ;
+\item \textbf{l'exclusion des profils déjà simulés} : une fois le minimum du modèle simulé, la boucle prend le suivant dans le classement du QUBO. Elle explore ainsi le voisinage du front, profil après profil, ce qui finit par atteindre les points non supportés.
+\end{itemize}
+C'est aussi ce qui explique la longue phase 3 : ces points ne sont jamais la cible directe d'un QUBO, on les atteint par épuisement du voisinage.
+
+Le front lui-même raconte la physique : tous ses profils sont minces ($t=8$ ou 10~\%, au bord de la contrainte d'épaisseur), et six sur dix sont proches de la contrainte de manœuvre ($C_{L,\max}$ entre 1,23 et 1,34). Les moins traînants ont un nez moyen ($I=4$) ; pour gagner en SER, il faut un nez fin ($I=2$), qui ne tient la manœuvre qu'avec plus d'épaisseur et de cambrure, d'où plus de traînée. Le dernier profil (318,8 counts) est un cas limite, déjà signalé dans le cours d'aérodynamique : sa traînée anormale est à vérifier.
+
+\subsection{Ce qu'il faut retenir, et où est le quantique}
+\begin{itemize}
+\item Sur 20 graines, la boucle retrouve tout le front en \textbf{75} simulations (S1) et \textbf{142,5} (S2), médianes. Un tirage au hasard en demande environ 900 à 1\,000 ; NSGA-II ne le complète presque jamais dans le budget de 250.
+\item Le travail de la boucle tient en trois mots : \emph{modèle, sélection, simulation}. Le QUBO est la façon d'écrire la sélection pour qu'un ordinateur quantique puisse la faire : c'est l'étape 2(b), et c'est la seule.
+\item Remplacer l'énumération par QAOA ou par le recuit dans cette étape dégrade les résultats (60~\% et 55~\% de réussite dans S2), pour les raisons vues aux chapitres~\ref{ch:recuit} et~\ref{ch:qaoa}. Et la supprimer, en énumérant directement les 1\,024 profils sans QUBO, fait aussi bien ou mieux (chapitre~\ref{ch:pourquoi}).
+\end{itemize}
+
 \exercices
 \begin{exercice}
 Trois profils ont pour objectifs normalisés $A=(0,\,1)$, $B=(0{,}6,\,0{,}6)$, $C=(1,\,0)$. (a) Sont-ils tous Pareto-optimaux ? (b) Montrer qu'aucun $w\in[0,1]$ ne fait de $B$ le minimum de $w\,x+(1-w)\,y$. (c) Quelle méthode permet de trouver $B$ ?
@@ -120,3 +213,7 @@ Trois profils ont pour objectifs normalisés $A=(0,\,1)$, $B=(0{,}6,\,0{,}6)$, $
 \begin{exercice}
 Un cas industriel a 20 variables de forme à 16 niveaux chacune. Nombre de qubits en binaire ? Nombre de CNOT par couche de QAOA si le QUBO est dense ? Combien de simulations au minimum pour ajuster le modèle quadratique en variables physiques ? Et un QUBO libre sur les bits ?
 \end{exercice}
+\begin{exercice}\label{ex:trace}
+D'après le tableau de la première itération : (a) Pourquoi les candidats des poids 0,25 et 0,75 ne sont-ils pas les minima de leur QUBO ? (b) Pourquoi tous les candidats ont-ils $I=2$ et $t\le10~\%$ ? (c) Que deviennent les modèles de $C_D$ et de SER à l'itération 2, sachant qu'aucun candidat n'était faisable ? Et celui de $C_{L,\max}$ ?
+\end{exercice}
+

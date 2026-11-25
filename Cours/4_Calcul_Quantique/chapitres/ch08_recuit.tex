@@ -66,10 +66,69 @@ Les machines D-Wave réalisent physiquement ce programme avec des milliers de qu
 \end{itemize}
 Le SDK \emph{Ocean} de D-Wave fournit aussi un recuit simulé classique (\texttt{SimulatedAnnealingSampler}), avec la même interface que le matériel : c'est ce que la note d'intention prévoit d'utiliser.
 
+\section{Le recuit simulé sur notre QUBO}\label{sec:recuit-v2}
+\begin{evolution}{V3}{section ajoutée}Cette section explique comment le recuit simulé est utilisé dans la boucle depuis la V2, et pourquoi il y trouve rarement l'optimum du QUBO. Les mesures portent sur les 5 QUBO de la première itération de l'exécution tracée au chapitre~\ref{ch:qubo} (section~\ref{sec:qubo-v2}).\end{evolution}
+
+\subsection{Ce que fait le code}
+Pour le solveur \texttt{"sa"}, la fonction de la boucle qui classe les candidats appelle le recuit simulé du fichier \texttt{recuit.py} (dossier \texttt{quantique}) avec les réglages suivants :
+\begin{itemize}
+\item \textbf{40 lectures} indépendantes, chacune partant d'une chaîne de 14 bits tirée au hasard ;
+\item \textbf{150 balayages} par lecture ; un balayage propose de retourner chacun des 14 bits une fois, dans un ordre aléatoire, avec la règle de Metropolis et la variation d'énergie
+\[ \Delta E_k=(1-2b_k)\Big(Q_{kk}+\sum_{l\ne k}Q_{\min(k,l)\max(k,l)}\,b_l\Big) ; \]
+\item une température qui décroît \textbf{géométriquement} de $T_0=2\max|Q_{kl}|$ à $T_1=0{,}01\max|Q_{kl}|$.
+\end{itemize}
+Les 40 états finaux sont triés par énergie, décodés en profils et dédoublonnés. La boucle simule le premier profil de cette liste qui n'a pas encore été simulé. Le recuit ne sert donc pas à trouver \emph{l'}optimum, mais à fournir une liste de bons candidats.
+
+\subsection{Ce qu'on mesure}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X c >{\raggedright\arraybackslash}p{4.4cm}}
+\toprule
+Réglage de la température & $T_1$ & lectures finissant sur l'optimum du QUBO \\
+\midrule
+celui du code ($\propto\max|Q|$, donc les pénalités) & 0,35 & \textbf{0~\%} sur les 5 QUBO \\
+réglé sur l'objectif ($\propto\max|Q_{\rm objectif}|$) & 0,003 à 0,006 & 0 à 7,5~\% selon le poids \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Sur le QUBO de traînée de la V0, plus de 95~\% des lectures finissaient à 0,1 count de l'optimum (figure~\ref{fig:recuit}). Sur le QUBO de la V2, il ne le trouve presque jamais. Trois raisons, qui tiennent toutes aux contraintes.
+
+\subsection{Pourquoi : un dilemme de température}
+\paragraph{1. Trop chaud pour voir l'objectif.} La température finale est réglée sur le plus grand coefficient de $Q$, qui vient des pénalités ($\max|Q|=35$, contre $0{,}30$ pour l'objectif seul). À $T_1=0{,}35$, deux profils séparés de $\delta=0{,}045$ en énergie (l'écart typique entre les deux meilleurs profils, chapitre~\ref{ch:pourquoi}) ont des probabilités de Boltzmann dans le rapport $e^{-\delta/T_1}\approx0{,}88$ : le recuit ne les distingue presque pas. Il finit « chaud » pour l'objectif, même s'il est « froid » pour les pénalités : il trouve des chaînes faisables, pas la meilleure.
+
+\paragraph{2. Trop froid pour franchir les barrières.} Si l'on règle la température sur l'objectif, le recuit voit bien les écarts utiles, mais il ne peut plus bouger : le moindre retournement de bit qui viole une contrainte coûte des unités d'énergie, soit $e^{-\Delta E/T}\approx e^{-1/0{,}005}$, une probabilité nulle. Or passer d'un bon profil à un autre demande souvent de traverser de tels états :
+\begin{itemize}
+\item \textbf{l'encodage binaire} : passer de $x_m=3$ (011) à $x_m=4$ (100) change trois bits. Les états intermédiaires (111, 001...) sont d'autres profils, parfois très mauvais ;
+\item \textbf{les bits d'écart} : changer un bit de conception change $\widehat{C_{L,\max}}$ d'une quantité $a_k$ ; tant que les bits d'écart ne se sont pas réajustés, la pénalité $75(\cdot)^2$ peut sauter de plusieurs unités ;
+\item \textbf{l'auxiliaire} : changer $t_1$ ou $t_2$ sans changer $y$ en même temps fait payer le terme de Rosenberg, $2P\rho\ge6$.
+\end{itemize}
+
+\paragraph{3. Le dilemme.} Assez chaud pour franchir les barrières des pénalités, le recuit est aveugle à l'objectif ; assez froid pour voir l'objectif, il est figé par les pénalités. Aucun programme de température ne fait les deux avec des retournements d'un seul bit. C'est la même cause que pour QAOA (chapitre~\ref{ch:pourquoi}) : la structure du QUBO est celle de ses contraintes.
+
+\begin{piege}[ : le code de Gray ne résout pas tout]
+Le code de Gray, où deux niveaux voisins ne diffèrent que d'un bit, supprimerait les sauts de l'encodage binaire. Mais l'indice s'y obtient par des \og ou exclusifs\fg{} entre bits, qui ne sont pas linéaires : $z$ ne serait plus affine en bits, et le modèle quadratique deviendrait de degré plus élevé. Ce n'est plus un QUBO sans auxiliaires supplémentaires.
+\end{piege}
+
+\subsection{Conséquence dans la boucle}
+Le recuit fournit quand même des candidats de basse énergie, et la boucle s'en sert. Sur 20 graines, la boucle à recuit retrouve tout le front de S1 en 97,5 simulations (médiane), contre 75 avec l'énumération, et ne retrouve celui de S2 que dans 55~\% des cas dans le budget de 250 simulations (contre 100~\%). La différence vient de la qualité des candidats : un candidat qui n'est pas le minimum du modèle est en moyenne moins bon.
+
+\subsection{Et sur un recuit quantique ?}
+Sur une machine de recuit quantique, notre QUBO poserait les mêmes problèmes, sous une autre forme :
+\begin{itemize}
+\item \textbf{le plongement} : 14 qubits logiques et 81 couplages sur 91 possibles, c'est un graphe presque complet. Sur une puce où chaque qubit n'a que quelques voisins, chaque qubit logique devient une chaîne de qubits physiques (section précédente) ;
+\item \textbf{la précision} : les coefficients d'Ising de notre QUBO s'étendent sur un rapport de 150 (de 0,03 à 5,2 pour les $|J_{ij}|$). La machine ramène tout à sa propre échelle maximale, et ses erreurs de contrôle, de l'ordre de quelques pour cent de cette échelle (ordre de grandeur), sont du même ordre que les écarts d'objectif qui départagent les bons profils ;
+\item \textbf{la température} : la machine opère à une température physique fixée. Comme pour le recuit simulé, ce qui compte est le rapport entre cette température et les écarts utiles, que les pénalités rendent petits.
+\end{itemize}
+D'où la règle générale, valable pour tous les solveurs : \textbf{des pénalités aussi faibles que possible}, juste assez pour que l'optimum du QUBO soit faisable.
+
+
 \exercices
 \begin{exercice}
 Au cours d'un recuit simulé, on propose un mouvement qui augmente l'énergie de $\Delta E=1$. Quelle est la probabilité de l'accepter à $T=2$ ? À $T=0{,}5$ ? À $T=0{,}1$ ? Expliquer le rôle de la température.
 \end{exercice}
 \begin{exercice}
 Pour une famille de problèmes, on mesure $g_{\min}\approx2^{-n/2}$. Comment croît le temps de recuit adiabatique nécessaire avec $n$ ? Comparer au coût de l'énumération exhaustive ($2^n$ évaluations). Qu'en conclure ?
+\end{exercice}
+\begin{exercice}\label{ex:boltzmann}
+À la fin du recuit de la boucle, $T_1=0{,}35$. (a) Rapport des probabilités de Boltzmann de deux profils séparés de $0{,}045$ en énergie ? (b) Probabilité d'accepter un retournement qui coûte $\Delta E=6$ (terme de Rosenberg) ? (c) Mêmes questions avec $T_1=0{,}005$. Conclure sur le dilemme.
 \end{exercice}

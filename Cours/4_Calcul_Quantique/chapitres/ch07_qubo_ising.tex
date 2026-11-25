@@ -99,6 +99,164 @@ Un polynôme de degré 2 en $z$ reste de degré 2 en bits : \textbf{c'est un QUB
 \end{itemize}
 \end{projet}
 
+\section{Le QUBO de la V2, bit par bit}\label{sec:qubo-v2}
+\begin{evolution}{V3}{section ajoutée}La section précédente décrit le QUBO de la V0 (9 qubits, traînée seule). Celle-ci décrit, sans rien omettre, le QUBO que la boucle construit et résout réellement depuis la V2 : 14 qubits, deux objectifs, deux contraintes. Les chiffres viennent d'une exécution réelle de la boucle (scénario S2, graine 0, premier QUBO, poids $w=0{,}5$), rejouée et enregistrée par \texttt{Code/quantique/trace\_boucle\_v2.py}.\end{evolution}
+
+\subsection{Le problème à traduire}
+On cherche un profil d'aile qui ait à la fois une faible traînée et une faible signature radar. Le profil est un NACA 4 chiffres modifié, décrit par quatre paramètres pris sur une grille :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{llcc}
+\toprule
+Paramètre & Valeurs & Niveaux $L$ & Bits \\
+\midrule
+cambrure $m$ & 0 à 7~\% de la corde, pas de 1~\% & 8 & 3 \\
+position de la cambrure $p$ & 0,25 ; 0,35 ; 0,45 ; 0,55 & 4 & 2 \\
+épaisseur $t$ & 6 à 20~\%, pas de 2~\% & 8 & 3 \\
+rayon de bord d'attaque $I$ & 2, 4, 6, 8 (indice du NACA modifié) & 4 & 2 \\
+\bottomrule
+\end{tabular}
+\end{center}
+soit $8\times4\times8\times4=1\,024$ profils. Pour chacun :
+\begin{itemize}
+\item \textbf{objectif 1}, la traînée $C_D$ (en counts, $10^{-4}$), donnée par XFOIL en croisière à $C_L=0{,}4$, $Re=3\cdot10^6$ ;
+\item \textbf{objectif 2}, la SER moyenne sur un secteur d'observation (en dBm), calculée par la méthode des moments à l'incidence de croisière ;
+\item \textbf{contrainte 1}, l'épaisseur $t\ge8~\%$ (structure, volume de carburant) ;
+\item \textbf{contrainte 2}, la manœuvre : $C_{L,\max}\ge1{,}2$, mesuré par une rampe d'incidence dans XFOIL ;
+\item \textbf{contrainte 3}, la convergence d'XFOIL en croisière.
+\end{itemize}
+Chaque évaluation est une \emph{simulation}, réputée coûteuse : c'est leur nombre que l'on cherche à minimiser. Le QUBO ne contient aucune simulation. Il contient des \emph{modèles} de ces grandeurs, ajustés sur les profils déjà simulés. C'est ce qui rend la traduction possible.
+
+\subsection{Les 10 bits de conception}
+Chaque paramètre est repéré par son indice $x\in\{0,\dots,L-1\}$, écrit en binaire : $x=\sum_j2^jb_j$. Comme $L$ est une puissance de 2, toutes les chaînes de bits sont des profils valides : l'encodage binaire n'ajoute aucune contrainte. Les qubits sont rangés ainsi :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l*{14}{c}}
+\toprule
+qubit & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & 12 & 13 \\
+rôle & $m_0$ & $m_1$ & $m_2$ & $p_0$ & $p_1$ & $t_0$ & $t_1$ & $t_2$ & $I_0$ & $I_1$ & $y$ & $s_0$ & $s_1$ & $s_2$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Les dix premiers sont les \textbf{bits de conception}. Le qubit $y$ est un \textbf{auxiliaire} (contrainte d'épaisseur) et $s_0s_1s_2$ sont des bits \textbf{d'écart} (contrainte de manœuvre) : ils ne décrivent pas le profil, ils servent à écrire les contraintes en quadratique. Au décodage, seuls les dix premiers comptent (\texttt{decode}).
+
+Les modèles n'utilisent pas les indices mais des variables \textbf{normalisées} dans $[-1,1]$, qui donnent le même poids à chaque paramètre et conditionnent bien les moindres carrés :
+\[ z=\frac{2x}{L-1}-1=-1+\frac{2}{L-1}\sum_j2^jb_j, \]
+soit par exemple $z_m=-1+\tfrac27(b_0+2b_1+4b_2)$ et $z_p=-1+\tfrac23(b_3+2b_4)$.
+Chaque $z_i$ est \textbf{affine} en bits : $\mathbf z=\mathbf a_0+A\mathbf b$, avec $\mathbf a_0=-\mathbf1$ et $A_{i,k}=2\cdot2^j/(L_i-1)$ si le qubit $k$ est le bit $j$ de la variable $i$ (\texttt{affine\_bit\_maps}). C'est cette propriété qui fait tout marcher : un polynôme de degré 2 en $\mathbf z$ restera de degré 2 en $\mathbf b$.
+
+\subsection{Les modèles de substitution}
+Sur les profils déjà simulés, on ajuste trois modèles (\texttt{optim/qubo\_loop.py}) :
+\begin{itemize}
+\item $\widehat{C_D}(\mathbf z)$ et $\widehat{\rm SER}(\mathbf z)$ : polynômes \textbf{quadratiques} complets, $c_0+\sum_ig_iz_i+\sum_{i\le j}M_{ij}z_iz_j$, soit $1+4+10=15$ coefficients pour 4 variables ; ajustés sur les profils \emph{faisables} seulement (un profil infaisable n'a pas toujours de $C_D$ : XFOIL peut ne pas converger) ;
+\item $\widehat{C_{L,\max}}(\mathbf z)$ : modèle \textbf{affine}, $c_0+\sum_ig_iz_i$ (5 coefficients), ajusté sur tous les profils où XFOIL a convergé.
+\end{itemize}
+L'ajustement est un problème de moindres carrés légèrement régularisé (\emph{ridge}). Avec $\Phi$ la matrice des monômes évalués sur les $N$ profils simulés et $\mathbf y$ les valeurs simulées :
+\[ \boldsymbol\theta=\big(\Phi^\top\Phi+\lambda\Id\big)^{-1}\Phi^\top\mathbf y,\qquad\lambda=10^{-6}. \]
+Le terme $\lambda\Id$ rend le système inversible même quand il y a moins de profils que de coefficients.
+
+\begin{piege}[ : un modèle sous-déterminé au départ]
+La boucle part de 10 profils tirés au hasard. Dans l'exécution tracée, 6 seulement sont faisables : on ajuste 15 coefficients sur 6 points. Le modèle passe exactement par les 6 points et peut prédire n'importe quoi ailleurs. Au premier QUBO, il prédit $\widehat{C_D}=27{,}5$ counts pour un profil dont la vraie traînée vaut 49, et $20$ counts pour un profil où XFOIL ne converge même pas. Le QUBO trouve exactement le minimum d'un modèle encore faux. Les premières itérations sont donc de l'exploration, et c'est normal (chapitre~\ref{ch:projet}).
+\end{piege}
+
+\paragraph{Pourquoi un modèle affine pour $C_{L,\max}$ ?} La contrainte sera écrite comme un carré (section suivante). Si le modèle était quadratique en bits, son carré serait de degré 4, et ce ne serait plus un QUBO (piège de la section~\ref{sec:penalites}). Un modèle affine donne un carré quadratique. C'est une contrainte de \emph{formulation}, pas un choix de précision : le diagnostic du lot L1 montre d'ailleurs que ce modèle affine est le moins précis des trois testés (erreur quadratique moyenne 0,19 contre 0,14 pour un quadratique).
+
+\subsection{L'objectif : une somme pondérée normalisée}
+Un QUBO n'a qu'une énergie. Pour viser plusieurs compromis traînée/SER, on résout à chaque itération \textbf{cinq} QUBO, un par poids $w\in\{0;\ 0{,}25;\ 0{,}5;\ 0{,}75;\ 1\}$, d'objectif
+\[ f_w(\mathbf b)=w\,\frac{\widehat{C_D}(\mathbf b)}{s_{C_D}}+(1-w)\,\frac{\widehat{\rm SER}(\mathbf b)}{s_{\rm SER}}, \]
+où $s_{C_D}$ et $s_{\rm SER}$ sont les étendues (max $-$ min) des valeurs simulées faisables. Sans cette normalisation, la traînée (des dizaines de counts) écraserait la SER (quelques dB), et $w$ n'aurait pas de sens. $w=1$ ne regarde que la traînée, $w=0$ que la SER.
+
+$f_w$ est une combinaison linéaire de deux polynômes quadratiques en $\mathbf z$, donc un polynôme quadratique en $\mathbf z$, de coefficients $\mathbf c=w\,\mathbf c_{C_D}/s_{C_D}+(1-w)\,\mathbf c_{\rm SER}/s_{\rm SER}$. On l'écrit $f=c_0+\mathbf g^\top\mathbf z+\mathbf z^\top M\mathbf z$ ($M$ symétrique : $M_{ii}$ est le coefficient de $z_i^2$, $M_{ij}=M_{ji}$ la moitié de celui de $z_iz_j$), puis on substitue $\mathbf z=\mathbf a_0+A\mathbf b$ :
+\[ f=\underbrace{c_0+\mathbf g^\top\mathbf a_0+\mathbf a_0^\top M\mathbf a_0}_{\text{constante}}+\underbrace{(\mathbf g+2M\mathbf a_0)^\top A}_{\boldsymbol\ell^\top}\,\mathbf b+\mathbf b^\top\underbrace{A^\top MA}_{R}\,\mathbf b. \]
+Il reste à ranger le tout dans une matrice triangulaire supérieure. Comme $b_k^2=b_k$, le terme $R_{kk}b_k^2$ est linéaire et va sur la diagonale avec $\ell_k$ ; chaque paire $k<l$ apparaît deux fois dans $\mathbf b^\top R\mathbf b$ ($R_{kl}$ et $R_{lk}$) :
+\[ Q_{kk}=R_{kk}+\ell_k,\qquad Q_{kl}=2R_{kl}\quad(k<l). \]
+C'est exactement \texttt{surrogate\_to\_qubo}. Aucune approximation n'est faite : l'énergie de ce QUBO \emph{est} la prédiction du modèle, à $10^{-14}$ près.
+
+\paragraph{Pourquoi le graphe est complet.} $R=A^\top MA$ couple deux bits dès que leurs variables sont couplées par $M$. Le terme $z_m^2$ couple les trois bits de $m$ entre eux ; un terme croisé $z_mz_t$ couple chaque bit de $m$ à chaque bit de $t$. Un modèle quadratique complet couple donc les 10 bits de conception deux à deux : 45 couplages, autant de portes $R_{ZZ}$.
+
+\subsection{La contrainte d'épaisseur : une pénalité cubique et la réduction de Rosenberg}
+$t\ge8~\%$ interdit le seul indice $x_t=0$ ($t=6~\%$), c'est-à-dire la chaîne $t_0=t_1=t_2=0$. La pénalité naturelle vaut $P$ sur cette chaîne et 0 ailleurs :
+\[ P\,(1-t_0)(1-t_1)(1-t_2),\qquad P=3. \]
+Elle est \textbf{exacte} (elle ne dépend d'aucun modèle, l'épaisseur est connue) mais \textbf{cubique}. Pour la ramener au degré 2, on remplace le produit $x_1x_2$ (avec $x_1=1-t_1$, $x_2=1-t_2$) par un nouveau bit $y$, et l'on ajoute un terme qui force $y=x_1x_2$ (Rosenberg, 1975) :
+\[ P\,(1-t_0)\,y\ +\ 2P\,\underbrace{\big(x_1x_2-2x_1y-2x_2y+3y\big)}_{\rho(x_1,x_2,y)}. \]
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{ccc|c|c}
+\toprule
+$x_1$ & $x_2$ & $y$ & $x_1x_2$ & $\rho$ \\
+\midrule
+0&0&0&0&0\\ 0&0&1&0&3\\ 0&1&0&0&0\\ 0&1&1&0&1\\ 1&0&0&0&0\\ 1&0&1&0&1\\ 1&1&0&1&1\\ 1&1&1&1&0\\
+\bottomrule
+\end{tabular}
+\end{center}
+Le tableau montre que $\rho=0$ si $y=x_1x_2$ et $\rho\ge1$ sinon. Pourquoi c'est exact : à $\mathbf t$ fixé, l'énergie minimale sur $y$ est atteinte pour $y=x_1x_2$. En effet, choisir le « mauvais » $y$ coûte au moins $2P\times1=2P$, alors que cela ne peut faire gagner qu'au plus $P$ sur le premier terme. Au minimum sur $y$, on retrouve donc exactement la pénalité cubique. La trace le vérifie : le même profil avec $t=6~\%$ coûte exactement $3{,}000=P$ de plus.
+
+En développant ($x=1-t$), on obtient des termes linéaires et des couplages entre $y$ et les bits $t_0,t_1,t_2$, plus une constante (\texttt{penalty\_index\_nonzero}). Le prix : \textbf{un qubit} et 3 couplages de plus. C'est la technique générale pour réduire un terme de degré $k$ : chaque produit remplacé coûte un qubit auxiliaire.
+
+\begin{piege}[ : pourquoi pas une simple pénalité quadratique ?]
+On pourrait être tenté par $P(1-t_1)(1-t_2)$, qui est quadratique. Mais elle interdirait aussi l'indice $x_t=1$ ($t=8~\%$, chaîne $t_0=1$, $t_1=t_2=0$), qui est permis, et c'est justement l'épaisseur des profils du front. Interdire exactement une chaîne parmi huit demande les trois bits, donc le degré 3.
+\end{piege}
+
+\subsection{La contrainte de manœuvre : variable d'écart et pénalité quadratique}
+Le modèle affine s'écrit en bits $\widehat{C_{L,\max}}(\mathbf b)=L_0+\sum_ka_kb_k$. Dans l'exécution tracée, $L_0=0{,}89$, et les $a_k$ vont de $-0{,}08$ à $+0{,}31$. Le plus grand est celui du bit de poids fort de $m$ : plus de cambrure, plus de portance maximale. Les bits de $t$ ont des coefficients négatifs : ajusté sur 10 profils seulement, ce modèle prédit qu'un profil plus épais décroche plus tôt. Les signes sont appris, pas imposés, et changent au fil de la boucle. Une inégalité ne se pénalise pas directement par un carré : $(\widehat{C_{L,\max}}-1{,}2)^2$ punirait aussi les profils qui ont de la marge. On introduit donc une \textbf{variable d'écart} $s\ge0$ qui absorbe la marge :
+\[ \widehat{C_{L,\max}}\ge1{,}2\iff\exists\,s\ge0:\ \widehat{C_{L,\max}}-1{,}2-s=0,\qquad\text{pénalité}\quad P_{CL}\big(\widehat{C_{L,\max}}(\mathbf b)-1{,}2-s\big)^2. \]
+L'écart est encodé sur 3 bits, $s=\frac{s_{\max}}{7}(s_0+2s_1+4s_2)$, où $s_{\max}=\max_{\mathbf b}\widehat{C_{L,\max}}-1{,}2$ est la plus grande marge possible ($s_{\max}=0{,}77$ ici). Le poids vaut $P_{CL}=3\times25=75$. L'expression entre parenthèses est affine en bits (conception et écart), donc son carré est quadratique : c'est un QUBO (\texttt{penalty\_linear\_geq}). Il couple chaque bit d'écart à chaque bit de conception (30 couplages) et les bits d'écart entre eux (3 couplages), et il \emph{ajoute} des couplages $2P_{CL}a_ka_l$ entre bits de conception.
+
+\paragraph{Ce que fait vraiment cette pénalité.} Pour un profil donné, le QUBO choisit le meilleur $s$ parmi 8 valeurs espacées de $s_{\max}/7=0{,}11$. La pénalité effective est donc $\min_s P_{CL}(\widehat{C_{L,\max}}-1{,}2-s)^2$ (figure~\ref{fig:penalite-cl}) :
+\begin{itemize}
+\item \textbf{sous le seuil}, $s=0$ et la pénalité vaut $P_{CL}(1{,}2-\widehat{C_{L,\max}})^2$ : elle est quadratique, donc \emph{douce} près du seuil. Une violation de 0,02 ne coûte que $75\times0{,}02^2=0{,}03$ ;
+\item \textbf{au-dessus du seuil}, la marge n'est absorbée exactement que si elle est un multiple de 0,11. Entre deux, il reste une pénalité qui peut atteindre $P_{CL}(0{,}055)^2=0{,}23$ pour un profil \emph{faisable}.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\input{figures/penalite_cl}
+\caption{Pénalité effective de la contrainte de manœuvre en fonction de $\widehat{C_{L,\max}}$, dans le premier QUBO de l'exécution tracée. Avec un écart continu, elle serait nulle au-dessus du seuil (tirets). Avec 3 bits d'écart, elle forme des dents de scie : un profil faisable peut payer jusqu'à 0,23, plus qu'un profil légèrement infaisable. Le point vert est le minimum du QUBO : un profil prédit à 1,178, sous le seuil, qui paie 0,037.}\label{fig:penalite-cl}
+\end{figure}
+Ces deux défauts ne sont pas des détails : l'étendue de l'objectif normalisé n'est que de 1,45 dans ce QUBO. Une pénalité résiduelle de 0,23 représente 16~\% de cette étendue, et peut donc changer le classement des profils faisables. Et la douceur sous le seuil explique pourquoi le minimum du QUBO est souvent un profil que le modèle prédit légèrement infaisable (chapitre~\ref{ch:pourquoi}). Ironie du projet : cette souplesse est \emph{utile}, car les profils du front sont juste au bord de la contrainte, et un modèle affine imprécis les prédit souvent infaisables (lot L1).
+
+\subsection{L'assemblage : 14 qubits, 81 couplages}
+\begin{figure}[htbp]
+\centering
+\input{figures/matrice_Q_v2}
+\caption{La matrice $Q$ du premier QUBO de l'exécution tracée (S2, $w=0{,}5$), en échelle logarithmique. Le bloc $10\times10$ en haut à gauche couple les bits de conception ; la colonne $y$ ne touche que les bits de $t$ ; les colonnes $s$ touchent tous les bits de conception. Les teintes les plus fortes viennent de la pénalité de manœuvre.}\label{fig:matrice-q-v2}
+\end{figure}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+Bloc de couplages & Nombre & Plus grand $|Q_{kl}|$ \\
+\midrule
+conception -- conception & 45 (tous) & 11,9 \\
+conception -- auxiliaire $y$ & 3 (bits de $t$) & 12,0 \\
+conception -- écart $s$ & 30 (tous) & 20,6 \\
+écart -- écart & 3 & 14,6 \\
+\midrule
+total & \textbf{81} sur 91 possibles & 35,1 (diagonale) \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le chiffre à retenir : le plus grand coefficient de l'objectif seul vaut \textbf{0,30}, celui du QUBO complet \textbf{35}. Les couplages entre bits de conception, qui devraient porter la physique traînée/SER, sont eux-mêmes dominés par les termes $2P_{CL}a_ka_l$ de la contrainte. L'énergie varie de 132 sur l'ensemble des chaînes, dont 1,45 seulement pour l'objectif. \textbf{La structure de ce QUBO est d'abord celle de ses contraintes.} Les chapitres suivants montrent ce que cela coûte au recuit et à QAOA.
+
+En variables d'Ising (section précédente), les champs $h_i$ vont de $-7{,}5$ à $5{,}3$ et les couplages $|J_{ij}|$ de $0{,}03$ à $5{,}2$ : un rapport de 150 entre le plus grand et le plus petit coefficient, à reproduire fidèlement sur un processeur.
+
+\subsection{Vérification sur une chaîne}
+Le minimum de ce QUBO est la chaîne
+\[ \underbrace{0\,1\,0}_{m}\ \underbrace{1\,1}_{p}\ \underbrace{1\,0\,0}_{t}\ \underbrace{0\,0}_{I}\ \underbrace{1}_{y}\ \underbrace{0\,0\,0}_{s}\qquad(\text{bit de poids faible à gauche}). \]
+Décodage : $x_m=0+2+0=2$ ($m=2~\%$), $x_p=1+2=3$ ($p=0{,}55$), $x_t=1$ ($t=8~\%$), $x_I=0$ ($I=2$). L'auxiliaire vaut $y=(1-t_1)(1-t_2)=1$ : c'est cohérent, donc $\rho=0$. Son énergie se décompose ainsi :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lr}
+\toprule
+objectif $f_{0{,}5}$ (modèles) & $-0{,}470$ \\
+pénalité d'épaisseur ($x_t=1\neq0$) & $0{,}000$ \\
+pénalité de manœuvre ($\widehat{C_{L,\max}}=1{,}178$, $s=0$) : $75\times(1{,}178-1{,}2)^2$ & $+0{,}037$ \\
+\midrule
+énergie QUBO & $-0{,}433$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le QUBO a préféré un profil prédit légèrement infaisable : la pénalité qu'il paie (0,037) est inférieure à ce qu'il gagne sur l'objectif. Une fois simulé, ce profil s'est révélé infaisable pour une autre raison : XFOIL ne converge pas sur la rampe de manœuvre de ce profil à nez très fin. Le modèle ne pouvait pas le savoir : c'est la simulation qui tranche.
+
 \exercices
 \begin{exercice}
 Convertir le QUBO jouet en modèle d'Ising : calculer $h$, $J$ et la constante avec les formules du cours. Vérifier que $E(\mathbf s)=-2$ pour la chaîne $101$, c'est-à-dire $\mathbf s=(-1,+1,-1)$.
@@ -106,3 +264,10 @@ Convertir le QUBO jouet en modèle d'Ising : calculer $h$, $J$ et la constante a
 \begin{exercice}
 On encode $m$, $p$, $t$ (8 niveaux chacun) en one-hot. Combien faut-il de qubits ? Écrire la pénalité qui impose « un seul niveau actif » pour $m$, et dire combien de couplages $Z_iZ_j$ elle ajoute. Conclure sur le choix d'encodage pour notre projet.
 \end{exercice}
+\begin{exercice}\label{ex:rosenberg}
+(a) Vérifier ligne à ligne le tableau de $\rho(x_1,x_2,y)$. (b) On remplace le poids $2P$ du terme de Rosenberg par $P/2$. Trouver une chaîne $\mathbf t$ et un $y$ pour lesquels l'énergie devient plus basse que la vraie pénalité cubique. Pourquoi faut-il un poids strictement supérieur à $P$ ?
+\end{exercice}
+\begin{exercice}\label{ex:ecart}
+Dans le QUBO de la figure~\ref{fig:penalite-cl}, $s_{\max}=0{,}77$ et $P_{CL}=75$. (a) Quelle pénalité paie un profil prédit à $\widehat{C_{L,\max}}=1{,}26$ ? À $1{,}20$ ? À $1{,}17$ ? (b) Combien de bits d'écart faudrait-il pour que la pénalité résiduelle d'un profil faisable reste sous $0{,}01$ ? Combien de qubits et de couplages cela ajoute-t-il ?
+\end{exercice}
+

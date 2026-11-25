@@ -43,6 +43,7 @@ La colonne « depuis » donne l'itération qui a créé le fichier ; « rôle en
 | `optim/check_pymoo.py` | V1 | vérification croisée de NSGA-II contre pymoo | V1 |
 | `quantique/qubo.py`, `qaoa.py`, `recuit.py` | V0 | QUBO / Ising, QAOA par vecteur d'état, recuit simulé | **actif** |
 | `quantique/montee_en_taille.py` | V2 | QAOA de 6 à 18 qubits, initialisation INTERP → `resultats/montee_en_taille.json` | **actif** |
+| `quantique/trace_boucle_v2.py` | V3 | rejoue une exécution de la boucle V2 (S2, graine 0) en enregistrant QUBO, candidats et recuit → `resultats/trace_boucle_V2.json` ; cours quantique, chapitres 8 à 12 | **actif** |
 | `quantique/anatomie_qubo.py` | V3 | anatomie des QUBO de la boucle (part des pénalités, QAOA avec et sans contraintes) → `resultats/anatomie_qubo_V3.json` ; cours quantique, chapitre « Pourquoi QAOA n'apporte rien » | **actif** |
 | `quantique/experiences.py` | V0 | expériences du cours quantique → `resultats/experiences_quantique.json` | figures V0 |
 | `validation.py` | V0 | validations du modèle rapide (V1 à V5 du cours aéro) | V0 |
@@ -73,6 +74,7 @@ Les cours et la fiche projet relisent `resultats/` pour leurs figures et leurs c
 | `base_aero_Re3e+06_a2.csv`, `base_aero_Re3e+06_CL0.4.csv`, `NACA2412.*`, `experiences_quantique.json` | V0 | `generer_base.py`, `demo_profil.py`, `quantique.experiences` |
 | `base_complete_S1_note.csv`, `base_complete_S2_sol.csv`, `pipeline.json`, `base_xfoil_a2.csv`, `check_pymoo.json` | V1 | `optim.experiences_pipeline`, `validation_xfoil_grille.py`, `optim.check_pymoo` |
 | `base_V2.csv`, `ser_mom_V2.csv`, `pipeline_V2.json`, `montee_en_taille.json` | V2 | voir « Lancer la V2 » |
+| `trace_boucle_V2.json` | V3 | `python3 -m quantique.trace_boucle_v2` (2 min) |
 | `anatomie_qubo_V3.json` | V3 | `python3 -m quantique.anatomie_qubo` (3 min) |
 | `montee_en_taille_init_aleatoire.json` | V2 | première version de la montée en taille (angles aléatoires), gardée pour la comparaison du cours quantique |
 
