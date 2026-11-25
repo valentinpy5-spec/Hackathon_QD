@@ -49,6 +49,12 @@
 
 \textbf{Ex.~8.4.} (a) Le pas de l'écart vaut $0{,}77/7=0{,}11$. Pour $1{,}26$ : la marge $0{,}06$ est à $0{,}05$ du niveau $s=0{,}11$, soit $75\times0{,}05^2\approx0{,}19$. Pour $1{,}20$ : $s=0$, pénalité nulle. Pour $1{,}17$ : $s=0$, $75\times0{,}03^2\approx0{,}07$. Le profil infaisable à $1{,}17$ paie moins que le profil faisable à $1{,}26$ ! (b) Il faut $75\,(\text{pas}/2)^2<0{,}01$, soit un pas inférieur à $0{,}023$, donc $2^k-1>0{,}77/0{,}023\approx34$ : $k=6$ bits (63 niveaux). Cela ajoute 3 qubits (17 au total). Chaque bit d'écart est couplé aux 10 bits de conception et aux autres bits d'écart : $6\times10+\binom62=75$ couplages au lieu de $30+3=33$, soit 42 de plus (123 au total). Une contrainte plus fidèle coûte des qubits et des portes.
 
+\textbf{Ex.~8.5.} (a) Indices $(5,3,1,1)$. Bits : $m$, $5=1+4$, donc $101$ ; $p$, $3=1+2$, donc $11$ ; $t$, $1$, donc $100$ ; $I$, $1$, donc $10$. Chaîne de conception : $1\,0\,1\ 1\,1\ 1\,0\,0\ 1\,0$. Par l'indice : $z_m=\frac{10}7-1=\frac37$, $z_p=\frac63-1=1$, $z_t=-\frac57$, $z_I=-\frac13$. Par la valeur : $z_m=\frac{5-3{,}5}{3{,}5}=\frac37$, $z_p=\frac{0{,}55-0{,}40}{0{,}15}=1$, et les mêmes pour $t$ et $I$. (b) Avec $z_m=-1+a_0b_0+a_1b_1+a_2b_2$, $a=(\frac27,\frac47,\frac87)$ : $z_m^2=1+\sum_k(a_k^2-2a_k)\,b_k+2\sum_{k<l}a_ka_l\,b_kb_l$ (après $b_k^2=b_k$), soit
+\[ z_m^2=1-\tfrac{24}{49}b_0-\tfrac{40}{49}b_1-\tfrac{48}{49}b_2+\tfrac{16}{49}b_0b_1+\tfrac{32}{49}b_0b_2+\tfrac{64}{49}b_1b_2. \]
+Pour $101$ : $1-\frac{24}{49}-\frac{48}{49}+\frac{32}{49}=\frac{9}{49}=(\frac37)^2$. Trois couplages entre les bits de $m$ : c'est ce qui remplit les blocs diagonaux de la matrice $Q$.
+
+\textbf{Ex.~8.6.} (a) $\frac{(5+1)(5+2)}2=21$ coefficients, donc au moins 21 profils faisables bien répartis. (b) Les monômes de degré au plus 3 en 4 variables sont au nombre de $\binom{4+3}3=35$. Un terme $z_mz_pz_t$ devient, en bits, des produits de trois bits : ce n'est plus un QUBO, il faudrait des auxiliaires (réduction de Rosenberg) pour chaque produit. (c) $3+2+3+2+3=13$ bits de conception, tous couplés deux à deux : $\binom{13}2=78$ couplages, contre 45 aujourd'hui.
+
 \section*{Chapitre~\ref{ch:recuit} — Recuit}
 \textbf{Ex.~9.1.} $e^{-1/2}\approx0{,}61$ ; $e^{-2}\approx0{,}14$ ; $e^{-10}\approx4{,}5\cdot10^{-5}$. À haute température, on explore presque librement, ce qui permet de franchir les barrières. À basse température, on ne fait plus que descendre. Refroidir progressivement passe de l'exploration à l'exploitation.
 

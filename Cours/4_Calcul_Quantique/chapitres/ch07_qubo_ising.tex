@@ -127,8 +127,77 @@ soit $8\times4\times8\times4=1\,024$ profils. Pour chacun :
 \end{itemize}
 Chaque évaluation est une \emph{simulation}, réputée coûteuse : c'est leur nombre que l'on cherche à minimiser. Le QUBO ne contient aucune simulation. Il contient des \emph{modèles} de ces grandeurs, ajustés sur les profils déjà simulés. C'est ce qui rend la traduction possible.
 
-\subsection{Les 10 bits de conception}
-Chaque paramètre est repéré par son indice $x\in\{0,\dots,L-1\}$, écrit en binaire : $x=\sum_j2^jb_j$. Comme $L$ est une puissance de 2, toutes les chaînes de bits sont des profils valides : l'encodage binaire n'ajoute aucune contrainte. Les qubits sont rangés ainsi :
+\subsection{Quatre façons de décrire un même profil}\label{sec:x-b-z}
+Un profil de la grille peut s'écrire de quatre façons, et chacune sert à une étape différente :
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.5cm}}
+\toprule
+Description & Ce que c'est & Qui s'en sert \\
+\midrule
+\textbf{valeur physique} $v$ & $m=2~\%$, $p=0{,}45$, $t=8~\%$, $I=4$ & XFOIL, la méthode des moments \\
+\textbf{indice} $x$ & la position de la valeur sur la grille : $0,1,\dots,L-1$ & la table des simulations \\
+\textbf{bits} $b$ & l'indice écrit en binaire & les qubits, le QUBO \\
+\textbf{variable normalisée} $z$ & la valeur ramenée dans $[-1,1]$, centrée au milieu de la grille & les modèles de substitution \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Les quatre sont reliées par des formules simples. Pour un paramètre à $L$ niveaux régulièrement espacés de $v_{\min}$ à $v_{\max}$ :
+\[ v=v_{\min}+x\,\frac{v_{\max}-v_{\min}}{L-1},\qquad x=\sum_j2^j\,b_j,\qquad z=\frac{2x}{L-1}-1=\frac{v-v_{\rm milieu}}{\tfrac12(v_{\max}-v_{\min})}. \]
+La dernière égalité dit ce qu'est $z$ : \textbf{l'écart au milieu de la grille, mesuré en demi-étendues}. $z=-1$ est la plus petite valeur, $z=+1$ la plus grande, $z=0$ le milieu. Pour nos quatre paramètres :
+\[ z_m=\frac{m-3{,}5~\%}{3{,}5~\%},\qquad z_p=\frac{p-0{,}40}{0{,}15},\qquad z_t=\frac{t-13~\%}{7~\%},\qquad z_I=\frac{I-5}{3}. \]
+Toutes les valeurs possibles :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{c c c c c}
+\toprule
+\multicolumn{5}{c}{\textbf{paramètres à 8 niveaux} (3 bits)} \\
+$x$ & bits $b_0b_1b_2$ & $z$ & $m$ & $t$ \\
+\midrule
+0 & 000 & $-1$ & 0~\% & 6~\% \\
+1 & 100 & $-5/7\approx-0{,}714$ & 1~\% & 8~\% \\
+2 & 010 & $-3/7\approx-0{,}429$ & 2~\% & 10~\% \\
+3 & 110 & $-1/7\approx-0{,}143$ & 3~\% & 12~\% \\
+4 & 001 & $+1/7$ & 4~\% & 14~\% \\
+5 & 101 & $+3/7$ & 5~\% & 16~\% \\
+6 & 011 & $+5/7$ & 6~\% & 18~\% \\
+7 & 111 & $+1$ & 7~\% & 20~\% \\
+\bottomrule
+\end{tabular}
+\hspace{1cm}
+\begin{tabular}{c c c c c}
+\toprule
+\multicolumn{5}{c}{\textbf{paramètres à 4 niveaux} (2 bits)} \\
+$x$ & bits $b_0b_1$ & $z$ & $p$ & $I$ \\
+\midrule
+0 & 00 & $-1$ & 0,25 & 2 \\
+1 & 10 & $-1/3$ & 0,35 & 4 \\
+2 & 01 & $+1/3$ & 0,45 & 6 \\
+3 & 11 & $+1$ & 0,55 & 8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Les bits sont écrits du poids faible au poids fort : « 110 » se lit $b_0=1$, $b_1=1$, $b_2=0$, soit $x=1+2=3$.
+
+\paragraph{Exemple complet.} Prenons le profil du front de S2 qui a la plus faible traînée : $m=2~\%$, $p=0{,}45$, $t=8~\%$, $I=4$.
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+& $m$ & $p$ & $t$ & $I$ \\
+\midrule
+valeur & 2~\% & 0,45 & 8~\% & 4 \\
+indice $x$ & 2 & 2 & 1 & 1 \\
+bits & $010$ & $01$ & $100$ & $10$ \\
+$z$ par l'indice, $\frac{2x}{L-1}-1$ & $\frac47-1=-\frac37$ & $\frac43-1=\frac13$ & $\frac27-1=-\frac57$ & $\frac23-1=-\frac13$ \\
+$z$ par la valeur & $\frac{2-3{,}5}{3{,}5}=-\frac37$ & $\frac{0{,}45-0{,}40}{0{,}15}=\frac13$ & $\frac{8-13}{7}=-\frac57$ & $\frac{4-5}3=-\frac13$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Sur les qubits, ce profil est la chaîne de conception $0\,1\,0\ 0\,1\ 1\,0\,0\ 1\,0$ (qubits 0 à 9). Les quatre qubits suivants servent aux contraintes d'épaisseur et de manœuvre (voir plus bas).
+
+\paragraph{La disposition des 14 qubits.}
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{l*{14}{c}}
@@ -138,28 +207,99 @@ rôle & $m_0$ & $m_1$ & $m_2$ & $p_0$ & $p_1$ & $t_0$ & $t_1$ & $t_2$ & $I_0$ & 
 \bottomrule
 \end{tabular}
 \end{center}
-Les dix premiers sont les \textbf{bits de conception}. Le qubit $y$ est un \textbf{auxiliaire} (contrainte d'épaisseur) et $s_0s_1s_2$ sont des bits \textbf{d'écart} (contrainte de manœuvre) : ils ne décrivent pas le profil, ils servent à écrire les contraintes en quadratique. Au décodage, seuls les dix premiers comptent (\texttt{decode}).
+Les dix premiers sont les \textbf{bits de conception}. Le qubit $y$ est un \textbf{auxiliaire} (contrainte d'épaisseur) et $s_0s_1s_2$ sont des bits \textbf{d'écart} (contrainte de manœuvre) : ils ne décrivent pas le profil, ils servent à écrire les contraintes en quadratique. Au décodage, seuls les dix premiers comptent (\texttt{decode}). Comme chaque $L$ est une puissance de 2, toute chaîne de 10 bits est un profil de la grille : l'encodage binaire n'ajoute aucune contrainte.
 
-Les modèles n'utilisent pas les indices mais des variables \textbf{normalisées} dans $[-1,1]$, qui donnent le même poids à chaque paramètre et conditionnent bien les moindres carrés :
-\[ z=\frac{2x}{L-1}-1=-1+\frac{2}{L-1}\sum_j2^jb_j, \]
-soit par exemple $z_m=-1+\tfrac27(b_0+2b_1+4b_2)$ et $z_p=-1+\tfrac23(b_3+2b_4)$.
-Chaque $z_i$ est \textbf{affine} en bits : $\mathbf z=\mathbf a_0+A\mathbf b$, avec $\mathbf a_0=-\mathbf1$ et $A_{i,k}=2\cdot2^j/(L_i-1)$ si le qubit $k$ est le bit $j$ de la variable $i$ (\texttt{affine\_bit\_maps}). C'est cette propriété qui fait tout marcher : un polynôme de degré 2 en $\mathbf z$ restera de degré 2 en $\mathbf b$.
+\subsection{À quoi servent les variables normalisées $z$}
+On pourrait écrire les modèles directement avec les valeurs physiques, ou avec les indices. Les $z$ ont trois avantages.
 
-\subsection{Les modèles de substitution}
+\paragraph{1. Tous les paramètres à la même échelle.} Les valeurs physiques ont des ordres de grandeur très différents : $m$ va de 0 à 0,07, $I$ de 2 à 8. Un modèle quadratique contient $m^2$ (au plus 0,005) et $I^2$ (jusqu'à 64) : des colonnes du problème de moindres carrés qui diffèrent d'un facteur $10^4$. Le système est alors mal conditionné, et le moindre bruit numérique d'XFOIL se transmet amplifié aux coefficients. Sur la grille de 1\,024 profils, le conditionnement de la matrice des monômes vaut $8{,}3\cdot10^4$ avec les valeurs physiques, et \textbf{5,1} avec les $z$. Avec les $z$, tous les monômes sont compris entre $-1$ et 1.
+
+\paragraph{2. Des coefficients lisibles.} Comme $z=0$ au milieu de la grille, le coefficient $g_i$ de $z_i$ est la \emph{pente} au centre du domaine, et le coefficient de $z_i^2$ est la \emph{courbure}. Sur une grille symétrique, les colonnes $z_i$ et $z_i^2$ sont de plus décorrélées ($\sum z_i=\sum z_i^3=0$) : pente et courbure s'estiment indépendamment. Avec les indices $x$, toujours positifs, $x$ et $x^2$ seraient très corrélés.
+
+\paragraph{3. Un lien affine avec les bits.} Chaque $z_i$ est une fonction \textbf{affine} des bits de sa variable :
+\[ z_m=-1+\tfrac27b_0+\tfrac47b_1+\tfrac87b_2,\qquad z_p=-1+\tfrac23b_3+\tfrac43b_4,\quad\dots \]
+En vecteur, $\mathbf z=\mathbf a_0+A\mathbf b$ avec $\mathbf a_0=-\mathbf1$ et $A_{i,k}=2\cdot2^j/(L_i-1)$ si le qubit $k$ est le bit $j$ de la variable $i$ (\texttt{affine\_bit\_maps}). C'est la propriété qui fait tout marcher : un polynôme de degré 2 en $\mathbf z$ reste de degré 2 en $\mathbf b$.
+
+\paragraph{Exemple : $z_p^2$ écrit en bits.} Avec $z_p=-1+\tfrac23b_3+\tfrac43b_4$ :
+\[ z_p^2=1-\tfrac43b_3-\tfrac83b_4+\tfrac49b_3^2+\tfrac{16}9b_4^2+\tfrac{16}9b_3b_4. \]
+Comme un bit vaut 0 ou 1, $b^2=b$ : les carrés redeviennent linéaires, et
+\[ z_p^2=1-\tfrac89b_3-\tfrac89b_4+\tfrac{16}9b_3b_4. \]
+Vérification sur les quatre valeurs : $b_3b_4=00$ donne $1=(-1)^2$ ; $10$ donne $1-\frac89=\frac19=(-\frac13)^2$ ; $01$ donne $\frac19=(\frac13)^2$ ; $11$ donne $1-\frac{16}9+\frac{16}9=1$. Le carré d'une variable à 2 bits devient un terme constant, deux termes linéaires et \emph{un couplage} $b_3b_4$ : c'est un morceau de QUBO.
+
+\subsection{Pourquoi 15 coefficients}
+Un modèle quadratique complet en $d$ variables contient \emph{tous} les monômes de degré au plus 2. Pour nos $d=4$ variables, dans l'ordre du code (\texttt{quadratic\_features}) :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{l c >{\raggedright\arraybackslash}X}
+\toprule
+Type & Nombre & Monômes, et ce qu'ils décrivent \\
+\midrule
+constante & 1 & $1$ : le niveau moyen, au centre de la grille \\
+linéaires & 4 & $z_m,\ z_p,\ z_t,\ z_I$ : la tendance de chaque paramètre (plus épais $\Rightarrow$ plus de traînée) \\
+carrés & 4 & $z_m^2,\ z_p^2,\ z_t^2,\ z_I^2$ : la courbure (un optimum à l'intérieur de la grille plutôt qu'au bord) \\
+croisés & 6 & $z_mz_p,\ z_mz_t,\ z_mz_I,\ z_pz_t,\ z_pz_I,\ z_tz_I$ : les interactions (l'effet d'un paramètre dépend d'un autre) \\
+\midrule
+total & \textbf{15} & $1+d+d+\binom d2=\frac{(d+1)(d+2)}2$ \\
+\bottomrule
+\end{tabularx}
+\end{center}
+D'où 10 coefficients pour les 3 variables de la V0, 15 pour les 4 de la V2, 21 si l'on libère la position d'épaisseur $T$ (cinquième variable), 231 pour 20 variables. Le degré 2 est le plus petit qui représente à la fois une courbure et des interactions, et c'est aussi le plus grand qu'accepte un QUBO : un modèle cubique en 4 variables aurait 35 coefficients et donnerait des termes à trois bits.
+
+\paragraph{Exemple à une variable.} Fixons $m=2~\%$, $p=0{,}45$, $I=4$ et faisons varier l'épaisseur. XFOIL donne :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{l*{8}{c}}
+\toprule
+$t$ & 6~\% & 8~\% & 10~\% & 12~\% & 14~\% & 16~\% & 18~\% & 20~\% \\
+$z_t$ & $-1$ & $-0{,}71$ & $-0{,}43$ & $-0{,}14$ & $0{,}14$ & $0{,}43$ & $0{,}71$ & $1$ \\
+$C_D$ simulé (counts) & 34,0 & 38,0 & 44,2 & 49,4 & 54,2 & 59,2 & 64,1 & 70,0 \\
+modèle $51{,}6+18{,}0\,z_t+0{,}1\,z_t^2$ & 33,7 & 38,8 & 43,9 & 49,0 & 54,2 & 59,3 & 64,5 & 69,7 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Les trois coefficients se lisent directement : 51,6 counts au milieu de la grille ($t=13~\%$) ; une pente de 18 counts par demi-étendue, soit $18/7\approx2{,}6$ counts par point d'épaisseur ; une courbure quasi nulle (0,1) : la traînée croît presque linéairement avec l'épaisseur. Le modèle à 15 coefficients fait la même chose en quatre dimensions, avec en plus les interactions.
+
+\paragraph{Le modèle de traînée ajusté sur toute la grille.} Pour voir des coefficients représentatifs, ajustons $\widehat{C_D}$ sur les 701 profils faisables de S2 (un profil aberrant à plus de 200 counts est écarté) :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{lr@{\hspace{1.2cm}}lr@{\hspace{1.2cm}}lr}
+\toprule
+$1$ & 54,9 & $z_m^2$ & 6,4 & $z_mz_p$ & $-9{,}1$ \\
+$z_m$ & 5,7 & $z_p^2$ & 3,1 & $z_mz_t$ & $-4{,}0$ \\
+$z_p$ & $-7{,}1$ & $z_t^2$ & 3,3 & $z_mz_I$ & $-3{,}1$ \\
+$z_t$ & 8,5 & $z_I^2$ & 2,9 & $z_pz_t$ & 1,0 \\
+$z_I$ & 0,9 & & & $z_pz_I$ & 0,2 \\
+ & & & & $z_tz_I$ & 1,2 \\
+\bottomrule
+\end{tabular}
+\end{center}
+On y lit de la physique : plus d'épaisseur ($+8{,}5$) ou de cambrure ($+5{,}7$), plus de traînée ; une cambrure placée plus en arrière en réduit ($-7{,}1$). Le plus grand coefficient croisé est $z_mz_p$ ($-9{,}1$) : l'effet de la position de cambrure $p$ dépend fortement de la cambrure $m$. C'est attendu, puisque $p$ n'a aucun effet géométrique quand $m=0$. Un modèle sans termes croisés ne pourrait pas le représenter.
+
+\paragraph{Une prédiction, calculée.} Pour le profil exemple, $\mathbf z=(-\frac37,\frac13,-\frac57,-\frac13)$. Les 15 monômes valent :
+\begin{align*}
+\boldsymbol\varphi(\mathbf z)=\big(&1;\ -0{,}429;\ 0{,}333;\ -0{,}714;\ -0{,}333;\ 0{,}184;\ -0{,}143;\ 0{,}306;\\
+&0{,}143;\ 0{,}111;\ -0{,}238;\ -0{,}111;\ 0{,}510;\ 0{,}238;\ 0{,}111\big),
+\end{align*}
+dans l'ordre $1$, $z_m$, $z_p$, $z_t$, $z_I$, $z_m^2$, $z_mz_p$, $z_mz_t$, $z_mz_I$, $z_p^2$, $z_pz_t$, $z_pz_I$, $z_t^2$, $z_tz_I$, $z_I^2$ (celui du code). La prédiction est le produit scalaire avec les coefficients : $\widehat{C_D}=\boldsymbol\varphi(\mathbf z)\cdot\boldsymbol\theta=46{,}9$ counts. XFOIL donne 38,0. L'erreur, 8,9 counts, est bien plus grande que l'erreur moyenne du modèle sur la grille (3,4 counts) : un modèle quadratique global est le moins précis justement près du front, dans un coin de la grille. C'est pourquoi la boucle ne fait jamais confiance au modèle pour le résultat final : elle simule les candidats.
+
+\subsection{L'ajustement : les moindres carrés}
 Sur les profils déjà simulés, on ajuste trois modèles (\texttt{optim/qubo\_loop.py}) :
 \begin{itemize}
-\item $\widehat{C_D}(\mathbf z)$ et $\widehat{\rm SER}(\mathbf z)$ : polynômes \textbf{quadratiques} complets, $c_0+\sum_ig_iz_i+\sum_{i\le j}M_{ij}z_iz_j$, soit $1+4+10=15$ coefficients pour 4 variables ; ajustés sur les profils \emph{faisables} seulement (un profil infaisable n'a pas toujours de $C_D$ : XFOIL peut ne pas converger) ;
-\item $\widehat{C_{L,\max}}(\mathbf z)$ : modèle \textbf{affine}, $c_0+\sum_ig_iz_i$ (5 coefficients), ajusté sur tous les profils où XFOIL a convergé.
+\item $\widehat{C_D}(\mathbf z)$ et $\widehat{\rm SER}(\mathbf z)$ : quadratiques complets (15 coefficients), ajustés sur les profils \emph{faisables} seulement, car un profil infaisable n'a pas toujours de $C_D$ (XFOIL peut ne pas converger) ;
+\item $\widehat{C_{L,\max}}(\mathbf z)$ : \textbf{affine}, $c_0+\sum_ig_iz_i$ (5 coefficients), ajusté sur tous les profils où XFOIL a convergé et donné un $C_{L,\max}$.
 \end{itemize}
-L'ajustement est un problème de moindres carrés légèrement régularisé (\emph{ridge}). Avec $\Phi$ la matrice des monômes évalués sur les $N$ profils simulés et $\mathbf y$ les valeurs simulées :
+On empile les $N$ profils simulés : la matrice $\Phi$ a une ligne par profil (ses 15 monômes, comme $\boldsymbol\varphi$ ci-dessus) et une colonne par monôme ; le vecteur $\mathbf y$ contient les $N$ valeurs simulées. On cherche les coefficients $\boldsymbol\theta$ qui minimisent $\|\Phi\boldsymbol\theta-\mathbf y\|^2$, avec une très légère régularisation (\emph{ridge}) :
 \[ \boldsymbol\theta=\big(\Phi^\top\Phi+\lambda\Id\big)^{-1}\Phi^\top\mathbf y,\qquad\lambda=10^{-6}. \]
-Le terme $\lambda\Id$ rend le système inversible même quand il y a moins de profils que de coefficients.
+Sans le terme $\lambda\Id$, $\Phi^\top\Phi$ n'est inversible que si l'on a au moins 15 profils bien répartis. Avec lui, le système a toujours une solution, mais elle n'est fiable que si les données suffisent.
 
 \begin{piege}[ : un modèle sous-déterminé au départ]
 La boucle part de 10 profils tirés au hasard. Dans l'exécution tracée, 6 seulement sont faisables : on ajuste 15 coefficients sur 6 points. Le modèle passe exactement par les 6 points et peut prédire n'importe quoi ailleurs. Au premier QUBO, il prédit $\widehat{C_D}=27{,}5$ counts pour un profil dont la vraie traînée vaut 49, et $20$ counts pour un profil où XFOIL ne converge même pas. Le QUBO trouve exactement le minimum d'un modèle encore faux. Les premières itérations sont donc de l'exploration, et c'est normal (chapitre~\ref{ch:projet}).
 \end{piege}
 
-\paragraph{Pourquoi un modèle affine pour $C_{L,\max}$ ?} La contrainte sera écrite comme un carré (section suivante). Si le modèle était quadratique en bits, son carré serait de degré 4, et ce ne serait plus un QUBO (piège de la section~\ref{sec:penalites}). Un modèle affine donne un carré quadratique. C'est une contrainte de \emph{formulation}, pas un choix de précision : le diagnostic du lot L1 montre d'ailleurs que ce modèle affine est le moins précis des trois testés (erreur quadratique moyenne 0,19 contre 0,14 pour un quadratique).
+\paragraph{Pourquoi un modèle affine pour $C_{L,\max}$ ?} La contrainte sera écrite comme un carré (plus bas). Si le modèle était quadratique en bits, son carré serait de degré 4, et ce ne serait plus un QUBO (piège de la section~\ref{sec:penalites}). Un modèle affine donne un carré quadratique. C'est une contrainte de \emph{formulation}, pas un choix de précision : le diagnostic du lot L1 montre d'ailleurs que ce modèle affine est le moins précis des trois testés (erreur quadratique moyenne 0,19 contre 0,14 pour un quadratique).
 
 \subsection{L'objectif : une somme pondérée normalisée}
 Un QUBO n'a qu'une énergie. Pour viser plusieurs compromis traînée/SER, on résout à chaque itération \textbf{cinq} QUBO, un par poids $w\in\{0;\ 0{,}25;\ 0{,}5;\ 0{,}75;\ 1\}$, d'objectif
@@ -269,5 +409,11 @@ On encode $m$, $p$, $t$ (8 niveaux chacun) en one-hot. Combien faut-il de qubits
 \end{exercice}
 \begin{exercice}\label{ex:ecart}
 Dans le QUBO de la figure~\ref{fig:penalite-cl}, $s_{\max}=0{,}77$ et $P_{CL}=75$. (a) Quelle pénalité paie un profil prédit à $\widehat{C_{L,\max}}=1{,}26$ ? À $1{,}20$ ? À $1{,}17$ ? (b) Combien de bits d'écart faudrait-il pour que la pénalité résiduelle d'un profil faisable reste sous $0{,}01$ ? Combien de qubits et de couplages cela ajoute-t-il ?
+\end{exercice}
+\begin{exercice}\label{ex:encodage}
+Un autre profil du front de S2 : $m=5~\%$, $p=0{,}55$, $t=8~\%$, $I=4$. (a) Donner ses indices, ses 10 bits de conception et ses quatre $z$, de deux façons (par l'indice et par la valeur). (b) Écrire $z_m^2$ en bits ($b_0,b_1,b_2$), comme l'exemple de $z_p^2$, et vérifier le résultat sur ce profil.
+\end{exercice}
+\begin{exercice}\label{ex:coefficients}
+(a) Combien de coefficients a un modèle quadratique complet si l'on libère la position d'épaisseur $T$ (cinquième variable) ? Combien de profils faisables faut-il au minimum pour l'ajuster sans régularisation ? (b) Combien de coefficients aurait un modèle cubique complet en 4 variables, et pourquoi ne peut-on pas l'utiliser dans un QUBO ? (c) Si $T$ prend 8 niveaux, combien de couplages entre bits de conception le modèle quadratique crée-t-il ?
 \end{exercice}
 
