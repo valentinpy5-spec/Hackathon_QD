@@ -285,15 +285,85 @@ On y lit de la physique : plus d'épaisseur ($+8{,}5$) ou de cambrure ($+5{,}7$)
 \end{align*}
 dans l'ordre $1$, $z_m$, $z_p$, $z_t$, $z_I$, $z_m^2$, $z_mz_p$, $z_mz_t$, $z_mz_I$, $z_p^2$, $z_pz_t$, $z_pz_I$, $z_t^2$, $z_tz_I$, $z_I^2$ (celui du code). La prédiction est le produit scalaire avec les coefficients : $\widehat{C_D}=\boldsymbol\varphi(\mathbf z)\cdot\boldsymbol\theta=46{,}9$ counts. XFOIL donne 38,0. L'erreur, 8,9 counts, est bien plus grande que l'erreur moyenne du modèle sur la grille (3,4 counts) : un modèle quadratique global est le moins précis justement près du front, dans un coin de la grille. C'est pourquoi la boucle ne fait jamais confiance au modèle pour le résultat final : elle simule les candidats.
 
-\subsection{L'ajustement : les moindres carrés}
+\subsection{L'ajustement : les moindres carrés, et pourquoi on régularise}\label{sec:ridge}
 Sur les profils déjà simulés, on ajuste trois modèles (\texttt{optim/qubo\_loop.py}) :
 \begin{itemize}
 \item $\widehat{C_D}(\mathbf z)$ et $\widehat{\rm SER}(\mathbf z)$ : quadratiques complets (15 coefficients), ajustés sur les profils \emph{faisables} seulement, car un profil infaisable n'a pas toujours de $C_D$ (XFOIL peut ne pas converger) ;
 \item $\widehat{C_{L,\max}}(\mathbf z)$ : \textbf{affine}, $c_0+\sum_ig_iz_i$ (5 coefficients), ajusté sur tous les profils où XFOIL a convergé et donné un $C_{L,\max}$.
 \end{itemize}
-On empile les $N$ profils simulés : la matrice $\Phi$ a une ligne par profil (ses 15 monômes, comme $\boldsymbol\varphi$ ci-dessus) et une colonne par monôme ; le vecteur $\mathbf y$ contient les $N$ valeurs simulées. On cherche les coefficients $\boldsymbol\theta$ qui minimisent $\|\Phi\boldsymbol\theta-\mathbf y\|^2$, avec une très légère régularisation (\emph{ridge}) :
-\[ \boldsymbol\theta=\big(\Phi^\top\Phi+\lambda\Id\big)^{-1}\Phi^\top\mathbf y,\qquad\lambda=10^{-6}. \]
-Sans le terme $\lambda\Id$, $\Phi^\top\Phi$ n'est inversible que si l'on a au moins 15 profils bien répartis. Avec lui, le système a toujours une solution, mais elle n'est fiable que si les données suffisent.
+
+\paragraph{Les équations normales.} On empile les $N$ profils simulés : la matrice $\Phi$ ($N\times15$) a une ligne par profil (ses 15 monômes, comme $\boldsymbol\varphi$ ci-dessus) et une colonne par monôme ; le vecteur $\mathbf y$ contient les $N$ valeurs simulées. On cherche les coefficients qui minimisent l'écart quadratique
+\[ J(\boldsymbol\theta)=\|\Phi\boldsymbol\theta-\mathbf y\|^2=\sum_{n=1}^N\big(\boldsymbol\varphi(\mathbf z_n)\cdot\boldsymbol\theta-y_n\big)^2. \]
+$J$ est une forme quadratique convexe en $\boldsymbol\theta$, de gradient $\nabla J=2\Phi^\top(\Phi\boldsymbol\theta-\mathbf y)$. Il est nul pour
+\[ \Phi^\top\Phi\,\boldsymbol\theta=\Phi^\top\mathbf y\qquad\text{(équations normales)}. \]
+La matrice $\Phi^\top\Phi$ ($15\times15$) est symétrique et positive : $\boldsymbol\theta^\top\Phi^\top\Phi\boldsymbol\theta=\|\Phi\boldsymbol\theta\|^2\ge0$. Elle est inversible si et seulement si les 15 colonnes de $\Phi$ sont indépendantes, c'est-à-dire si $\mathrm{rang}\,\Phi=15$. Cela demande deux choses :
+\begin{itemize}
+\item \textbf{au moins 15 profils}, puisque $\mathrm{rang}\,\Phi\le\min(N,15)$ ;
+\item \textbf{des profils bien répartis}. Si tous les profils simulés avaient le même rayon $I$, la colonne $z_I$ serait proportionnelle à la colonne constante, $z_I^2$ aussi, et $z_mz_I$ à $z_m$ : le rang chuterait, même avec 100 profils.
+\end{itemize}
+
+\paragraph{Quand il y a moins de 15 profils.} Le rang vaut au plus $N$, et $\Phi^\top\Phi$ a $15-N$ valeurs propres nulles. Il existe alors des vecteurs $\mathbf n\neq0$ tels que $\Phi\mathbf n=0$ (le \emph{noyau} de $\Phi$) : ajouter $\mathbf n$ aux coefficients ne change rien aux prédictions sur les profils simulés, mais change tout ailleurs. Il y a une infinité de modèles qui passent exactement par les $N$ points, et les équations normales ne disent pas lequel choisir. À la première itération de l'exécution tracée, $N=6$ : $\Phi^\top\Phi$ a 9 valeurs propres nulles.
+
+Que fait numpy si l'on résout quand même $\Phi^\top\Phi\boldsymbol\theta=\Phi^\top\mathbf y$ ? Les arrondis rendent ces valeurs propres de l'ordre de $10^{-15}$ au lieu de 0 : \texttt{np.linalg.solve} ne signale \emph{aucune erreur} et renvoie une solution qui passe bien par les 6 points, mais dont les coefficients sont dictés par les arrondis. Sur la grille complète, ce modèle se trompe de \textbf{260 counts} en moyenne quadratique, pour des traînées de 40 à 70 counts.
+
+\paragraph{La régularisation ridge.} On ajoute à $J$ une pénalité sur la taille des coefficients :
+\[ J_\lambda(\boldsymbol\theta)=\|\Phi\boldsymbol\theta-\mathbf y\|^2+\lambda\|\boldsymbol\theta\|^2\quad\Longrightarrow\quad\big(\Phi^\top\Phi+\lambda\Id\big)\boldsymbol\theta=\Phi^\top\mathbf y. \]
+Si les valeurs propres de $\Phi^\top\Phi$ sont $\sigma_k^2\ge0$, celles de $\Phi^\top\Phi+\lambda\Id$ sont $\sigma_k^2+\lambda\ge\lambda>0$ : la matrice est \textbf{toujours inversible}, et la solution est unique. Pour voir ce qu'elle vaut, on écrit la décomposition en valeurs singulières $\Phi=\sum_k\sigma_k\mathbf u_k\mathbf v_k^\top$ :
+\[ \boldsymbol\theta_\lambda=\sum_k\underbrace{\frac{\sigma_k^2}{\sigma_k^2+\lambda}}_{\text{filtre}}\ \frac{\mathbf u_k^\top\mathbf y}{\sigma_k}\ \mathbf v_k. \]
+Le facteur de filtre vaut presque 1 dans les directions bien informées par les données ($\sigma_k^2\gg\lambda$) et presque 0 dans les directions mal informées ($\sigma_k^2\ll\lambda$), en particulier dans le noyau ($\sigma_k=0$). La régularisation \emph{éteint} ce que les données ne déterminent pas.
+
+\paragraph{Ce que fait $\lambda=10^{-6}$ dans notre code.} $\sqrt\lambda=10^{-3}$ est très petit devant les plus petites valeurs singulières non nulles de $\Phi$ (0,29 à la première itération, 0,03 au pire). Le filtre vaut donc 1 partout, sauf dans le noyau, où il vaut 0. Parmi tous les modèles qui passent exactement par les points, la boucle prend celui qui n'a \emph{aucune} composante dans le noyau, c'est-à-dire celui de \textbf{plus petite norme} $\|\boldsymbol\theta\|$. C'est la solution donnée par la pseudo-inverse, $\Phi^+\mathbf y$ : à la première itération, les deux diffèrent de $10^{-4}$. Ici, la régularisation n'est donc pas un lissage : c'est une \textbf{sécurité numérique} qui choisit une solution raisonnable quand il en existe une infinité.
+
+Dans le code, tout tient en trois lignes :
+\begin{lstlisting}
+def fit_quadratic(I, y, ridge=1e-6, levels=LEVELS):
+    Phi = quadratic_features(z_of(I, levels))                    # N x 15 : monomes des z
+    A = Phi.T @ Phi + ridge * np.eye(Phi.shape[1])               # Phi^T Phi + lambda Id
+    return np.linalg.solve(A, Phi.T @ y)                         # equations normales regularisees
+\end{lstlisting}
+\texttt{fit\_linear} fait la même chose avec les 5 colonnes $1,z_m,z_p,z_t,z_I$. Il est mieux posé : 5 profils bien répartis suffisent.
+
+\paragraph{Ce que la régularisation ne fait pas.} Elle rend le calcul possible, pas le modèle juste. Au fil de l'exécution tracée :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{cccccc}
+\toprule
+itération & $N$ faisables & rang de $\Phi$ & plus petite $\sigma_k>0$ & conditionnement & erreur (grille) \\
+\midrule
+1 & 6 & 6 & 0,29 & $1{,}7\cdot10^7$ & 22,0 counts \\
+5 & 10 & 10 & 0,12 & $2{,}6\cdot10^7$ & 13,1 counts \\
+6 & 15 & 15 & 0,03 & $4{,}1\cdot10^4$ & \textbf{24,8} counts \\
+7 & 19 & 15 & 0,13 & $3{,}2\cdot10^3$ & 10,4 counts \\
+\bottomrule
+\end{tabular}
+\end{center}
+(Conditionnement de $\Phi^\top\Phi+\lambda\Id$ ; erreur : écart quadratique moyen du modèle de traînée sur tous les profils faisables de la grille.) Trois régimes apparaissent :
+\begin{itemize}
+\item \textbf{$N<15$} : le modèle interpole exactement les points, et n'a aucune information dans les 15$-N$ directions du noyau. Plus de points le rendent meilleur, lentement.
+\item \textbf{$N=15$} : c'est le \emph{pire} moment. Il y a juste assez de points pour une solution unique, mais une direction est à peine déterminée ($\sigma=0{,}03$) : le modèle interpole aussi le bruit d'XFOIL avec de grands coefficients ($\|\boldsymbol\theta\|=79$, contre 51 à l'itération 1), et se trompe davantage qu'à l'itération précédente.
+\item \textbf{$N>15$} : les moindres carrés \emph{moyennent} enfin. Le modèle ne passe plus exactement par les points (écart maximal 1,8 count), et il généralise mieux.
+\end{itemize}
+
+\paragraph{Un défaut du code : la constante est régularisée.} La pénalité $\lambda\|\boldsymbol\theta\|^2$ porte sur les 15 coefficients, y compris la constante $c_0$. En cherchant la plus petite norme, la régularisation préfère donc une petite constante, et compense avec les autres monômes. À la première itération, $c_0=43{,}8$ alors que la traînée moyenne des 6 profils vaut 58,1 : le reste du niveau moyen est porté par d'autres monômes, qui le reproduisent aux 6 points mais extrapolent mal ailleurs (l'exercice~\ref{ex:ridge} montre le mécanisme sur un cas à la main). L'usage est de ne pas pénaliser la constante, ce qui revient à centrer $\mathbf y$ avant l'ajustement. L'effet est fort :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{ccccc}
+\toprule
+& \multicolumn{2}{c}{itération 1 ($N=6$)} & \multicolumn{2}{c}{itération 6 ($N=15$)} \\
+$\lambda$ & constante pénalisée & non pénalisée & constante pénalisée & non pénalisée \\
+\midrule
+$10^{-6}$ (code) & 22,0 & 11,2 & 24,8 & 24,8 \\
+$10^{-2}$ & 22,0 & 11,2 & 9,5 & 7,9 \\
+$1$ & 26,8 & 11,4 & 14,1 & 7,2 \\
+$10$ & 40,6 & 11,5 & 27,7 & 9,0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+(Erreur du modèle de traînée sur la grille, en counts.) Ne pas pénaliser la constante divise l'erreur par deux en début de boucle. Avec la constante pénalisée, augmenter $\lambda$ \emph{dégrade} le modèle, parce que $c_0$ est tiré vers 0 (14 counts pour $\lambda=10$). Avec la constante libre, un $\lambda$ de l'ordre de $10^{-2}$ à 1 corrige aussi le mauvais moment $N=15$. Attention : l'erreur sur toute la grille ne mesure pas directement ce qui compte pour la boucle, à savoir situer le minimum. L'effet sur le nombre de simulations reste à mesurer (piste d'amélioration).
+
+\paragraph{Une lecture probabiliste.} La régularisation ridge revient à supposer, \emph{avant} de voir les données, que chaque coefficient suit une loi normale centrée en 0, de variance $\sigma^2/\lambda$ si $\sigma^2$ est la variance du bruit des simulations. C'est raisonnable pour les termes de pente, de courbure et d'interaction (« a priori, pas d'effet »), mais pas pour la constante : supposer a priori une traînée nulle n'a pas de sens physique. C'est la même conclusion, vue autrement.
 
 \begin{piege}[ : un modèle sous-déterminé au départ]
 La boucle part de 10 profils tirés au hasard. Dans l'exécution tracée, 6 seulement sont faisables : on ajuste 15 coefficients sur 6 points. Le modèle passe exactement par les 6 points et peut prédire n'importe quoi ailleurs. Au premier QUBO, il prédit $\widehat{C_D}=27{,}5$ counts pour un profil dont la vraie traînée vaut 49, et $20$ counts pour un profil où XFOIL ne converge même pas. Le QUBO trouve exactement le minimum d'un modèle encore faux. Les premières itérations sont donc de l'exploration, et c'est normal (chapitre~\ref{ch:projet}).
@@ -415,5 +485,8 @@ Un autre profil du front de S2 : $m=5~\%$, $p=0{,}55$, $t=8~\%$, $I=4$. (a) Donn
 \end{exercice}
 \begin{exercice}\label{ex:coefficients}
 (a) Combien de coefficients a un modèle quadratique complet si l'on libère la position d'épaisseur $T$ (cinquième variable) ? Combien de profils faisables faut-il au minimum pour l'ajuster sans régularisation ? (b) Combien de coefficients aurait un modèle cubique complet en 4 variables, et pourquoi ne peut-on pas l'utiliser dans un QUBO ? (c) Si $T$ prend 8 niveaux, combien de couplages entre bits de conception le modèle quadratique crée-t-il ?
+\end{exercice}
+\begin{exercice}\label{ex:ridge}
+Modèle à une variable $f(z)=c_0+gz+Mz^2$ (3 coefficients), ajusté sur deux profils : $z=-1$ et $z=+1$, de même valeur $y=1$. (a) Écrire $\Phi$ et montrer que tous les modèles $c_0+M=1$, $g=0$ passent par les deux points. Donner un vecteur du noyau. (b) Quelle est la solution de plus petite norme (celle que donne la régularisation du code quand $\lambda\to0$) ? Que prédit-elle en $z=0$ ? (c) Même question si l'on ne pénalise pas $c_0$. Quel modèle est le plus raisonnable, et quel lien avec le défaut décrit dans le cours ?
 \end{exercice}
 
