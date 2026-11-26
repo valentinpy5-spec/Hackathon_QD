@@ -404,28 +404,104 @@ C'est exactement \texttt{surrogate\_to\_qubo}. Aucune approximation n'est faite 
 
 \paragraph{Pourquoi le graphe est complet.} $R=A^\top MA$ couple deux bits dès que leurs variables sont couplées par $M$. Le terme $z_m^2$ couple les trois bits de $m$ entre eux ; un terme croisé $z_mz_t$ couple chaque bit de $m$ à chaque bit de $t$. Un modèle quadratique complet couple donc les 10 bits de conception deux à deux : 45 couplages, autant de portes $R_{ZZ}$.
 
-\subsection{La contrainte d'épaisseur : une pénalité cubique et la réduction de Rosenberg}
-$t\ge8~\%$ interdit le seul indice $x_t=0$ ($t=6~\%$), c'est-à-dire la chaîne $t_0=t_1=t_2=0$. La pénalité naturelle vaut $P$ sur cette chaîne et 0 ailleurs :
-\[ P\,(1-t_0)(1-t_1)(1-t_2),\qquad P=3. \]
-Elle est \textbf{exacte} (elle ne dépend d'aucun modèle, l'épaisseur est connue) mais \textbf{cubique}. Pour la ramener au degré 2, on remplace le produit $x_1x_2$ (avec $x_1=1-t_1$, $x_2=1-t_2$) par un nouveau bit $y$, et l'on ajoute un terme qui force $y=x_1x_2$ (Rosenberg, 1975) :
-\[ P\,(1-t_0)\,y\ +\ 2P\,\underbrace{\big(x_1x_2-2x_1y-2x_2y+3y\big)}_{\rho(x_1,x_2,y)}. \]
+\subsection{La contrainte d'épaisseur : une pénalité cubique et la réduction de Rosenberg}\label{sec:rosenberg}
+
+\paragraph{Le principe d'une contrainte dans un QUBO.} Un QUBO n'a pas de contraintes : le solveur peut rendre n'importe laquelle des $2^{14}$ chaînes. Pour en interdire certaines, on modifie l'énergie, en trois étapes :
+\begin{enumerate}
+\item écrire une fonction \textbf{indicatrice de violation} $g(\mathbf b)$, nulle sur les chaînes permises et positive sur les chaînes interdites ;
+\item l'ajouter à l'énergie avec un poids $P$ : $E=f_w+P\,g$. Une chaîne interdite paie alors $P$ en plus. Si $P$ dépasse tout ce que l'objectif peut faire gagner (son étendue, de l'ordre de 1 à 2 ici), aucune chaîne interdite ne peut être le minimum ;
+\item vérifier que $P\,g$ est \textbf{quadratique} en bits, sans quoi ce n'est plus un QUBO. C'est cette troisième étape qui pose problème ici.
+\end{enumerate}
+
+\paragraph{Étape 1 : quelles chaînes interdire ?} L'épaisseur est codée par 3 bits $t_0t_1t_2$ (qubits 5 à 7), et $t\ge8~\%$ interdit le seul indice $x_t=0$ :
 \begin{center}
 \renewcommand{\arraystretch}{1.15}
-\begin{tabular}{ccc|c|c}
+\small
+\begin{tabular}{l*{8}{c}}
 \toprule
-$x_1$ & $x_2$ & $y$ & $x_1x_2$ & $\rho$ \\
-\midrule
-0&0&0&0&0\\ 0&0&1&0&3\\ 0&1&0&0&0\\ 0&1&1&0&1\\ 1&0&0&0&0\\ 1&0&1&0&1\\ 1&1&0&1&1\\ 1&1&1&1&0\\
+chaîne $t_0t_1t_2$ & 000 & 100 & 010 & 110 & 001 & 101 & 011 & 111 \\
+indice $x_t$ & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+épaisseur & \textbf{6~\%} & 8~\% & 10~\% & 12~\% & 14~\% & 16~\% & 18~\% & 20~\% \\
+permise ? & \textbf{non} & oui & oui & oui & oui & oui & oui & oui \\
 \bottomrule
 \end{tabular}
 \end{center}
-Le tableau montre que $\rho=0$ si $y=x_1x_2$ et $\rho\ge1$ sinon. Pourquoi c'est exact : à $\mathbf t$ fixé, l'énergie minimale sur $y$ est atteinte pour $y=x_1x_2$. En effet, choisir le « mauvais » $y$ coûte au moins $2P\times1=2P$, alors que cela ne peut faire gagner qu'au plus $P$ sur le premier terme. Au minimum sur $y$, on retrouve donc exactement la pénalité cubique. La trace le vérifie : le même profil avec $t=6~\%$ coûte exactement $3{,}000=P$ de plus.
+Il faut donc une fonction qui vaut 1 sur $000$ et 0 sur les sept autres chaînes. En posant $x_k=1-t_k$ (qui vaut 1 quand le bit est éteint), c'est le produit
+\[ g(\mathbf t)=x_0x_1x_2=(1-t_0)(1-t_1)(1-t_2), \]
+qui vaut 1 si et seulement si les trois bits sont éteints. La pénalité naturelle est $P\,x_0x_1x_2$, avec $P=3$. Elle est \textbf{exacte} : elle ne dépend d'aucun modèle, car l'épaisseur d'une chaîne est connue.
 
-En développant ($x=1-t$), on obtient des termes linéaires et des couplages entre $y$ et les bits $t_0,t_1,t_2$, plus une constante (\texttt{penalty\_index\_nonzero}). Le prix : \textbf{un qubit} et 3 couplages de plus. C'est la technique générale pour réduire un terme de degré $k$ : chaque produit remplacé coûte un qubit auxiliaire.
+\paragraph{Étape 3 : pourquoi elle n'est pas quadratique.} En développant :
+\[ (1-t_0)(1-t_1)(1-t_2)=1-t_0-t_1-t_2+t_0t_1+t_0t_2+t_1t_2-\boxed{t_0t_1t_2}. \]
+Le dernier terme est un produit de \emph{trois} bits. Un QUBO n'a que des termes à un ou deux bits : sur un processeur, ce sont les portes $R_Z$ (un qubit) et $R_{ZZ}$ (deux qubits), et il n'y a pas d'interaction native à trois qubits.
+
+Peut-on trouver une autre fonction, quadratique celle-là, qui vaille aussi 1 sur $000$ et 0 ailleurs ? \textbf{Non.} Toute fonction de bits s'écrit d'une seule façon comme un polynôme où chaque bit apparaît au plus à la puissance 1 (puisque $b^2=b$). Celle-ci a un coefficient $-1$ devant $t_0t_1t_2$, et ce coefficient ne peut pas disparaître. Le piège ci-dessous montre ce qui se passe si l'on essaie quand même.
 
 \begin{piege}[ : pourquoi pas une simple pénalité quadratique ?]
-On pourrait être tenté par $P(1-t_1)(1-t_2)$, qui est quadratique. Mais elle interdirait aussi l'indice $x_t=1$ ($t=8~\%$, chaîne $t_0=1$, $t_1=t_2=0$), qui est permis, et c'est justement l'épaisseur des profils du front. Interdire exactement une chaîne parmi huit demande les trois bits, donc le degré 3.
+On pourrait être tenté par $P(1-t_1)(1-t_2)=P\,x_1x_2$, qui est quadratique. Elle vaut $P$ dès que $t_1=t_2=0$, quel que soit $t_0$ : elle interdit $000$ ($t=6~\%$), mais aussi $100$ ($t=8~\%$), qui est permise. Or $t=8~\%$ est justement l'épaisseur de la plupart des profils du front : cette pénalité les exclurait tous. Pour isoler exactement une chaîne parmi huit, il faut regarder les trois bits à la fois, donc le degré 3.
 \end{piege}
+
+\paragraph{L'idée de Rosenberg : un bit de plus pour baisser le degré.} Introduisons un nouveau bit $y$ (le qubit 10) et \emph{supposons} qu'il vaille $x_1x_2$. Alors
+\[ P\,x_0x_1x_2=P\,x_0\,y, \]
+qui est un produit de deux bits : quadratique. Le problème est que le solveur choisit $y$ librement, comme tous les autres bits ; rien ne l'oblige à prendre $y=x_1x_2$. Il faut donc une seconde pénalité qui \emph{force} cette égalité : une fonction quadratique $\rho(x_1,x_2,y)$, nulle quand $y=x_1x_2$ et positive sinon. Rosenberg (1975) propose
+\[ \rho(x_1,x_2,y)=x_1x_2-2x_1y-2x_2y+3y. \]
+On le vérifie sur les 8 combinaisons, en séparant les cas cohérents ($y=x_1x_2$) des autres :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{ccc|c|c|l}
+\toprule
+$x_1$ & $x_2$ & $y$ & $x_1x_2$ & $\rho$ & \\
+\midrule
+0&0&0&0&0& cohérent ($y=x_1x_2$) : $\rho=0$ \\
+0&1&0&0&0& \\
+1&0&0&0&0& \\
+1&1&1&1&0& \\
+\midrule
+0&0&1&0&3& incohérent : $\rho\ge1$ \\
+0&1&1&0&1& \\
+1&0&1&0&1& \\
+1&1&0&1&1& \\
+\bottomrule
+\end{tabular}
+\end{center}
+La pénalité totale de la contrainte d'épaisseur est alors
+\[ G(\mathbf t,y)=\underbrace{P\,x_0\,y}_{\text{la contrainte, si }y=x_1x_2}+\underbrace{2P\,\rho(x_1,x_2,y)}_{\text{force }y=x_1x_2}, \]
+qui est bien quadratique en $(t_0,t_1,t_2,y)$.
+
+\paragraph{Pourquoi le résultat est exact : le calcul sur les 8 épaisseurs.} Le solveur cherche le minimum de l'énergie sur toutes les chaînes, donc aussi sur $y$. Pour chaque épaisseur, la pénalité effective est $\min_yG(\mathbf t,y)$. Avec $P=3$ :
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{cc ccc cc c c}
+\toprule
+$t_0t_1t_2$ & épaisseur & $x_0$ & $x_1$ & $x_2$ & $G$ si $y=0$ & $G$ si $y=1$ & $\min_yG$ & voulu : $P\,x_0x_1x_2$ \\
+\midrule
+000 & 6~\% & 1&1&1 & 6 & \textbf{3} & 3 & 3 \\
+100 & 8~\% & 0&1&1 & 6 & \textbf{0} & 0 & 0 \\
+010 & 10~\% & 1&0&1 & \textbf{0} & 9 & 0 & 0 \\
+110 & 12~\% & 0&0&1 & \textbf{0} & 6 & 0 & 0 \\
+001 & 14~\% & 1&1&0 & \textbf{0} & 9 & 0 & 0 \\
+101 & 16~\% & 0&1&0 & \textbf{0} & 6 & 0 & 0 \\
+011 & 18~\% & 1&0&0 & \textbf{0} & 21 & 0 & 0 \\
+111 & 20~\% & 0&0&0 & \textbf{0} & 18 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Pour chaque épaisseur, le minimum sur $y$ (en gras) est atteint au $y$ cohérent, et il vaut exactement la pénalité voulue : 3 pour $t=6~\%$, 0 sinon. Ces valeurs ont été vérifiées avec la fonction du code (\texttt{penalty\_index\_nonzero}).
+
+La ligne $000$ montre pourquoi le poids de $\rho$ doit dépasser $P$. Pour cette chaîne interdite, le solveur aurait intérêt à « tricher » avec $y=0$ : cela annule le terme $P\,x_0y$ et fait économiser $P=3$. Mais $y=0$ est incohérent ($x_1x_2=1$), donc $\rho=1$, ce qui coûte $2P\times1=6$. La triche coûte plus qu'elle ne rapporte : 6 contre 3. Avec un poids inférieur à $P$, elle deviendrait rentable, et la chaîne interdite ne paierait plus son dû (exercice~\ref{ex:rosenberg}). En général, se tromper sur $y$ fait gagner au plus $P$ (le premier terme vaut au plus $P$) et coûte au moins le poids de $\rho$ ; un poids strictement supérieur à $P$ suffit. Le code prend $2P$ pour garder de la marge.
+
+\paragraph{Ce que cela donne dans la matrice $Q$.} On remplace $x_k=1-t_k$ et l'on développe :
+\begin{align*}
+P\,x_0y&=P\,y-P\,t_0y,\\
+2P\,\rho&=2P\big[(1-t_1)(1-t_2)-2(1-t_1)y-2(1-t_2)y+3y\big]\\
+&=2P-2P\,t_1-2P\,t_2+2P\,t_1t_2-2P\,y+4P\,t_1y+4P\,t_2y.
+\end{align*}
+En additionnant, avec $P=3$ : une constante $+6$ ; les termes linéaires $-6\,t_1$, $-6\,t_2$ et $-3\,y$ (car $P-2P=-P$), qui vont sur la diagonale de $Q$ ; les couplages $+6\,t_1t_2$, $+12\,t_1y$, $+12\,t_2y$ et $-3\,t_0y$. C'est exactement ce qu'ajoute \texttt{penalty\_index\_nonzero} : un qubit auxiliaire, couplé aux trois bits d'épaisseur (les couplages de 12 sont les plus forts du bloc « conception -- auxiliaire » de la matrice, figure~\ref{fig:matrice-q-v2}). Vérification sur la chaîne interdite $t=000$, $y=1$ : $6-3=3=P$. Sur $t=100$ ($t_0=1$), $y=1$ : $6-3-3=0$.
+
+\paragraph{Dans la boucle.} Le solveur travaille sur les 14 bits, $y$ compris. Au minimum du QUBO, $y$ est donc automatiquement cohérent avec les bits d'épaisseur, et au décodage on l'ignore. Dans le minimum calculé plus bas (section « Vérification sur une chaîne »), $t_0t_1t_2=100$, donc $x_1=x_2=1$, et le solveur a bien choisi $y=1$.
+
+\paragraph{La règle générale.} La même technique réduit n'importe quel terme de degré élevé : on remplace un produit de deux bits par un bit auxiliaire, et l'on force l'égalité avec une pénalité de type $\rho$, pondérée plus fort que le terme qu'elle remplace. Chaque substitution baisse le degré de 1 et coûte \textbf{un qubit}. Un terme de degré $k$ demande $k-2$ auxiliaires. Ici, un seul auxiliaire et 3 couplages suffisent.
 
 \subsection{La contrainte de manœuvre : variable d'écart et pénalité quadratique}
 Le modèle affine s'écrit en bits $\widehat{C_{L,\max}}(\mathbf b)=L_0+\sum_ka_kb_k$. Dans l'exécution tracée, $L_0=0{,}89$, et les $a_k$ vont de $-0{,}08$ à $+0{,}31$. Le plus grand est celui du bit de poids fort de $m$ : plus de cambrure, plus de portance maximale. Les bits de $t$ ont des coefficients négatifs : ajusté sur 10 profils seulement, ce modèle prédit qu'un profil plus épais décroche plus tôt. Les signes sont appris, pas imposés, et changent au fil de la boucle. Une inégalité ne se pénalise pas directement par un carré : $(\widehat{C_{L,\max}}-1{,}2)^2$ punirait aussi les profils qui ont de la marge. On introduit donc une \textbf{variable d'écart} $s\ge0$ qui absorbe la marge :
