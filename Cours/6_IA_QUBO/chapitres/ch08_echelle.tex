@@ -1,0 +1,114 @@
+\chapter{Un problème mis à l'échelle}\label{ch:echelle}
+\iterbanner{V3}
+
+\section{Pourquoi un second problème}
+Le problème V2 a deux propriétés qui le rendent confortable, mais irréaliste : on peut \textbf{tout énumérer} (1\,024 profils, $2^{14}$ chaînes du QUBO), et l'on connaît le \textbf{front exact}. Sur un vrai problème de conception, aucune des deux n'est vraie. Pour savoir ce que deviennent les méthodes quand on s'en approche, on construit un second problème :
+\begin{itemize}
+\item une forme décrite par \textbf{10 paramètres} au lieu de 4 ;
+\item \textbf{30 bits} : $8^{10}\approx1{,}07\cdot10^9$ profils, qu'on ne peut évidemment pas tous simuler, et un QUBO de 30 à 33 qubits, dont l'énumération prendrait de l'ordre d'une minute par QUBO, pour environ 300 QUBO par exécution : il faut un solveur heuristique, le recuit simulé ;
+\item des \textbf{solveurs boîtes noires} appelés à la demande (XFOIL, SER), avec un coût réel par évaluation ;
+\item un front \textbf{inconnu}.
+\end{itemize}
+
+\section{La forme : la paramétrisation CST}
+La méthode CST (\emph{Class-Shape Transformation}, Kulfan, 2008) est très utilisée en conception aéronautique. Chaque face du profil s'écrit comme le produit d'une \emph{fonction de classe}, qui donne l'allure générale, et d'une \emph{fonction de forme}, qui la module :
+\[ y(x)=\underbrace{\sqrt x\,(1-x)}_{C(x)}\ \underbrace{\sum_{i=0}^{4}A_i\,\binom4i\,x^i(1-x)^{4-i}}_{S(x)}. \]
+\begin{itemize}
+\item $C(x)=\sqrt x(1-x)$ donne un nez arrondi ($y\propto\sqrt x$ près de $x=0$) et un bord de fuite pointu ($y\to0$ en $x=1$).
+\item $S(x)$ est une combinaison de 5 polynômes de Bernstein de degré 4. Chaque coefficient $A_i$ agit surtout sur une portion de la corde : $A_0$ au nez, $A_4$ près du bord de fuite.
+\item Le rayon de bord d'attaque de chaque face vaut $A_0^2/2$ : le premier coefficient pilote directement le nez, donc la SER.
+\end{itemize}
+Avec 5 coefficients pour l'extrados ($A_{e,0..4}$, positifs) et 5 pour l'intrados ($A_{i,0..4}$, plutôt négatifs), on a 10 variables.
+
+\paragraph{Exemple : le NACA 2412 en CST.} En ajustant les coefficients par moindres carrés sur le contour du NACA 2412, on trouve
+\[ \mathbf A_e=(0{,}192;\ 0{,}213;\ 0{,}208;\ 0{,}194;\ 0{,}218),\qquad\mathbf A_i=(-0{,}152;\ -0{,}094;\ -0{,}100;\ -0{,}076;\ -0{,}078), \]
+avec un écart maximal au contour de $1{,}4\cdot10^{-3}$ corde. Les rayons de nez valent $0{,}192^2/2=0{,}018$ (extrados) et $0{,}152^2/2=0{,}012$ (intrados), à comparer à $0{,}016$ pour la formule du NACA : la CST représente le profil avec 10 nombres, à la précision d'un tracé.
+
+\paragraph{Les bornes.} Pour que la grille couvre des profils réalistes, on ajuste la CST sur 60 profils NACA (cambrure de 0 à 6~\%, position 0,3 à 0,5, épaisseur de 8 à 18~\%), on prend pour chaque coefficient le minimum et le maximum, élargis de 10~\%, et l'on y place 8 niveaux régulièrement espacés. Le NACA 2412 tombe près des indices $(2,3,2,3,2;\ 4,3,3,3,3)$. Sur 30 profils tirés au hasard dans la grille, 29 ont une géométrie valide et 23 sont faisables.
+
+\begin{codebox}[ : \code{ia\_qubo/probleme\_cst.py}]
+\begin{lstlisting}
+def cst_coords(Au, Al, n_half=120):
+    x = 0.5 * (1 - np.cos(np.linspace(0, np.pi, n_half + 1)))     # points resserres au nez et au BF
+    yu = classe(x) * (bernstein_matrix(x) @ Au)                     # extrados
+    yl = classe(x) * (bernstein_matrix(x) @ Al)                     # intrados
+    return np.concatenate([x[::-1], x[1:]]), np.concatenate([yu[::-1], yl[1:]])
+\end{lstlisting}
+\end{codebox}
+
+\section{Les solveurs, en boîtes noires}
+Chaque évaluation d'un profil (\code{evaluer}) fait, dans l'ordre :
+\begin{enumerate}
+\item \textbf{la géométrie} : contour CST, vérification que l'intrados reste sous l'extrados, épaisseur maximale ;
+\item \textbf{XFOIL en croisière} : $C_L=0{,}4$, $Re=3\cdot10^6$ $\to$ incidence et traînée $C_D$ ;
+\item \textbf{XFOIL en manœuvre} : rampe de 4 à 14° $\to$ $C_{L,\max}$ ;
+\item \textbf{la SER} : optique physique sur le secteur S2 ($-60^\circ$ à $0^\circ$, 81 directions, 10~GHz), à l'incidence de croisière.
+\end{enumerate}
+Contraintes : épaisseur maximale $\ge8~\%$, $C_{L,\max}\ge1{,}2$, convergence d'XFOIL, géométrie valide. Une évaluation prend de 0,5 à 2 secondes.
+
+\begin{piege}[ : pourquoi l'optique physique et pas la méthode des moments]
+À l'échelle, chaque méthode demande 300 évaluations, et l'on compare 7 méthodes sur 5 graines : plus de 6\,000 profils distincts. La méthode des moments, à plusieurs secondes par profil et par secteur, rendrait l'étude trop longue. L'optique physique sous-estime la SER d'environ 1~dB mais garde le classement (corrélation de rang 0,999 sur la grille V2, cours SER) : c'est le classement qui compte pour comparer des méthodes d'optimisation. Sur un cas réel, ce serait exactement la place d'une approche multi-fidélité (chapitre~\ref{ch:ia-autres}).
+\end{piege}
+
+\paragraph{Le cache.} Chaque profil évalué est écrit dans \code{resultats/cache\_cst.jsonl}. Un profil demandé par deux méthodes n'est calculé qu'une fois ; mais le \emph{compteur} de chaque exécution compte toujours les profils distincts qu'elle a demandés, comme \code{CountedProblem}. Le cache économise du temps de calcul, pas des simulations au sens de la mesure.
+
+\section{Mesurer sans connaître le front}
+Le front exact est inconnu. On construit un \textbf{front de référence} : le front non dominé de tous les profils faisables évalués, par toutes les méthodes et toutes les graines. Pour chaque exécution, on calcule tous les 20 profils simulés l'hypervolume de ses profils faisables, divisé par celui du front de référence (objectifs normalisés comme en V2, point de référence $(1{,}1;\ 1{,}1)$). Une méthode qui atteint 1 a trouvé un front aussi bon que la réunion de tous les autres.
+
+\section{Le solveur des QUBO : un recuit réglé}
+Avec 30 à 33 qubits, énumérer les $2^{33}\approx8\cdot10^9$ chaînes de chaque QUBO n'est plus raisonnable dans la boucle : les QUBO sont résolus par recuit simulé. Le cours de calcul quantique (chapitre~9) a montré que le réglage de la boucle V2, avec une température proportionnelle au plus grand coefficient de $Q$ (donc aux pénalités), trouve rarement l'optimum. On a donc mesuré trois réglages sur 18 QUBO de la boucle V2 (6 graines, 3 poids), dont l'optimum est connu par énumération, avec 64 lectures :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X >{\centering\arraybackslash}p{2.4cm} >{\centering\arraybackslash}p{3cm}}
+\toprule
+Température (décroissance géométrique) & lectures optimales & meilleure lecture $=$ optimum \\
+\midrule
+de $2\max|Q|$ à $0{,}01\max|Q|$ (réglage V2, pénalités) & 0,7~\% & 39~\% \\
+de $2\max|Q|$ à $0{,}01\max|Q_{\rm obj}|$, 300 balayages & 1,4~\% & 56~\% \\
+de $2\max|Q_{\rm obj}|$ à $0{,}01\max|Q_{\rm obj}|$ (objectif) & 2,7~\% & \textbf{67~\%} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le réglage sur l'objectif est le meilleur : c'est lui qu'utilise \code{ia\_qubo/boucle.py}, avec 128 lectures et 200 balayages, pour toutes les méthodes à QUBO. La comparaison des modèles se fait donc à solveur égal. Le recuit est vectorisé (les 128 lectures avancent ensemble, en NumPy) : un QUBO de 33 qubits se résout en une fraction de seconde.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lccc}
+\toprule
+Méthode & paramètres du modèle & qubits & choix du candidat \\
+\midrule
+hasard & --- & --- & tirage uniforme \\
+NSGA-II (population 16) & --- & --- & algorithme génétique \\
+\code{quadz\_modele} (approche actuelle) & 66 par grandeur & 33 & recuit \\
+\code{fm\_modele} & 151 & 33 & recuit \\
+\code{fm\_bn} & 151 (un par poids) & 30 & recuit \\
+\code{bocs\_modele} & 466 & 33 & recuit (tirage de Thompson) \\
+\code{mlp\_modele} & 1\,441 & --- & tirage et recherche locale \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{resultat}
+\begin{itemize}
+\item Le problème mis à l'échelle a 10 paramètres CST, 30 bits, $10^9$ profils, un front inconnu et des solveurs appelés à la demande.
+\item La CST décrit un profil réaliste avec 10 nombres ; $A_0$ pilote le rayon de nez, donc la SER.
+\item Les QUBO de 30 à 33 qubits sont résolus par un recuit réglé sur l'objectif, le meilleur des trois réglages mesurés.
+\item On mesure l'hypervolume relatif à un front de référence commun à toutes les méthodes.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:cst}
+(a) Montrer que pour $x\to0$, $y(x)\approx A_0\sqrt x$, et en déduire que le rayon de courbure au nez vaut $A_0^2/2$. (Indice : le cercle $(x-R)^2+y^2=R^2$ donne $y^2\approx2Rx$ près de $x=0$.) (b) Que vaut $y$ au bord de fuite ? Que faudrait-il ajouter pour un bord de fuite épais ?
+\end{exercice}
+\begin{exercice}\label{ex:echelle-taille}
+Combien de temps faudrait-il pour énumérer les $8^{10}$ profils à 1 seconde par évaluation ? Et pour énumérer les $2^{33}$ chaînes d'un QUBO à raison de $10^8$ énergies par seconde ? Laquelle des deux énumérations est hors de portée, et pourquoi l'autre l'est aussi en pratique ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter un troisième niveau de difficulté : 20 coefficients (CST de degré 9) et 60 bits.
+\item Remplacer l'optique physique par la méthode des moments pour les seuls profils du front final (vérification haute fidélité).
+\end{itemize}
+\end{pistes}

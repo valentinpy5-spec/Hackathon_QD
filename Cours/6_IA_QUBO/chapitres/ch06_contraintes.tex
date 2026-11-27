@@ -1,0 +1,78 @@
+\chapter{Les contraintes : modélisées ou laissées à la boîte noire}\label{ch:contraintes}
+\iterbanner{V3}
+
+\section{Deux façons de faire}
+Le profil doit être assez épais ($t\ge8~\%$), tenir la manœuvre ($C_{L,\max}\ge1{,}2$) et faire converger XFOIL en croisière. La boucle de la V2 traite ces contraintes par des pénalités dans le QUBO (cours de calcul quantique, chapitre~8). Ce cours compare deux approches.
+
+\paragraph{Contrainte modélisée (\code{modele}), comme en V2.}
+\begin{itemize}
+\item l'épaisseur est connue sans simulation : l'indice $x_t=0$ est interdit par une pénalité exacte, rendue quadratique par un qubit auxiliaire (Rosenberg) ;
+\item $C_{L,\max}$ est \emph{modélisé} par un modèle affine en $z$, ajusté sur les profils où XFOIL a convergé, et pénalisé avec 3 bits d'écart (poids 75) ;
+\item la traînée et la SER sont modélisées sur les seuls profils faisables.
+\end{itemize}
+Le QUBO compte 14 qubits sur le problème V2 (10 de conception, 1 auxiliaire, 3 d'écart), et 33 sur le problème mis à l'échelle (30 de conception, 3 d'écart, pas d'auxiliaire car l'épaisseur n'y est plus une variable).
+
+\paragraph{Contrainte en boîte noire (\code{bn}), comme FMQA.} On ne modélise aucune contrainte. Pour chaque poids $w$, on construit directement les données de l'objectif pondéré :
+\[ y_n=\begin{cases}w\,C_{D,n}/s_{C_D}+(1-w)\,{\rm SER}_n/s_{\rm SER} & \text{si le profil }n\text{ est faisable,}\\[2pt] \max_{\text{faisables}}y+0{,}2\times\big(\max_{\text{faisables}}y-\min_{\text{faisables}}y\big) & \text{sinon,}\end{cases} \]
+et l'on ajuste un seul modèle sur \emph{tous} les profils simulés. Le modèle apprend que les régions infaisables sont mauvaises, comme il apprend que les régions traînantes le sont. Seule l'épaisseur, connue sans calcul, garde sa pénalité exacte. Le QUBO n'a plus de bits d'écart : 11 qubits sur le problème V2, 30 à l'échelle.
+
+\paragraph{Exemple.} Si les profils faisables ont des objectifs pondérés entre 0,2 et 1,0, un profil infaisable reçoit $1{,}0+0{,}2\times0{,}8=1{,}16$ : un peu plus mauvais que le plus mauvais faisable. Le choix de 0,2 est arbitraire ; trop grand, il crée une marche que le modèle quadratique lisse mal ; trop petit, l'infaisable n'est plus assez repoussé.
+
+\section{Avantages et inconvénients}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+Contrainte modélisée & Contrainte en boîte noire \\
+\midrule
+utilise l'information « de combien la contrainte est violée » ($C_{L,\max}=1{,}1$ n'est pas $0{,}6$) & ne sait que « faisable ou non » : l'écart à la contrainte est perdu \\
+modèle de $C_{L,\max}$ forcé affine (sinon le carré est de degré 4) & aucun modèle de contrainte, donc aucune forme imposée \\
+3 bits d'écart, pénalité en dents de scie qui domine le spectre & pas de bits d'écart ; l'objectif occupe une plus grande part du spectre \\
+2 modèles par itération (traînée, SER) & 5 modèles par itération (un par poids) \\
+la frontière de faisabilité est une surface lisse prédite & la frontière est une marche, que les modèles lisses représentent mal \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le QUBO en boîte noire est-il plus facile pour QAOA ?}
+Le cours de calcul quantique (chapitre~15) a montré que, dans le QUBO de la V2, l'objectif n'occupe que 1,7~\% de l'étendue des énergies : les pénalités écrasent tout, et QAOA ne fait que 5 fois mieux que le hasard. Sans bits d'écart, la situation devrait s'améliorer. On le mesure (\code{ia\_qubo/qaoa\_contraintes.py}) sur 9 QUBO de début de boucle (3 graines, 3 poids), avec le modèle en $z$ dans les deux cas pour n'isoler que l'effet de la contrainte :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X c >{\centering\arraybackslash}p{3.3cm} >{\centering\arraybackslash}p{3.3cm}}
+\toprule
+& qubits & part de l'objectif dans le spectre & QAOA $p=2$ : gain sur le hasard \\
+\midrule
+contrainte modélisée & 14 & 1,7~\% & 4,5 (3,5 à 4,8) \\
+contrainte en boîte noire & 11 & 9,8~\% & 4,1 (0,1 à 8,3) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+(Médianes, entre parenthèses le minimum et le maximum.) La part de l'objectif est multipliée par six, mais QAOA n'en profite pas en médiane. La raison est visible dans la matrice $Q$ : la pénalité d'épaisseur reste, avec ses termes de Rosenberg (couplages jusqu'à 12), qui dominent encore un objectif normalisé d'étendue de l'ordre de 1. Supprimer \emph{une} pénalité ne suffit pas : il faudrait qu'aucune ne domine. C'est l'argument pour les espaces latents qui ne décrivent que des conceptions valides (chapitre~\ref{ch:ia-autres}), ou pour des mélangeurs qui respectent les contraintes (cours de calcul quantique, chapitre~15).
+
+\begin{piege}[ : la valeur dégradée des infaisables]
+Dans la boîte noire, la valeur donnée aux infaisables est \emph{inventée}. Un modèle quadratique ajusté sur des données qui sautent brusquement à la frontière de faisabilité fait des erreurs des deux côtés : il peut rendre attractif un profil infaisable voisin d'un bon faisable, ou repousser un bon profil faisable voisin d'un infaisable. Or le front est justement au bord de la contrainte de manœuvre (lot L1).
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item Contrainte modélisée : plus d'information (l'écart à la contrainte), mais un modèle affine imposé et des bits d'écart qui dominent le spectre.
+\item Contrainte en boîte noire : aucun modèle de contrainte, un QUBO plus petit où l'objectif pèse six fois plus, mais une frontière apprise en marche d'escalier.
+\item Pour QAOA, retirer les bits d'écart ne suffit pas : la pénalité d'épaisseur domine encore.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:bn-valeur}
+Dix profils simulés : six faisables d'objectifs pondérés $0{,}3;\ 0{,}5;\ 0{,}6;\ 0{,}8;\ 0{,}9;\ 1{,}1$, et quatre infaisables. Quelle valeur reçoivent les infaisables ? Que se passe-t-il si le prochain profil simulé est faisable avec un objectif de $1{,}5$ ?
+\end{exercice}
+\begin{exercice}\label{ex:bn-qubits}
+Combien de qubits et de couplages entre bits de conception et bits d'écart économise la boîte noire sur le problème V2 ? Sur le problème mis à l'échelle (30 bits de conception) ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Modéliser la faisabilité par un \emph{classifieur} (probabilité d'être faisable) plutôt que par une valeur dégradée, et l'utiliser comme dans l'optimisation bayésienne contrainte du lot L1.
+\item Retirer aussi la pénalité d'épaisseur en décalant la grille de $t$ (8 niveaux de 8 à 22~\% au lieu de 6 à 20~\%) : la contrainte disparaît de la formulation, sans auxiliaire ni pénalité. La formulation du problème est un levier plus puissant que le solveur.
+\end{itemize}
+\end{pistes}

@@ -1,0 +1,80 @@
+\chapter{Le modèle bayésien sur les bits et le tirage de Thompson}\label{ch:bocs}
+\iterbanner{V3}
+
+\section{Le modèle le plus libre qui reste un QUBO}
+BOCS (\emph{Bayesian Optimization of Combinatorial Structures}, Baptista et Poloczek, 2018) prend le modèle quadratique \emph{complet} sur les bits : une constante, un poids par bit, un couplage libre par paire.
+\[ \hat y(\mathbf b)=\boldsymbol\varphi(\mathbf b)\cdot\boldsymbol\theta,\qquad\boldsymbol\varphi(\mathbf b)=\big(1;\ b_1,\dots,b_n;\ b_1b_2,\ b_1b_3,\dots,b_{n-1}b_n\big), \]
+soit $p=1+n+n(n-1)/2$ coefficients : 56 pour nos 10 bits, 466 pour les 30 bits du problème mis à l'échelle. Comme pour la machine de factorisation, les coefficients se lisent directement comme un QUBO : $Q_{ii}=\theta_{b_i}$, $Q_{ij}=\theta_{b_ib_j}$, $c=\theta_1$ (\code{theta\_to\_qubo}).
+
+La différence est dans la façon d'ajuster : au lieu d'un seul jeu de coefficients, on calcule une \emph{loi de probabilité} sur les coefficients, qui dit ce que les données permettent de savoir et ce qu'elles laissent incertain.
+
+\section{La régression bayésienne}
+\paragraph{Les hypothèses.} A priori (avant les données), chaque coefficient suit une loi normale centrée : $\theta_k\sim\mathcal N(0,1/\alpha)$, sauf la constante, laissée libre. Les simulations sont le modèle plus un bruit : $y_n=\boldsymbol\varphi(\mathbf b_n)\cdot\boldsymbol\theta+\varepsilon_n$, $\varepsilon_n\sim\mathcal N(0,1/\beta)$. On travaille sur $y$ centré réduit.
+
+\paragraph{La loi a posteriori.} Le produit de deux gaussiennes est une gaussienne : après les données, $\boldsymbol\theta\sim\mathcal N(\mathbf m,S)$ avec
+\[ S=\big(A+\beta\,\Phi^\top\Phi\big)^{-1},\qquad\mathbf m=\beta\,S\,\Phi^\top\mathbf y,\qquad A=\mathrm{diag}(\epsilon,\alpha,\dots,\alpha). \]
+$\Phi$ est la matrice $N\times p$ des $\boldsymbol\varphi(\mathbf b_n)$, et $\epsilon=10^{-6}$ laisse la constante presque libre.
+
+\paragraph{Le lien avec la régularisation ridge.} En multipliant par $\beta$ : $\mathbf m=(\Phi^\top\Phi+A/\beta)^{-1}\Phi^\top\mathbf y$. C'est exactement la solution ridge, avec $\lambda=\alpha/\beta$, et \emph{sans pénaliser la constante} : la correction que le cours de calcul quantique (chapitre~8, section sur la régularisation) recommandait pour le modèle en $z$. La moyenne a posteriori est le modèle ridge ; la covariance $S$ dit en plus à quel point chaque coefficient est incertain.
+
+\paragraph{Régler $\alpha$ et $\beta$ sur les données.} Plutôt que de les fixer, on les choisit pour que les données soient les plus probables possible sous le modèle (maximum de l'\emph{évidence}, MacKay 1992). On itère trois formules jusqu'à convergence :
+\[ \gamma=\sum_k\frac{\beta\lambda_k}{\alpha+\beta\lambda_k},\qquad\alpha=\frac{\gamma}{\|\mathbf m\|^2},\qquad\beta=\frac{N-\gamma}{\|\mathbf y-\Phi\mathbf m\|^2}, \]
+où les $\lambda_k$ sont les valeurs propres de $\Phi^\top\Phi$. Le nombre $\gamma$ a un sens simple : c'est le \textbf{nombre effectif de coefficients} que les données déterminent vraiment. Chaque terme vaut presque 1 dans une direction bien informée ($\beta\lambda_k\gg\alpha$), presque 0 dans une direction mal informée. Avec 30 profils et 56 coefficients, $\gamma$ ne peut pas dépasser 30 : les 26 autres directions restent gouvernées par l'a priori.
+
+\section{Le tirage de Thompson : choisir avec l'incertitude}
+Comment choisir le prochain profil avec une loi sur les modèles plutôt qu'un modèle ? L'optimisation bayésienne du lot L1 utilisait l'amélioration espérée, qui n'est pas quadratique : on ne peut pas l'écrire comme un QUBO. BOCS utilise une règle qui, elle, le permet :
+\begin{enumerate}
+\item tirer \emph{un} jeu de coefficients au hasard dans la loi a posteriori : $\tilde{\boldsymbol\theta}\sim\mathcal N(\mathbf m,S)$ ;
+\item ce tirage est un modèle quadratique en bits, donc un QUBO : le minimiser ;
+\item simuler le profil obtenu.
+\end{enumerate}
+C'est l'échantillonnage de Thompson (1933). Il équilibre de lui-même exploration et exploitation : un coefficient bien connu est tiré près de sa moyenne, un coefficient incertain peut être tiré très favorable, ce qui envoie la boucle explorer la région qu'il gouverne. Quand les données s'accumulent, $S$ rétrécit et les tirages se resserrent autour de $\mathbf m$.
+
+\paragraph{Exemple chiffré.} Supposons qu'un couplage ait pour moyenne a posteriori $m=-0{,}2$ et pour écart-type $0{,}5$ (incertain). Il est tiré négatif, donc favorable à l'allumage simultané des deux bits, avec probabilité $\Phi(0{,}2/0{,}5)=\Phi(0{,}4)\approx0{,}66$, et positif une fois sur trois. Avec 20 fois plus de données, l'écart-type tombe vers $0{,}5/\sqrt{20}\approx0{,}11$ et la probabilité monte à $\Phi(1{,}8)\approx0{,}96$ : le doute est levé.
+
+\paragraph{Le tirage en pratique.} Avec la décomposition de Cholesky $S=LL^\top$ et $\boldsymbol\varepsilon\sim\mathcal N(0,\Id)$, le vecteur $\tilde{\boldsymbol\theta}=\mathbf m+L\boldsymbol\varepsilon$ suit la bonne loi. Dans la boucle, chaque poids $w$ tire ses propres modèles de traînée et de SER : les cinq QUBO d'une itération sont cinq tirages différents.
+
+\begin{codebox}[ : \code{ia\_qubo/modeles.py}, classe \code{BayesQuadBits}]
+\begin{lstlisting}
+for _ in range(self.n_iter):                     # maximum de l'evidence (MacKay)
+    S = np.linalg.inv(A + beta * G)               # G = Phi^T Phi
+    mN = beta * S @ Phi.T @ t
+    gamma = np.sum(beta * lam / (alpha + beta * lam))
+    alpha = gamma / (mN[1:] @ mN[1:])            # la constante n'entre pas dans la pénalité
+    beta = (N - gamma) / np.sum((t - Phi @ mN) ** 2)
+...
+def sample_qubo(self):                            # tirage de Thompson -> QUBO
+    L = np.linalg.cholesky(self.S + 1e-10 * np.eye(len(self.m)))
+    return self._to_qubo(self.m + L @ self.rng.standard_normal(len(self.m)))
+\end{lstlisting}
+\end{codebox}
+
+\begin{piege}[ : le prix de la liberté]
+Le modèle complet a $\Theta(n^2)$ coefficients. À 80 bits, il en a 3\,241 : il faudrait des milliers de simulations pour les déterminer, alors que l'on en a quelques centaines. L'a priori gaussien ne crée pas d'information : il ramène vers 0 tout ce que les données ne déterminent pas. BOCS d'origine utilise un a priori \og en fer à cheval\fg{} (\emph{horseshoe}), qui suppose que la plupart des couplages sont nuls ; c'est une hypothèse plus forte, utile quand elle est vraie.
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item BOCS ajuste le modèle quadratique complet en bits par régression bayésienne : la moyenne a posteriori est la solution ridge sans pénaliser la constante, et la covariance mesure l'incertitude de chaque coefficient.
+\item Le tirage de Thompson remplace l'amélioration espérée : un modèle tiré au hasard dans la loi a posteriori est un QUBO, et le minimiser explore là où le modèle doute.
+\item C'est le plus libre des modèles quadratiques en bits, donc le plus gourmand en données.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:bocs-ridge}
+Montrer que $\mathbf m=\beta S\Phi^\top\mathbf y$ est la solution de $\min_{\boldsymbol\theta}\ \beta\|\Phi\boldsymbol\theta-\mathbf y\|^2+\boldsymbol\theta^\top A\boldsymbol\theta$. En déduire la valeur du paramètre ridge $\lambda$ équivalent.
+\end{exercice}
+\begin{exercice}\label{ex:thompson}
+Un poids de bit a pour loi a posteriori $\mathcal N(0{,}3;\ 0{,}2^2)$. (a) Probabilité qu'un tirage de Thompson le donne négatif (bit favorable à allumer) ? (b) Même question pour $\mathcal N(0{,}3;\ 1^2)$. (c) Expliquer pourquoi le tirage de Thompson explore davantage en début de boucle.
+\end{exercice}
+\begin{exercice}\label{ex:gamma}
+Avec $N=30$ profils et le modèle complet à 56 coefficients, pourquoi a-t-on toujours $\gamma\le30$ ? Que vaut à peu près $\gamma$ pour un modèle en $z$ à 15 coefficients, si $\Phi^\top\Phi$ a toutes ses valeurs propres grandes devant $\alpha/\beta$ ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Utiliser l'a priori en fer à cheval de BOCS d'origine, qui favorise les modèles creux, et comparer.
+\item Appliquer le tirage de Thompson au modèle en $z$ (régression bayésienne sur ses 15 coefficients) : on garderait la continuité des niveaux, avec en plus l'exploration.
+\end{itemize}
+\end{pistes}

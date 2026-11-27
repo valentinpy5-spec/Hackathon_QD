@@ -1,0 +1,50 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_IA_QUBO.tex
+% Figures à données : python3 tools/make_figures.py (lit Code/resultats/ia_qubo_*.json,
+% produits par les scripts de Code/ia_qubo/, voir Code/ia_qubo/README.md)
+\input{preambule}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{IA et QUBO}\\[0.4em]\large Apprendre le modèle de la boucle quantique :\\ machine de factorisation, modèle bayésien sur les bits, réseau de neurones,\\ et passage à un problème boîte noire plus grand (lot L6 de la V3)}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 27 novembre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Objet.} La boucle QUBO du projet ajuste un polynôme de degré 2 en variables physiques, puis le minimise sous forme de QUBO. Ce cours remplace ce modèle par des modèles \emph{appris} : une machine de factorisation (méthode FMQA), un modèle quadratique bayésien sur les bits (méthode BOCS) et, pour mesurer le prix de la forme QUBO, un réseau de neurones. Il les compare sur le problème V2, puis sur un problème mis à l'échelle (forme CST à 10 paramètres, 30 bits, $10^9$ profils, solveurs en boîte noire). Il fait enfin le point sur ce que l'intelligence artificielle peut apporter d'autre au projet.
+
+\paragraph{Ce qu'on suppose connu.} Le cours de calcul quantique (QUBO, chapitre~8 ; recuit, chapitre~9 ; pourquoi QAOA n'apporte rien, chapitre~15) et le cours d'optimisation bayésienne (lot L1). Les machines de factorisation, la régression bayésienne et les réseaux de neurones sont posés depuis le début.
+
+\paragraph{Fil conducteur.} La question et le plan d'expérience (ch.~\ref{ch:question}) $\to$ les trois modèles appris (ch.~\ref{ch:fm} à \ref{ch:mlp}) $\to$ leur précision selon le nombre de données (ch.~\ref{ch:precision}) $\to$ le traitement des contraintes (ch.~\ref{ch:contraintes}) $\to$ les résultats sur le problème V2 (ch.~\ref{ch:resultats-v2}) $\to$ le problème mis à l'échelle et ses résultats (ch.~\ref{ch:echelle} et \ref{ch:resultats-echelle}) $\to$ ce que l'IA peut apporter d'autre (ch.~\ref{ch:ia-autres}) $\to$ bilan (ch.~\ref{ch:bilan}).
+
+\paragraph{Code et chiffres.} Tout le code est dans \code{Code/ia\_qubo/}, à part de l'approche actuelle, qu'il ne modifie pas. Les figures et les chiffres sont produits par \code{tools/make\_figures.py} à partir des fichiers \code{Code/resultats/ia\_qubo\_*.json}. Chaque chapitre se termine par des exercices (corrigés en annexe~\ref{annexe:corriges}) et des pistes d'amélioration.
+
+\paragraph{Itérations du projet.} Tout ce cours appartient à l'itération V3 (lot L6).
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_question}
+\input{chapitres/ch02_fm}
+\input{chapitres/ch03_bocs}
+\input{chapitres/ch04_mlp}
+\input{chapitres/ch05_precision}
+\input{chapitres/ch06_contraintes}
+\input{chapitres/ch07_resultats_v2}
+\input{chapitres/ch08_echelle}
+\input{chapitres/ch09_resultats_echelle}
+\input{chapitres/ch10_ia_autres}
+\input{chapitres/ch11_bilan}
+
+\appendix
+\input{chapitres/annexe_corriges}
+
+\end{document}

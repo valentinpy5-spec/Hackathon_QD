@@ -1,0 +1,90 @@
+\chapter{La question : apprendre le QUBO, pour des problèmes boîte noire et plus grands}\label{ch:question}
+\iterbanner{V3}
+
+\section{Ce que le projet a établi}
+La boucle du projet a trois étapes : ajuster un \emph{modèle} sur les profils déjà simulés, choisir le prochain profil en minimisant ce modèle (écrit comme un QUBO), le simuler. Trois résultats sont acquis :
+\begin{itemize}
+\item la boucle retrouve tout le front traînée/SER en 75 (S1) et 142,5 (S2) simulations, quand NSGA-II n'y parvient presque jamais (V2) ;
+\item un modèle plus souple, le krigeage, ne fait pas mieux que le modèle quadratique, et c'est le traitement de la contrainte de manœuvre qui décide du succès (lot L1, cours \emph{Optimisation bayésienne}) ;
+\item à 14 qubits, le solveur du QUBO n'est pas le goulot : l'énumération est imbattable, et les pénalités écrasent l'objectif au point d'aveugler QAOA et le recuit (cours de calcul quantique, chapitres 9, 10 et 15).
+\end{itemize}
+
+\section{La nouvelle question}
+Le modèle de la boucle est un polynôme de degré 2 en variables \emph{physiques} normalisées. C'est un choix fort : il suppose que chaque grandeur varie comme une parabole de chaque paramètre. Il marche sur un NACA à 4 paramètres ; marchera-t-il sur une forme décrite par des dizaines de paramètres, évaluée par des codes dont on ne connaît rien (boîtes noires) ?
+
+L'idée de ce cours est d'utiliser des méthodes d'apprentissage pour \textbf{apprendre directement le QUBO} : un modèle plus souple, ajusté sur les données, mais qui reste quadratique en bits pour pouvoir être confié à un solveur quantique. On en tire trois questions :
+\begin{description}
+\item[Q1. Précision.] Un modèle appris sur les bits est-il plus précis que le modèle en $z$ ? À partir de combien de données ? Et le gain de précision se traduit-il par moins de simulations ?
+\item[Q2. Contraintes.] Peut-on se passer de modèle de contrainte, en laissant le modèle appris \og voir\fg{} les profils infaisables comme mauvais (boîte noire complète) ?
+\item[Q3. Passage à l'échelle.] Sur un problème plus grand (30 bits, $10^9$ profils, ni grille ni QUBO énumérables), quelle méthode garde l'avantage ?
+\end{description}
+
+\section{Où se situe la recherche}
+L'idée n'est pas neuve, et c'est une bonne nouvelle : notre boucle appartient à une famille de méthodes connue, à laquelle on peut se comparer.
+\begin{itemize}
+\item \textbf{FMQA} (Kitai et al., \emph{Physical Review Research}, 2020) : une machine de factorisation apprend la fonction boîte noire directement sur des bits ; c'est un QUBO par construction ; on le résout par recuit quantique, on simule, on réapprend. Appliquée d'abord à des métamatériaux, étendue depuis aux variables entières (2022), continues (2024), et aux circuits de type QAOA. Un paquet Python existe (\code{fmqa}).
+\item \textbf{BOCS} (Baptista et Poloczek, ICML 2018) : modèle quadratique complet sur les bits, régression bayésienne, choix par tirage de Thompson ; le QUBO d'acquisition est résolu par recuit simulé ou programmation semi-définie.
+\item \textbf{Espace latent binaire} (Wilson et al., \emph{Applied Physics Reviews}, 2021) : un autoencodeur variationnel binaire apprend un code qui ne décrit que des conceptions valides ; FMQA travaille ensuite dans ce code, et les contraintes n'ont plus besoin de pénalités.
+\item \textbf{Applications aéronautiques}, encore rares : une thèse de TU Delft (2025) applique FMQA à des profils couplés à un solveur Lattice Boltzmann ; un article de Keio (2026) l'applique à l'aile d'un avion à propulsion humaine (32 variables) ; un article de Pékin (2026) optimise des profils NACA 4 chiffres avec une machine d'Ising cohérente et des surfaces de réponse.
+\end{itemize}
+Dans ce vocabulaire, notre boucle est un FMQA dont le modèle n'est pas une machine de factorisation mais un polynôme \emph{structuré} : quadratique dans les variables physiques, ce qui donne un QUBO à couplages contraints ($A^\top MA$).
+
+\section{Le plan d'expérience}
+On garde la boucle et l'on change \emph{un seul} élément à la fois : le modèle, puis le traitement de la contrainte.
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}X c c}
+\toprule
+Modèle & En deux mots & QUBO ? & Chapitre \\
+\midrule
+\code{quadz} & l'approche actuelle : quadratique en $z$ & oui & cours quantique, ch.~8 \\
+\code{fm} & machine de factorisation sur les bits (FMQA) & oui & \ref{ch:fm} \\
+\code{bocs} & quadratique complet sur les bits, bayésien, tirage de Thompson & oui & \ref{ch:bocs} \\
+\code{mlp} & réseau de neurones, recherche directe & non & \ref{ch:mlp} \\
+\midrule
+Contrainte & & & \\
+\midrule
+\code{modele} & $C_{L,\max}$ modélisé (affine), variables d'écart, comme en V2 & & \ref{ch:contraintes} \\
+\code{bn} (boîte noire) & pas de modèle de contrainte : les infaisables entrent dans les données avec une mauvaise valeur & & \ref{ch:contraintes} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Sur le problème V2, les $4\times2=8$ combinaisons sont comparées avec le protocole du lot L1 : mêmes 10 profils initiaux par graine, 5 poids, un profil par poids et par itération, budget de 250 simulations, 20 graines, nombre de simulations pour retrouver tout le front exact (chapitre~\ref{ch:resultats-v2}). Sur le problème mis à l'échelle, le front exact n'est plus connu : on suit l'hypervolume (chapitres~\ref{ch:echelle} et~\ref{ch:resultats-echelle}).
+
+\section{Le code}
+Tout est dans un dossier à part, \code{Code/ia\_qubo/}, qui ne modifie aucun fichier existant : il importe les briques de la V2 (\code{CountedProblem}, \code{z\_of}, les pénalités de \code{qubo\_loop.py}).
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.6cm}X}
+\toprule
+Fichier & Contenu \\
+\midrule
+\code{modeles.py} & les quatre modèles, l'encodage indices $\leftrightarrow$ bits \\
+\code{boucle.py} & la boucle générique \code{boucle\_ia}, le recuit vectorisé, la recherche directe \\
+\code{experiences\_v2\_ia.py} & la comparaison sur le problème V2 $\to$ \code{resultats/ia\_qubo\_V2.json} \\
+\code{precision\_modeles.py} & la précision des modèles selon le nombre de données $\to$ \code{ia\_qubo\_precision.json} \\
+\code{probleme\_cst.py} & le problème mis à l'échelle : forme CST, XFOIL et SER en boîte noire, cache \\
+\code{experiences\_echelle.py} & la comparaison à l'échelle $\to$ \code{resultats/ia\_qubo\_echelle.json} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{codebox}[ : la boucle générique reproduit la V2]
+Avec le modèle \code{quadz}, la contrainte \code{modele} et le solveur exact, \code{boucle\_ia} doit refaire exactement la boucle QUBO de la V2. La fonction \code{verifier\_boucle} le contrôle : sur trois graines, les deux boucles simulent les mêmes profils, dans le même ordre. Toute différence observée ensuite vient donc du seul élément changé.
+\end{codebox}
+
+\exercices
+\begin{exercice}\label{ex:classer}
+Pour chacun des quatre modèles, dire s'il est un QUBO, combien il a de paramètres sur le problème V2 (10 bits, 4 variables), et s'il « sait » que les niveaux d'une variable sont ordonnés.
+\end{exercice}
+\begin{exercice}\label{ex:fmqa-nous}
+En quoi la boucle de la V2 est-elle un cas particulier de FMQA ? Qu'est-ce qui la distingue d'une machine de factorisation ? (Penser à la forme des couplages entre bits.)
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Comparer aussi au paquet \code{fmqa} de référence, pour vérifier que notre machine de factorisation se comporte comme celle de la littérature.
+\end{itemize}
+\end{pistes}
