@@ -41,6 +41,8 @@ def xfoil_available(exe="xfoil"):
 
 
 def xfoil_env():
+    if os.name == "nt":
+            return os.environ.copy()
     """Environnement d'exécution avec un écran X (réel si présent, sinon Xvfb local)."""
     env = dict(os.environ)
     if env.get("DISPLAY"):

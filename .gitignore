@@ -28,3 +28,6 @@ Code/resultats/*.log
 .vscode/
 .idea/
 *~
+
+# xfoil
+xfoil.exe
