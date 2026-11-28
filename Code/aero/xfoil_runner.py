@@ -42,10 +42,9 @@ def xfoil_available(exe="xfoil"):
 
 def xfoil_env():
     """Environnement d'exécution avec un écran X (réel si présent, sinon Xvfb local)."""
-    if os.name=="nt": # Windows : xfoil.exe a sa propre fenêtre graphique
-        return env
-    
     env = dict(os.environ)
+    if os.name == "nt":   # Windows : xfoil.exe a sa propre fenêtre graphique
+        return env
     if env.get("DISPLAY"):
         return envS
     xvfb = shutil.which("Xvfb") or (LOCAL_XVFB if os.path.exists(LOCAL_XVFB) else None)
