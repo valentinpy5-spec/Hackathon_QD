@@ -121,6 +121,63 @@ Le ratio d'approximation est $r=1-\expval{\tilde E}$, où $\tilde E=(E-E_{\min})
 $\gamma$ multiplie $E$ dans une phase. Avec $E$ en counts de traînée (de $57$ à $117$), une variation de $\gamma$ de $0{,}1$ fait tourner les phases de plusieurs radians : le paysage $F_1$ devient une « tôle ondulée » où l'optimiseur se perd. Sans normalisation, on obtient $P(\text{optimum})=0{,}0045$ à $p=1$ ; en centrant et réduisant $E$ (\texttt{normalize}), on obtient $0{,}018$. Il faut toujours normaliser le QUBO avant QAOA.
 \end{piege}
 
+\section{Comment le mélangeur fait interférer : le calcul exact}\label{sec:interference}
+\begin{evolution}{V3}{sections ajoutées}Les deux sections qui suivent rendent précise l'intuition « le mélangeur fait interférer les chaînes voisines », puis décrivent QAOA tel qu'il est utilisé dans la boucle depuis la V2, sur le QUBO à 14 qubits du chapitre~\ref{ch:qubo} (section~\ref{sec:qubo-v2}).\end{evolution}
+
+\subsection{L'élément de matrice du mélangeur}
+Les termes $X_k$ agissent sur des qubits différents et commutent : $e^{-i\beta H_M}=\prod_ke^{-i\beta X_k}$, et sur chaque qubit, comme $X^2=\Id$, $e^{-i\beta X}=\cos\beta\,\Id-i\sin\beta\,X$ (section~\ref{sec:schrodinger}). Sur un qubit, ce facteur laisse un bit inchangé avec l'amplitude $\cos\beta$ et le retourne avec l'amplitude $-i\sin\beta$. Pour $n$ qubits, on multiplie les facteurs des $n$ bits : si les chaînes $x$ et $y$ diffèrent en $d(x,y)$ bits (distance de Hamming),
+\[ \boxed{\bra x e^{-i\beta H_M}\ket y=(\cos\beta)^{\,n-d(x,y)}\,(-i\sin\beta)^{\,d(x,y)}.} \]
+Le mélangeur relie \emph{toutes} les chaînes entre elles, avec un poids qui décroît avec leur distance quand $|\beta|$ est petit.
+
+\subsection{L'amplitude après une couche}
+Partant de la superposition uniforme, la couche de coût donne $\psi_y=2^{-n/2}e^{-i\gamma E(y)}$, puis le mélangeur donne :
+\[ \psi_x(\gamma,\beta)=2^{-n/2}\sum_y(\cos\beta)^{n-d(x,y)}(-i\sin\beta)^{d(x,y)}\,e^{-i\gamma E(y)}. \]
+L'amplitude finale de $x$ est une \textbf{somme sur toutes les chaînes} $y$, chacune contribuant avec la phase de son énergie : c'est littéralement une interférence. En gardant les termes $d=0$ et $d=1$ (valable pour $|\beta|$ petit) et en factorisant la phase de $x$ :
+\[ \psi_x\approx2^{-n/2}(\cos\beta)^ne^{-i\gamma E(x)}\Big[1-i\tan\beta\sum_{y\sim x}e^{-i\gamma\,(E(y)-E(x))}\Big], \]
+où $y\sim x$ parcourt les $n$ voisins de $x$ (un bit retourné). Avec $|1-itS|^2=1+2t\,\mathrm{Im}\,S+t^2|S|^2$, on obtient au premier ordre en $\tan\beta$ :
+\[ P(x)\approx2^{-n}(\cos\beta)^{2n}\Big[1-2\tan\beta\sum_{y\sim x}\sin\big(\gamma\,(E(y)-E(x))\big)\Big]. \]
+
+\paragraph{Ce que dit cette formule.} Prenons $\gamma>0$ petit et $\beta<0$ (donc $-\tan\beta>0$). Si les voisins de $x$ ont une énergie plus haute que $x$, les sinus sont positifs et $P(x)$ \emph{augmente} ; s'ils sont plus bas, $P(x)$ diminue. À une couche et à petits angles, QAOA \textbf{compare chaque chaîne à ses voisines} et favorise les minima locaux, un peu comme un pas de descente. Les couches suivantes répètent ce mécanisme sur l'état obtenu, et à grande profondeur on retrouve le recuit adiabatique (section~\ref{sec:schrodinger} et chapitre~\ref{ch:recuit}).
+
+\paragraph{Ce qu'elle dit de notre QUBO.} La formule contient les \emph{différences d'énergie entre voisins}, multipliées par $\gamma$. Dans notre QUBO, parmi les 14 voisins d'un bon profil faisable, la plupart paient une pénalité : retourner un bit de $t$, l'auxiliaire $y$ ou un bit d'écart change l'énergie d'une à plusieurs dizaines d'unités, alors que les différences utiles d'objectif valent quelques centièmes. On ne peut choisir qu'un seul $\gamma$ :
+\begin{itemize}
+\item si $\gamma$ est assez grand pour que $\gamma\delta$ soit significatif sur les petites différences d'objectif $\delta$, les termes $\sin(\gamma\Delta_{\rm pén})$ des voisins pénalisés prennent des valeurs quasi aléatoires, et brouillent le signal ;
+\item si $\gamma$ est assez petit pour que les voisins pénalisés restent cohérents ($\gamma\Delta_{\rm pén}<\pi$), alors $\gamma\delta$ est minuscule, et l'objectif ne contribue presque pas à $P(x)$.
+\end{itemize}
+C'est le même dilemme que pour la température du recuit simulé (section~\ref{sec:recuit-v2}), écrit dans les phases au lieu des probabilités de Boltzmann. C'est ce qui explique la mesure du chapitre~\ref{ch:pourquoi} : sur les QUBO de la boucle, QAOA ne fait que 5 fois mieux que le hasard, contre 30 à 400 fois sur le même objectif sans contraintes.
+
+\section{QAOA dans la boucle, étape par étape}\label{sec:qaoa-boucle}
+Voici ce que fait la branche \texttt{"qaoa"} de \texttt{ranked\_candidates} pour chacun des 5 QUBO d'une itération. On distingue ce qui serait quantique sur une vraie machine de ce qui reste classique.
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{c>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.6cm}}
+\toprule
+& Étape & Sur une vraie machine \\
+\midrule
+1 & Construire $Q$ (14 qubits), le passer en Ising : 14 champs $h_i$, 81 couplages $J_{ij}$. & classique \\
+2 & Normaliser l'énergie (centrer, réduire), pour que $\gamma$ soit d'ordre 1 (piège de l'échelle). & classique (coefficients divisés par l'écart-type) \\
+3 & Profondeur $p=2$ : 4 angles $(\gamma_1,\gamma_2,\beta_1,\beta_2)$. Pour 3 jeux d'angles de départ tirés au hasard, COBYLA minimise $F_2=\expval{H_C}$. & \textbf{quantique} pour chaque évaluation de $F_2$ (circuit + tirs), classique pour l'optimiseur \\
+4 & Préparer l'état aux meilleurs angles et le mesurer 512 fois. & \textbf{quantique} \\
+5 & Garder les chaînes distinctes, les \emph{retrier par leur énergie exacte}, les décoder en profils, dédoublonner. & classique \\
+6 & Simuler le premier profil non encore simulé. & simulation (XFOIL, méthode des moments) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le circuit d'une couche compte 14 portes $R_Z$, 81 portes $R_{ZZ}$ (162 CNOT) et 14 portes $R_X$ ; à $p=2$, 324 CNOT avant routage.
+
+\paragraph{QAOA comme générateur de candidats.} L'étape~5 est importante pour comprendre le rôle de QAOA dans la boucle : on ne lui demande pas l'optimum, on lui demande un \emph{échantillon} de chaînes, que l'on classe ensuite exactement. QAOA est utile si cet échantillon contient de meilleurs candidats que le hasard ; il est parfait s'il contient toujours l'optimum. Sur les QUBO de la boucle, la probabilité de l'optimum est d'environ $3\cdot10^{-4}$, et l'optimum n'apparaît dans les 512 tirs qu'une fois sur sept environ (chapitre~\ref{ch:pourquoi}).
+
+\paragraph{Ce que cela donne dans la boucle.} Sur 5 graines, la boucle à QAOA retrouve le front de S1 en 105 simulations (médiane), contre 75 avec l'énumération, et celui de S2 dans 60~\% des cas seulement. Le simulateur, lui, met 6 à 16 secondes par QUBO, contre 3,7 millisecondes pour l'énumération.
+
+\begin{resultat}
+\begin{itemize}
+\item $\bra xe^{-i\beta H_M}\ket y=(\cos\beta)^{n-d}(-i\sin\beta)^d$ : le mélangeur fait interférer chaque chaîne avec toutes les autres, d'autant plus fort qu'elles sont proches.
+\item À une couche et à petits angles, $P(x)$ augmente quand les voisins de $x$ ont une énergie plus haute : QAOA favorise les minima locaux.
+\item Les grandes différences d'énergie dues aux pénalités brouillent ce mécanisme : un seul $\gamma$ ne peut pas servir à la fois les pénalités et l'objectif.
+\item Dans la boucle, QAOA est un générateur de candidats, dont les chaînes sont reclassées classiquement.
+\end{itemize}
+\end{resultat}
+
 \section{Limites à connaître}
 \begin{itemize}
 \item \textbf{Optimisation classique difficile} : le paysage est non convexe, avec de nombreux minima locaux. Il faut des stratégies d'initialisation (INTERP, transfert d'angles d'une instance à une autre).
@@ -137,3 +194,7 @@ Généraliser l'exemple à un qubit à $H_C=h\,Z$ avec $h>0$. Montrer que $F_1(\
 \begin{exercice}
 Pour notre QUBO aéro (9 qubits, 36 couplages), compter les portes d'un circuit QAOA à $p=3$ : $H$, $R_Z$, CNOT, $R_X$. Avec $P(\text{optimum})=0{,}097$, combien de shots faut-il pour observer l'optimum au moins une fois avec une probabilité de 99~\% ?
 \end{exercice}
+\begin{exercice}\label{ex:melangeur}
+Deux qubits, $H_C$ diagonal d'énergies $E(00),E(01),E(10),E(11)$. (a) Écrire la matrice $4\times4$ de $e^{-i\beta(X_0+X_1)}$ dans la base $00,01,10,11$ à l'aide de la formule de la section~\ref{sec:interference}. (b) En déduire $\psi_{11}$ après une couche de QAOA, partant de $\ket{++}$. (c) Pour $E=(0,1,1,-1)$ (le QUBO de l'exercice~7.3), $\gamma=0{,}3$ et $\beta=-0{,}3$, calculer $P(11)$ et comparer à $\frac14$.
+\end{exercice}
+

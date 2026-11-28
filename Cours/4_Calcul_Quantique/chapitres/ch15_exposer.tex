@@ -1,0 +1,164 @@
+\chapter{Exposer la démarche d'optimisation quantique}\label{ch:exposer}
+\iterbanner{V3}
+
+\begin{evolution}{V3}{pourquoi ce chapitre}Les chapitres précédents expliquent chaque élément en détail. Celui-ci les rassemble pour un exposé : le récit en sept étapes, les images à utiliser devant un public non spécialiste (et leurs limites), les chiffres à connaître, les questions probables du jury avec leurs réponses, et un plan d'exposé. Chaque point renvoie à la section du cours qui le justifie.\end{evolution}
+
+\section{Le récit en sept étapes}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm and 5mm,
+  st/.style={draw=cink,rounded corners=2pt,align=center,font=\footnotesize,inner sep=3pt,text width=3.1cm,minimum height=1.35cm,fill=white},
+  qu/.style={st,draw=cviolet,fill=cviolet!8,line width=1pt}]
+\node[st] (a) {\textbf{1. Le problème}\\ traînée et SER\\ s'opposent ; chaque\\ simulation coûte};
+\node[st,right=of a] (b) {\textbf{2. Discrétiser}\\ 1\,024 profils\\ $=$ 10 bits};
+\node[st,right=of b] (c) {\textbf{3. Apprendre}\\ un modèle quadratique\\ sur les profils simulés};
+\node[qu,below=of c] (d) {\textbf{4. Écrire un QUBO}\\ modèle $+$ pénalités\\ 14 qubits};
+\node[qu,left=of d] (e) {\textbf{5. Un hamiltonien}\\ énergie $=$ coût,\\ fondamental $=$ solution};
+\node[qu,left=of e] (f) {\textbf{6. Le résoudre}\\ recuit, QAOA,\\ ou énumération};
+\node[st,below=of e,text width=8.2cm,minimum height=1cm] (g) {\textbf{7. Simuler les candidats, réapprendre, recommencer}\\ le front de Pareto ne contient que des profils simulés};
+\draw[arr] (a) -- (b); \draw[arr] (b) -- (c); \draw[arr] (c) -- (d); \draw[arr] (d) -- (e); \draw[arr] (e) -- (f);
+\draw[arr] (f.south) -- (f.south |- g.north); \draw[arr] (g.east) -| ([xshift=5mm]d.east) |- (c.east);
+\end{tikzpicture}
+\caption{Le récit de l'exposé. Les étapes 4 à 6, en violet, sont la partie quantique : elles ne font qu'une chose, choisir le prochain profil à simuler.}\label{fig:recit}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.3cm}}
+\toprule
+Étape & Ce qu'on dit au public & Où c'est justifié \\
+\midrule
+1. Le problème & Une aile doit traîner peu et être peu visible au radar. Les deux s'opposent : il n'y a pas un meilleur profil, mais un ensemble de compromis, le front de Pareto. Chaque évaluation est une simulation coûteuse : le but est de trouver ce front en simulant le moins de profils possible. & ch.~\ref{ch:qubo}, §\ref{sec:qubo-v2} \\
+2. Discrétiser & On décrit le profil par 4 paramètres pris sur une grille : 1\,024 profils, numérotés par 10 bits. Un ordinateur quantique travaille sur des bits ; c'est la condition pour lui parler. & §\ref{sec:qubo-v2} \\
+3. Apprendre & On simule quelques profils, puis on ajuste des formules simples (des polynômes de degré 2) qui prédisent la traînée, la SER et la portance maximale des autres. & §\ref{sec:qubo-v2} \\
+4. Écrire un QUBO & Le choix du prochain profil devient : trouver la chaîne de bits qui minimise une énergie, faite de la prédiction et d'amendes pour les contraintes. C'est un QUBO, la forme que comprennent les machines quantiques d'optimisation. & ch.~\ref{ch:qubo} \\
+5. Un hamiltonien & Ce QUBO est une énergie physique : chaque chaîne de bits est un état du système, et l'état de plus basse énergie est la solution. & ch.~\ref{ch:hamiltoniens} \\
+6. Le résoudre & Trois façons de trouver cet état : refroidir lentement (recuit), faire interférer les états (QAOA), ou tout essayer (énumération, possible ici). & ch.~\ref{ch:recuit}, \ref{ch:qaoa} \\
+7. Boucler & On simule les profils choisis, on améliore les formules, on recommence. Les formules ne servent qu'à proposer ; seuls les profils simulés entrent dans le résultat. & ch.~\ref{ch:projet}, §\ref{sec:boucle-v2} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Les images pour un public non spécialiste}
+Une image aide à comprendre, mais chacune a une limite qu'il faut connaître, parce qu'un jury averti la cherchera.
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+Image & Ce qu'elle fait comprendre & Sa limite \\
+\midrule
+\textbf{Le paysage} : chaque profil est un lieu, son énergie une altitude. & Optimiser, c'est trouver le point le plus bas. Les minima locaux sont des cuvettes où l'on reste coincé. & Le « paysage » a 16\,384 lieux reliés par des retournements de bits : ce n'est pas une surface continue. \\
+\textbf{Les amendes} : une contrainte violée ajoute une pénalité. & Pourquoi un QUBO peut tenir compte des contraintes sans en avoir. & Une amende trop forte écrase le reste du paysage : c'est exactement notre problème (§\ref{sec:recuit-v2}, ch.~\ref{ch:pourquoi}). \\
+\textbf{Les vagues} : chaque chaîne a une amplitude et une phase, comme une onde ; les ondes s'additionnent ou s'annulent. & Le cœur de QAOA : le coût décale les phases, le mélangeur fait interférer, les bonnes chaînes sont renforcées (§\ref{sec:interference}). & Il faut ajouter qu'on ne lit qu'une seule chaîne par mesure : on répète le calcul (512 tirs). \\
+\textbf{Refroidir un métal} (recuit simulé) et \textbf{traverser une colline} (effet tunnel, recuit quantique). & Comment on sort d'une cuvette : par-dessus grâce à l'agitation, ou à travers grâce aux fluctuations quantiques. & L'effet tunnel n'aide que pour certaines barrières (hautes et minces) ; il ne garantit rien en général. \\
+\textbf{Le réglage d'une radio} : l'ordinateur classique tourne les boutons $\gamma$, $\beta$ jusqu'au meilleur signal. & QAOA est hybride : le processeur quantique prépare et mesure, le classique règle. & Chaque réglage demande des centaines de tirs ; c'est le coût dominant sur machine. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{piege}[ : l'image à ne pas utiliser]
+« L'ordinateur quantique essaie toutes les solutions en même temps. » C'est faux, ou du moins trompeur : la superposition contient toutes les chaînes, mais une mesure n'en donne qu'une, au hasard. Si les amplitudes restaient égales, on tirerait au hasard. Tout l'art est de \emph{faire interférer} les amplitudes pour que les bonnes chaînes sortent plus souvent. Dire « interférence » plutôt que « parallélisme ».
+\end{piege}
+
+\section{Les chiffres à connaître}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X r}
+\toprule
+\multicolumn{2}{l}{\textbf{Le problème et le QUBO}} \\
+profils de la grille (4 paramètres) & 1\,024 \\
+qubits : conception $+$ auxiliaire $+$ écart & $10+1+3=14$ \\
+couplages du QUBO (sur 91 possibles) & 81 \\
+CNOT par couche de QAOA, avant routage & 162 \\
+part de l'objectif dans l'étendue des énergies & 1,7~\% \\
+temps d'énumération des $2^{14}$ chaînes & 3,7~ms \\
+\midrule
+\multicolumn{2}{l}{\textbf{La boucle} (simulations pour retrouver tout le front, médiane sur 20 graines ; S1 / S2)} \\
+tirage au hasard & 911 / 971 \\
+NSGA-II & front presque jamais complet en 250 \\
+boucle QUBO, énumération & 75 / 142,5 \\
+boucle QUBO, recuit simulé & 97,5 / 55~\% de réussite \\
+boucle QUBO, QAOA (5 graines) & 105 / 60~\% de réussite \\
+même boucle sans QUBO (contrôle, lot L1) & 75 / 95 \\
+optimisation bayésienne (lot L1) & 125 / 127,5 \\
+\midrule
+\multicolumn{2}{l}{\textbf{QAOA sur nos QUBO} (probabilité de l'optimum, divisée par celle du hasard)} \\
+avec les contraintes (14 qubits) & environ 5 \\
+même objectif sans contraintes (10 qubits) & 30 à 400 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Le message, en trois phrases}
+\begin{enumerate}
+\item \textbf{La démarche fonctionne} : en apprenant un modèle simple et en le réoptimisant à chaque itération, on retrouve tout le front de Pareto en 75 à 140 simulations au lieu d'un millier, là où un algorithme génétique n'y parvient pas.
+\item \textbf{La formulation quantique est complète et vérifiée} : le choix du profil suivant s'écrit exactement comme un QUBO de 14 qubits, résolu par recuit et par QAOA simulé, avec toutes les contraintes.
+\item \textbf{Mais à cette taille, le quantique n'apporte pas de gain, et l'on sait pourquoi} : le QUBO s'énumère en quelques millisecondes, et ses pénalités, indispensables aux contraintes, écrasent l'objectif au point que QAOA et le recuit ne le distinguent plus. Le gain vient du modèle et de la boucle.
+\end{enumerate}
+Le troisième point n'est pas un aveu d'échec : c'est un résultat, démontré par une ablation (ch.~\ref{ch:pourquoi}), et il indique précisément ce qu'il faudrait changer pour que le quantique serve.
+
+\section{Les questions du jury}
+\begin{description}
+\item[Pourquoi utiliser du quantique si l'on peut tout énumérer ?] À 14 qubits, on ne devrait pas, et nous le montrons. L'intérêt est la formulation : elle reste la même pour un problème de centaines de variables, où l'énumération est impossible. Notre cas est petit exprès, pour connaître la réponse exacte et mesurer chaque méthode honnêtement.
+\item[Combien de qubits pour un cas réel ?] Vingt paramètres de forme à 16 niveaux font 80 bits de conception, plus les auxiliaires et les écarts, soit une centaine de qubits, et un QUBO dense de l'ordre de 5\,000 couplages, soit 10\,000 CNOT par couche. C'est hors de portée du matériel actuel sans correction d'erreurs (ch.~\ref{ch:projet}, exercice).
+\item[Pourquoi un modèle quadratique ?] Parce qu'un QUBO est quadratique : un modèle de degré 2 en variables normalisées reste de degré 2 en bits, sans approximation (§\ref{sec:qubo-v2}). Le lot L1 montre qu'un modèle plus riche (krigeage) n'améliore pas la boucle sur ce problème.
+\item[Comment sont traitées les contraintes ?] Par des pénalités : exacte pour l'épaisseur (un qubit auxiliaire, réduction de Rosenberg), approchée pour la manœuvre (modèle affine, trois qubits d'écart). Et le front final ne contient que des profils simulés, donc réellement faisables.
+\item[Pourquoi la somme pondérée ne suffit-elle pas pour un front non convexe ?] Elle ne vise que les points supportés. La boucle trouve quand même les autres, parce que le modèle n'est pas exact et qu'elle n'évalue jamais deux fois le même profil : elle explore le voisinage du front (§\ref{sec:boucle-v2}). Une $\varepsilon$-contrainte les viserait directement, au prix de qubits d'écart.
+\item[Pourquoi QAOA fait-il moins bien que l'énumération ?] L'énumération donne le minimum exact ; QAOA ne peut au mieux que l'égaler. Et sur nos QUBO, les pénalités font 98~\% de l'étendue des énergies : à faible profondeur, QAOA apprend à éviter les pénalités, pas à départager les bons profils (§\ref{sec:interference}).
+\item[Pourquoi ne pas l'avoir exécuté sur une vraie machine ?] Le circuit compte 324 CNOT à $p=2$ avant routage ; avec les taux d'erreur actuels, le résultat serait fortement dégradé. La simulation exacte donne le meilleur cas possible : si QAOA n'apporte rien sans bruit, il n'apportera rien avec.
+\item[Pourquoi l'avoir comparé à l'optimisation bayésienne ?] Parce que c'est la méthode classique de même nature, à modèle de substitution. Battre NSGA-II ne disait pas si le gain venait du modèle ou du QUBO. L'ablation répond : du modèle (ch.~\ref{ch:pourquoi}).
+\item[Qu'est-ce qui pourrait rendre le quantique utile ?] Un problème plus grand, que les heuristiques classiques résolvent mal ; des contraintes portées par le circuit (mélangeurs qui restent dans l'espace faisable) plutôt que par des pénalités ; et un matériel corrigé des erreurs. La recherche actuelle porte sur ces trois points (ch.~\ref{ch:pourquoi}).
+\item[Les résultats sont-ils robustes ?] Vingt graines par méthode (cinq pour QAOA, plus lent), médianes et taux de réussite, comparaisons appariées par graine avec un test de Wilcoxon. Le front exact est connu par simulation des 1\,024 profils.
+\end{description}
+
+\section{Un plan d'exposé de dix minutes}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{c c >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.6cm}}
+\toprule
+& Durée & Contenu & Support \\
+\midrule
+1 & 1 min & Le problème : traînée contre furtivité, simulations coûteuses, but = peu de simulations. & un profil, un front de Pareto \\
+2 & 1 min & La boucle : apprendre, choisir, simuler. & figure~\ref{fig:recit} \\
+3 & 1,5 min & Du choix au QUBO : 10 bits, modèle quadratique, pénalités, 14 qubits. & matrice $Q$ (figure~\ref{fig:matrice-q-v2}) \\
+4 & 1,5 min & Du QUBO au quantique : hamiltonien, recuit, QAOA (phases et interférence). & circuit QAOA (figure~\ref{fig:circuit-qaoa}) \\
+5 & 1,5 min & Résultats : la boucle contre le hasard et NSGA-II. & tableau des chiffres \\
+6 & 2 min & Ce que fait vraiment le quantique ici : énumération, ablation, pénalités. & figure~\ref{fig:anatomie} \\
+7 & 1,5 min & Ce qu'il faudrait pour un avantage, et nos prochaines étapes. & trois conditions \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Les mots justes}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+À éviter & À dire \\
+\midrule
+« le quantique trouve la solution optimale » & « le QUBO a pour état fondamental le minimum du modèle ; QAOA en tire des candidats » \\
+« on résout exactement le problème » & « on résout exactement le QUBO, qui approche le problème » (§\ref{sec:exact}) \\
+« essaie toutes les solutions en parallèle » & « fait interférer les amplitudes » \\
+« avantage quantique » & « la formulation est prête ; à cette taille, aucun gain, pour des raisons identifiées » \\
+« QAOA converge vers l'optimum » & « QAOA contient le recuit adiabatique quand $p\to\infty$ ; à $p$ fini, c'est une heuristique » \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{S'entraîner à l'oral}
+Pour chaque question, essayer de répondre en deux minutes, sans notes, à quelqu'un qui ne connaît pas le projet ; vérifier ensuite dans la section indiquée.
+\begin{enumerate}
+\item Pourquoi faut-il 14 qubits pour 1\,024 profils, et pas 10 ? (§\ref{sec:qubo-v2})
+\item Pourquoi la contrainte d'épaisseur est-elle exacte et celle de manœuvre approchée ? (§\ref{sec:qubo-v2})
+\item Pourquoi une phase $e^{-i\gamma E(x)}$ ne change-t-elle pas la probabilité de mesurer $x$, et comment devient-elle visible ? (§\ref{sec:cout})
+\item Que fait une couche de QAOA à une chaîne dont toutes les voisines ont une énergie plus haute ? (§\ref{sec:interference})
+\item Pourquoi le recuit simulé de la boucle ne trouve-t-il presque jamais l'optimum du QUBO ? (§\ref{sec:recuit-v2})
+\item Pourquoi les premiers candidats de la boucle sont-ils tous infaisables, et pourquoi n'est-ce pas grave ? (§\ref{sec:boucle-v2})
+\item Qu'est-ce qu'un point non supporté, et comment la boucle les trouve-t-elle quand même ? (§\ref{sec:boucle-v2})
+\item Pourquoi la comparaison décisive est-elle l'optimisation bayésienne, et pas NSGA-II ? (ch.~\ref{ch:pourquoi})
+\end{enumerate}
