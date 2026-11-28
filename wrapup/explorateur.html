@@ -1,0 +1,766 @@
+<meta charset="utf-8">
+<title>Explorateur des fronts traînée-SER</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Mise en page : en-tête court, onglets des trois problèmes, puis un poste de travail en deux colonnes
+   (nuage traînée-SER à gauche, fiche du profil à droite) et, dessous, la bande des profils du front.
+   Un seul thème sombre, choisi exprès : c'est celui du deck de wrap-up et de ses figures. */
+:root {
+  color-scheme: dark;
+  --bg: #08133A;        /* navy du deck */
+  --panel: #0E1D4E;
+  --line: #2B4590;
+  --fg: #F5F7FD;
+  --soft: #C3CDE8;
+  --mute: #93A2CC;
+  --ctx: #5F6F9F;       /* profils sans rôle particulier */
+  --front: #9887ef;     /* front exact ou de référence (violet des figures du deck) */
+  --found: #00a888;     /* front trouvé par une méthode */
+  --bad: #e76624;       /* contrainte non tenue */
+  --sim: #3AA0DA;       /* profil simulé pendant un rejeu */
+  --f-display: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+  --f-body: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --f-mono: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+h2 { font-size: 20px; font-weight: 700; }
+h3 { font-size: 13px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--mute); }
+p { margin: 0; }
+[hidden] { display: none !important; }   /* déjà dans le squelette de l’artefact ; utile quand la page est servie en local */
+.eyebrow { font-family: var(--f-display); font-size: 13px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--front); }
+.lead { color: var(--soft); max-width: 75ch; }
+.mute { color: var(--mute); }
+.num { font-variant-numeric: tabular-nums; }
+code, .mono { font-family: var(--f-mono); font-size: 0.92em; }
+
+header { display: flex; flex-direction: column; gap: 8px; }
+
+/* onglets des problèmes */
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab {
+  flex: 1 1 220px; text-align: left; cursor: pointer; font: inherit; color: var(--soft);
+  background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.tab b { font-family: var(--f-display); font-size: 16px; color: var(--fg); font-weight: 700; }
+.tab span { font-size: 13px; color: var(--mute); }
+.tab[aria-selected="true"] { background: var(--panel); border-color: var(--front); }
+.tab:hover { border-color: var(--soft); }
+.context { color: var(--soft); max-width: 95ch; }
+
+/* commandes */
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+.ctl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; color: var(--soft); background: transparent; border: 0; padding: 6px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--line); color: var(--fg); }
+.seg button:disabled { color: var(--ctx); cursor: not-allowed; }
+select, .btn {
+  font: inherit; font-size: 13px; color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 10px; cursor: pointer;
+}
+.btn:hover:not(:disabled), select:hover { border-color: var(--soft); }
+.btn:disabled { color: var(--ctx); cursor: not-allowed; }
+label.chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--soft); cursor: pointer; }
+input[type="checkbox"] { accent-color: var(--front); }
+input[type="range"] { accent-color: var(--found); flex: 1; min-width: 140px; }
+:focus-visible { outline: 2px solid var(--sim); outline-offset: 2px; }
+
+/* poste de travail */
+.work { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .work { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--soft); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.legend i.ring { background: transparent; border: 2px solid; width: 8px; height: 8px; }
+.legend i.bar { width: 90px; height: 8px; border-radius: 4px; }
+.chart { position: relative; width: 100%; }
+.chart canvas { display: block; width: 100%; touch-action: pan-y; cursor: crosshair; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font-size: 13px; line-height: 1.4; color: var(--soft); white-space: nowrap; z-index: 2;
+}
+.tip b { color: var(--fg); font-weight: 600; }
+.hint { font-size: 12.5px; color: var(--mute); }
+
+/* rejeu */
+.replay { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.replay .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.status { font-size: 14px; color: var(--soft); }
+.status b { color: var(--fg); }
+
+/* fiche du profil */
+.prof-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px; align-items: baseline; }
+.prof-name { font-family: var(--f-display); font-size: 18px; font-weight: 700; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.pill.front { color: var(--front); border-color: var(--front); }
+.pill.dom { color: var(--soft); border-color: var(--line); }
+.pill.bad { color: var(--bad); border-color: var(--bad); }
+.pill.found { color: var(--found); border-color: var(--found); }
+svg.prof { width: 100%; height: auto; display: block; }
+.nose-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
+.nose-row p { font-size: 13px; color: var(--mute); }
+table.metrics { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+table.metrics th, table.metrics td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
+table.metrics td { white-space: nowrap; }
+table.metrics th:first-child, table.metrics td:first-child { white-space: normal; text-align: left; color: var(--mute); font-weight: 400; }
+table.metrics thead th { color: var(--fg); font-weight: 600; white-space: nowrap; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.pins { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 3px 4px 3px 10px; }
+.chip button { font: inherit; color: var(--mute); background: transparent; border: 0; cursor: pointer; padding: 0 6px; font-size: 15px; line-height: 1; }
+.chip button:hover { color: var(--fg); }
+
+/* bande du front */
+.strip-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+.axis-note { font-size: 13px; color: var(--mute); }
+.strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.mini {
+  font: inherit; text-align: left; color: var(--soft); background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.mini:hover { border-color: var(--soft); }
+.mini[aria-current="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+.mini .k { font-size: 12px; color: var(--mute); display: flex; justify-content: space-between; gap: 6px; }
+.mini .v { font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--fg); }
+.mini svg { width: 100%; height: auto; display: block; }
+
+footer { font-size: 13px; color: var(--mute); display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 14px; }
+.err { color: var(--bad); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Hackathon QD · wrap-up</p>
+    <h1>Explorateur des fronts traînée-SER</h1>
+    <p class="lead">Chaque point est un profil réellement simulé. Cliquez un point ou un profil du front pour voir sa forme, son nez et ses chiffres ; épinglez-en jusqu’à trois pour les superposer. « Rejouer » montre, simulation après simulation, ce qu’une méthode a trouvé.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Problème" id="tabs"></nav>
+  <p class="context" id="context"></p>
+
+  <div class="controls" id="controls">
+    <div class="ctl"><span>Radar</span><div class="seg" id="sector"></div></div>
+    <div class="ctl" id="src-ctl"><span>SER</span><div class="seg" id="src"></div></div>
+    <div class="ctl"><label for="colorby">Colorer par</label><select id="colorby"></select></div>
+    <label class="chk"><input type="checkbox" id="showinf"> Profils infaisables</label>
+  </div>
+
+  <div class="work">
+    <section class="card" aria-label="Nuage traînée-SER">
+      <div class="chart-head">
+        <div class="seg" id="mode">
+          <button type="button" data-mode="explore" aria-pressed="true">Tous les profils</button>
+          <button type="button" data-mode="replay" aria-pressed="false">Rejouer une recherche</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="chart" id="chart">
+        <canvas id="cv" role="img" aria-label="Nuage de points : traînée en abscisse, SER en ordonnée"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <div class="chart-head">
+        <p class="hint">Glisser pour zoomer · double-clic pour revenir au cadrage</p>
+        <div class="row" style="display:flex;gap:8px;">
+          <button type="button" class="btn" id="fit-all">Tout voir</button>
+          <button type="button" class="btn" id="fit-reset">Cadrage par défaut</button>
+        </div>
+      </div>
+      <div class="replay" id="replay" hidden>
+        <div class="row">
+          <select id="rp-method" aria-label="Méthode"></select>
+          <select id="rp-seed" aria-label="Graine"></select>
+          <button type="button" class="btn" id="rp-play">Lecture</button>
+        </div>
+        <div class="row">
+          <label for="rp-slider" class="hint" id="rp-slider-label">Simulations</label>
+          <input type="range" id="rp-slider" min="0" max="300" value="300">
+        </div>
+        <p class="status" id="rp-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <aside class="card" aria-label="Fiche du profil" id="profile">
+      <div class="prof-head"><span class="prof-name" id="p-name">Profil</span><span id="p-pill"></span></div>
+      <svg class="prof" id="p-svg" viewBox="-0.34 -0.24 1.4 0.48" role="img" aria-label="Forme du profil et secteur radar"></svg>
+      <div class="nose-row">
+        <svg class="prof" id="p-nose" viewBox="-0.012 -0.06 0.12 0.12" role="img" aria-label="Zoom sur le bord d'attaque" style="border:1px solid var(--line);border-radius:8px;"></svg>
+        <p id="p-nose-txt">Bord d’attaque, agrandi. C’est lui qui renvoie l’écho radar de face, et lui qui fait décrocher le profil s’il est trop pointu.</p>
+      </div>
+      <div style="overflow-x:auto;"><table class="metrics" id="p-table"></table></div>
+      <div class="pins">
+        <button type="button" class="btn" id="pin">Épingler pour comparer</button>
+        <span id="pin-list" class="pins"></span>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card" aria-label="Profils du front">
+    <div class="strip-head">
+      <h2 id="strip-title">Les profils du front</h2>
+      <span class="axis-note">de la plus faible traînée à la plus faible SER</span>
+    </div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <footer>
+    <p id="sources"></p>
+    <p>Données : <code>wrapup/explorateur_data.json</code>, régénéré par <code>Code/.venv/Scripts/python.exe wrapup/explorateur.py</code> depuis <code>Code/resultats/</code> (le script vérifie que chaque front est celui publié). Formes redessinées à partir des paramètres, avec les formules de <code>aero/naca4.py</code> et <code>ia_qubo/probleme_cst.py</code>.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const C = Object.fromEntries(["bg", "panel", "line", "fg", "soft", "mute", "ctx", "front", "found", "bad", "sim"]
+  .map(k => [k, getComputedStyle(document.documentElement).getPropertyValue("--" + k).trim()]));
+const PIN_COLORS = [C.sim, C.bad, C.found];   // fiche : sélection en blanc, épingles A, B, C
+const PIN_LETTERS = ["A", "B", "C"];
+const $ = id => document.getElementById(id);
+
+// ------------------------------------------------------------------ format français
+const fmt = (v, d = 1) => v == null || !isFinite(v) ? "—" : v.toFixed(d).replace(".", ",").replace("-", "−");
+const pct = v => fmt(100 * v, 0) + " %";
+const sub = s => s.replace(/C_L,max/g, "C<sub>L,max</sub>").replace(/C_L/g, "C<sub>L</sub>");
+
+// ------------------------------------------------------------------ description des trois problèmes
+const SECTORS = { S1: { label: "S1 · de face", lo: -20, hi: 20, txt: "de face, ±20°" }, S2: { label: "S2 · en contrebas", lo: -60, hi: 0, txt: "en contrebas, de −60° à 0°" } };
+const PB = {
+  V1: {
+    tab: "V1 · chaîne de la note", sub: "512 NACA 4 chiffres, modèle rapide",
+    sectors: ["S1", "S2"], srcs: null,
+    colorby: [["t", "épaisseur t", pct], ["m", "cambrure m", pct], ["p", "position de cambrure p", v => fmt(v, 2)]],
+    why: { t: "épaisseur < 8 %", cl: "C_L < 0,3 à α = 2°", cv: "calcul non convergé" },
+    cdLabel: "Traînée à α = 2° (modèle rapide)",
+    context: pb => `${pb.n.toLocaleString("fr-FR")} profils NACA 4 chiffres (cambrure m, sa position p, épaisseur t). Traînée par le modèle rapide maison à α = 2°, SER par optique physique. ${pb.nf} faisables (t ≥ 8 %, C_L ≥ 0,3). En S1, le front est dégénéré : ses ${pb.fronts.S1.length} profils ont tous ${pct(pb.pts[pb.fronts.S1[0]].t)} d’épaisseur et leur SER ne varie que de ${fmt(spread(pb, "S1"), 2)} dB. Le profil le plus fin gagne partout, il n’y a rien à arbitrer.`,
+  },
+  V2: {
+    tab: "V2 · problème reformulé", sub: "1 024 NACA modifiés, XFOIL",
+    sectors: ["S1", "S2"], srcs: ["MoM", "PO"],
+    colorby: [["I", "indice de nez I", v => fmt(v, 0)], ["clmax", "C_L,max", v => fmt(v, 2)], ["t", "épaisseur t", pct], ["m", "cambrure m", pct]],
+    why: { t: "épaisseur < 8 %", cl: "C_L,max < 1,2", cv: "XFOIL ne converge pas en croisière" },
+    cdLabel: "Traînée de croisière (C_L = 0,4)",
+    context: pb => `${pb.n.toLocaleString("fr-FR")} profils NACA modifiés : cambrure m, position p, épaisseur t, et un indice de nez I qui règle le rayon du bord d’attaque. XFOIL en croisière à C_L = 0,4 et sur une rampe de manœuvre (C_L,max ≥ 1,2 exigé). ${pb.nf} faisables. Front exact, par énumération : ${pb.fronts.S1.length} profils en S1, ${pb.fronts.S2.length} en S2 (SER par méthode des moments). Un nez pointu baisse la SER mais fait décrocher : c’est le vrai compromis.`,
+  },
+  CST: {
+    tab: "V3 L6 · profil CST, 30 bits", sub: "8¹⁰ ≈ 10⁹ profils, XFOIL à la demande",
+    sectors: ["S2"], srcs: null,
+    colorby: [["clmax", "C_L,max", v => fmt(v, 2)], ["t", "épaisseur maximale", pct]],
+    why: { t: "épaisseur < 8 %", cl: "C_L,max < 1,2", cv: "XFOIL non convergé, ou traînée > 200 counts", geom: "géométrie invalide" },
+    cdLabel: "Traînée de croisière (C_L = 0,4)",
+    context: pb => `Profil CST à 10 coefficients de 8 niveaux : 30 bits, 8¹⁰ ≈ 10⁹ profils, trop pour tout simuler. Le front exact est inconnu ; le front de référence (${pb.fronts.S2.length} profils) est le front non dominé des ${pb.n.toLocaleString("fr-FR")} profils simulés par 7 méthodes × 8 graines (${pb.nf.toLocaleString("fr-FR")} faisables). SER par optique physique, radar en contrebas.`,
+  },
+};
+const spread = (pb, s) => { const v = pb.fronts[s].map(i => pb.pts[i][s]); return Math.max(...v) - Math.min(...v); };
+
+// ------------------------------------------------------------------ géométrie (mêmes formules que le code Python)
+const NH = 100;
+const XS = Array.from({ length: NH + 1 }, (_, i) => 0.5 * (1 - Math.cos(Math.PI * i / NH)));
+function camber(x, m, p) {
+  if (m === 0 || p === 0) return [0, 0];
+  return x < p ? [m / p ** 2 * (2 * p * x - x * x), 2 * m / p ** 2 * (p - x)]
+               : [m / (1 - p) ** 2 * ((1 - 2 * p) + 2 * p * x - x * x), 2 * m / (1 - p) ** 2 * (p - x)];
+}
+function fromThickness(yt, m, p) {   // [extrados, intrados] en points [x, y], du BA au BF
+  const up = [], lo = [];
+  XS.forEach((x, i) => {
+    const [yc, dyc] = camber(x, m, p), th = Math.atan(dyc), t = yt(x);
+    up.push([x - t * Math.sin(th), yc + t * Math.cos(th)]);
+    lo.push([x + t * Math.sin(th), yc - t * Math.cos(th)]);
+  });
+  return [up, lo];
+}
+const GEOM = {
+  naca4: (d, q) => fromThickness(x => 5 * q.t * (0.2969 * Math.sqrt(x) - 0.1260 * x - 0.3516 * x * x + 0.2843 * x ** 3 - 0.1036 * x ** 4), q.m, q.p),
+  naca4mod: (d, q) => {
+    const [a0, a1, a2, a3, d1, d2, d3] = d.coeffs[String(q.I)], T = d.T;
+    return fromThickness(x => (q.t / 0.2) * (x <= T ? a0 * Math.sqrt(x) + a1 * x + a2 * x * x + a3 * x ** 3
+                                                     : d1 * (1 - x) + d2 * (1 - x) ** 2 + d3 * (1 - x) ** 3), q.m, q.p);
+  },
+  cst: (d, q) => {
+    const [Au, Al] = cstCoeffs(d, q), N = d.nbern, bin = [1, 4, 6, 4, 1];
+    const S = (A, x) => A.reduce((s, a, i) => s + a * bin[i] * x ** i * (1 - x) ** (N - i), 0);
+    const cls = x => Math.sqrt(x) * (1 - x);
+    return [XS.map(x => [x, cls(x) * S(Au, x)]), XS.map(x => [x, cls(x) * S(Al, x)])];
+  },
+};
+function cstCoeffs(d, q) {
+  const A = [...q.id].map((c, i) => d.vals[i][+c]);
+  return [A.slice(0, d.nbern + 1), A.slice(d.nbern + 1)];
+}
+const geomCache = new Map();
+function shape(q) {
+  const k = S.pb + q.id;
+  if (!geomCache.has(k)) geomCache.set(k, GEOM[P.geom](P, q));
+  return geomCache.get(k);
+}
+function pathD(q) {
+  const [up, lo] = shape(q), f = ([x, y]) => `${x.toFixed(5)},${(-y).toFixed(5)}`;
+  return "M" + [...up].reverse().map(f).join("L") + "L" + lo.slice(1).map(f).join("L") + "Z";
+}
+function rle(q) {   // rayon de bord d'attaque, en cordes
+  if (S.pb === "V2") return [q.rle];
+  if (S.pb === "V1") return [1.1019 * q.t ** 2];
+  const [Au, Al] = cstCoeffs(P, q);
+  return [Au[0] ** 2 / 2, Al[0] ** 2 / 2];   // propriété de la classe CST sqrt(x)(1 - x)
+}
+
+// ------------------------------------------------------------------ état
+const S = { pb: "V2", sector: "S1", src: "MoM", color: "none", showInf: false, mode: "explore",
+            sel: null, pins: [], domain: null, rp: { method: "quadz_modele", seed: 0, n: 300, step: null }, playing: null };
+let D = null, P = null;   // toutes les données, problème courant
+
+function prepare(key) {
+  const d = D[key];
+  if (!d.pts) {
+    d.pts = d.rows.map((r, i) => Object.assign(Object.fromEntries(d.cols.map((c, j) => [c, r[j]])), { i }));
+    d.nf = d.pts.filter(q => q.f).length;
+    d.byId = new Map(d.pts.map(q => [q.id, q]));
+  }
+  return d;
+}
+const serKey = () => S.pb === "V2" && S.src === "PO" ? S.sector + "po" : S.sector;
+const front = () => P.fronts[serKey()].map(i => P.pts[i]);
+const ser = q => q[serKey()];
+
+function name(q) {
+  if (S.pb === "CST") return `CST ${q.id.slice(0, 5)} · ${q.id.slice(5)}`;
+  const base = `m ${pct(q.m)} · p ${fmt(q.p, 2)} · t ${pct(q.t)}`;
+  return S.pb === "V2" ? `${base} · I ${fmt(q.I, 0)}` : base;
+}
+
+// ------------------------------------------------------------------ rejeu
+function replayState() {
+  if (S.mode !== "replay" || !P.replay) return null;
+  let seq, cur = [];
+  if (S.pb === "V2") {
+    const steps = P.replay.steps, k = S.rp.step ?? steps.length - 1;
+    seq = steps.slice(0, k + 1).flat();
+    cur = steps[k];
+  } else {
+    seq = P.replay[S.rp.method].seeds[S.rp.seed].slice(0, S.rp.n);
+  }
+  const sims = [...new Set(seq)].map(i => P.pts[i]);
+  const feas = sims.filter(q => q.f && q.cd != null);
+  const fr = pareto(feas).sort((a, b) => a.cd - b.cd);
+  const ref = new Set(front().map(q => q.i));
+  return { sims, feas, fr, cur: new Set(cur), hit: fr.filter(q => ref.has(q.i)).length, nref: ref.size };
+}
+function pareto(pts) {
+  const k = serKey();
+  return pts.filter(a => !pts.some(b => b.cd <= a.cd && b[k] <= a[k] && (b.cd < a.cd || b[k] < a[k])));
+}
+
+// ------------------------------------------------------------------ nuage (canvas)
+const cv = $("cv"), ctx = cv.getContext("2d"), tip = $("tip");
+const M = { l: 58, r: 18, t: 14, b: 46 };
+let W = 0, H = 0, drag = null, hover = null;
+
+function visible() {   // points dessinés, pour le survol
+  const k = serKey(), rs = replayState();
+  if (rs) return [...rs.sims.filter(q => q.cd != null && q[k] != null), ...front()];
+  return P.pts.filter(q => q.cd != null && q[k] != null && (q.f || S.showInf));
+}
+function defaultDomain(all) {
+  const k = serKey();
+  const pts = P.pts.filter(q => q.cd != null && q[k] != null && (q.f || S.showInf));
+  const cds = pts.filter(q => q.f).map(q => q.cd).sort((a, b) => a - b);
+  const x0 = cds[0], x1 = all ? Math.max(...pts.map(q => q.cd)) : cds[Math.floor(0.99 * (cds.length - 1))];
+  const ys = pts.filter(q => q.cd <= x1).map(q => q[k]);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys), px = (x1 - x0) * 0.04, py = (y1 - y0) * 0.05;
+  return [x0 - px, x1 + px, y0 - py, y1 + py];
+}
+const defDom = {};   // le cadrage par défaut ne dépend que du problème, de l’objectif SER et des infaisables affichés
+const dom = () => S.domain || (defDom[`${S.pb}|${serKey()}|${S.showInf}`] ||= defaultDomain(false));
+const sx = x => { const [a, b] = dom(); return M.l + (x - a) / (b - a) * (W - M.l - M.r); };
+const sy = y => { const [, , a, b] = dom(); return H - M.b - (y - a) / (b - a) * (H - M.t - M.b); };
+const ix = px => { const [a, b] = dom(); return a + (px - M.l) / (W - M.l - M.r) * (b - a); };
+const iy = py => { const [, , a, b] = dom(); return a + (H - M.b - py) / (H - M.t - M.b) * (b - a); };
+
+function ticks(a, b, n) {
+  const step0 = (b - a) / n, mag = 10 ** Math.floor(Math.log10(step0)), err = step0 / mag;
+  const step = mag * (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1);
+  const out = [];
+  for (let v = Math.ceil(a / step) * step; v <= b + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function ramp(t) {   // séquentiel mono-teinte, sombre -> clair
+  const a = [0x2f, 0x4a, 0x9a], b = [0xd8, 0xe6, 0xff];
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+}
+function colorField() { return PB[S.pb].colorby.find(c => c[0] === S.color); }
+
+function resize() {
+  const w = $("chart").clientWidth, dpr = window.devicePixelRatio || 1;
+  W = w; H = Math.max(340, Math.min(560, Math.round(w * 0.62)));
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function dot(x, y, r, fill, stroke, lw = 2) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function draw() {
+  if (!P || !W) return;
+  const k = serKey(), [x0, x1, y0, y1] = dom(), rs = replayState();
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = "12px Inter, 'Segoe UI', Arial, sans-serif";
+  // grille et axes
+  ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.fillStyle = C.mute;
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const v of ticks(x0, x1, 7)) { const X = sx(v); ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(X, M.t); ctx.lineTo(X, H - M.b); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(fmt(v, 0), X, H - M.b + 6); }
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (const v of ticks(y0, y1, 6)) { const Y = sy(v); ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(M.l, Y); ctx.lineTo(W - M.r, Y); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(fmt(v, Math.abs(y1 - y0) < 3 ? 1 : 0), M.l - 8, Y); }
+  ctx.fillStyle = C.soft; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  const narrow = W < 640;
+  ctx.fillText(narrow ? "Traînée (counts) · gauche = mieux" : `${PB[S.pb].cdLabel.replace("C_L", "CL")}, en counts · à gauche = moins de traînée`, M.l + (W - M.l - M.r) / 2, H - 4);
+  ctx.save(); ctx.translate(14, M.t + (H - M.t - M.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle";
+  ctx.fillText(narrow ? `SER ${S.sector} (dB) · bas = mieux` : `SER ${SECTORS[S.sector].txt} (dB) · en bas = plus discret`, 0, 0); ctx.restore();
+
+  ctx.save(); ctx.beginPath(); ctx.rect(M.l, M.t, W - M.l - M.r, H - M.t - M.b); ctx.clip();
+  const pts = P.pts.filter(q => q.cd != null && q[k] != null);
+  const small = P.pts.length > 3000 ? 1.6 : 2.6;
+  if (!rs) {
+    if (S.showInf) for (const q of pts) if (!q.f) dot(sx(q.cd), sy(q[k]), small + 0.6, null, q.why === "cl" ? C.bad : C.ctx, 1.2);
+    const cf = colorField();
+    let lo = 0, hi = 1;
+    if (cf) { const v = pts.filter(q => q.f && q[cf[0]] != null).map(q => q[cf[0]]); lo = Math.min(...v); hi = Math.max(...v); }
+    ctx.globalAlpha = P.pts.length > 3000 ? 0.6 : 0.9;
+    for (const q of pts) if (q.f) dot(sx(q.cd), sy(q[k]), small, cf && q[cf[0]] != null ? ramp((q[cf[0]] - lo) / ((hi - lo) || 1)) : C.ctx);
+    ctx.globalAlpha = 1;
+    polyline(front(), C.front);
+    for (const q of front()) dot(sx(q.cd), sy(q[k]), 5, C.front, C.bg, 2);
+  } else {
+    ctx.globalAlpha = 0.22;
+    for (const q of pts) if (q.f) dot(sx(q.cd), sy(q[k]), small, C.ctx);
+    ctx.globalAlpha = 1;
+    for (const q of front()) dot(sx(q.cd), sy(q[k]), 7, null, C.front, 1.6);
+    for (const q of rs.sims) if (q.cd != null && q[k] != null && !q.f) dot(sx(q.cd), sy(q[k]), 3, null, C.bad, 1.2);
+    for (const q of rs.feas) dot(sx(q.cd), sy(q[k]), 3, C.sim);
+    for (const q of rs.sims) if (rs.cur.has(q.i) && q.cd != null) dot(sx(q.cd), sy(q[k]), 6, null, C.fg, 1.5);
+    polyline(rs.fr, C.found);
+    for (const q of rs.fr) dot(sx(q.cd), sy(q[k]), 5, C.found, C.bg, 2);
+  }
+  // sélection et épingles
+  S.pins.forEach((q, j) => mark(q, PIN_LETTERS[j]));
+  if (S.sel) mark(S.sel, null);
+  ctx.restore();
+  // profils importants hors cadre : flèche au bord droit
+  const keyPts = rs ? [...rs.fr, ...front()] : front();
+  const seen = new Set();
+  ctx.fillStyle = C.soft; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (const q of keyPts) {
+    if (seen.has(q.i) || q.cd <= x1 || q[k] < y0 || q[k] > y1) continue;
+    seen.add(q.i);
+    const Y = sy(q[k]), X = W - M.r;
+    ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X - 9, Y - 6); ctx.lineTo(X - 9, Y + 6); ctx.closePath();
+    ctx.fillStyle = rs && rs.fr.includes(q) ? C.found : C.front; ctx.fill();
+    ctx.fillStyle = C.soft; ctx.fillText(`${fmt(q.cd, 0)} counts`, X - 13, Y);
+  }
+  if (drag && drag.moved) {
+    ctx.strokeStyle = C.soft; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+    ctx.strokeRect(drag.x0, drag.y0, drag.x - drag.x0, drag.y - drag.y0); ctx.setLineDash([]);
+  }
+}
+function polyline(list, color) {
+  if (list.length < 2) return;
+  const k = serKey();
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+  list.forEach((q, j) => j ? ctx.lineTo(sx(q.cd), sy(q[k])) : ctx.moveTo(sx(q.cd), sy(q[k])));
+  ctx.stroke();
+}
+function mark(q, letter) {
+  const k = serKey();
+  if (q.cd == null || q[k] == null) return;
+  const X = sx(q.cd), Y = sy(q[k]);
+  dot(X, Y, letter ? 8 : 10, null, C.bg, 5);
+  dot(X, Y, letter ? 8 : 10, null, letter ? PIN_COLORS[PIN_LETTERS.indexOf(letter)] : C.fg, 2.2);
+  if (letter) { ctx.fillStyle = C.fg; ctx.font = "600 12px Inter, Arial, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(letter, X + 8, Y - 6); ctx.font = "12px Inter, Arial, sans-serif"; }
+}
+
+function nearest(px, py) {
+  const k = serKey();
+  let best = null, bd = 14 * 14;
+  for (const q of visible()) {
+    const dx = sx(q.cd) - px, dy = sy(q[k]) - py, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = q; }
+  }
+  return best;
+}
+function status(q) {
+  const inFront = P.fronts[serKey()].includes(q.i);
+  const rs = replayState();
+  if (rs && rs.fr.includes(q)) return ["found", inFront ? "Trouvé, sur le front de réf." : "Front trouvé, dominé par la réf."];
+  if (inFront) return ["front", S.pb === "CST" ? "Front de référence" : "Front exact"];
+  if (!q.f) return ["bad", "Infaisable : " + (PB[S.pb].why[q.why] || q.why)];
+  return ["dom", "Faisable, dominé"];
+}
+function showTip(q, px, py) {
+  if (!q) { tip.hidden = true; return; }
+  const [, s] = status(q);
+  tip.innerHTML = `<b>${name(q)}</b><br>${fmt(q.cd, 1)} counts · ${fmt(ser(q), 2)} dB${q.clmax != null ? ` · C<sub>L,max</sub> ${fmt(q.clmax, 2)}` : ""}<br>${sub(s)}`;
+  tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(Math.max(4, px + 14), W - w - 4) + "px";
+  tip.style.top = (py - h - 12 < 0 ? py + 16 : py - h - 12) + "px";
+}
+const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+cv.addEventListener("pointerdown", e => {
+  const [x, y] = pos(e);
+  drag = { x0: x, y0: y, x, y, moved: false, mouse: e.pointerType === "mouse" };
+  if (drag.mouse) cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener("pointermove", e => {
+  const [x, y] = pos(e);
+  if (drag && drag.mouse) {
+    drag.x = x; drag.y = y;
+    drag.moved = drag.moved || Math.abs(x - drag.x0) > 6 || Math.abs(y - drag.y0) > 6;
+    if (drag.moved) { tip.hidden = true; draw(); return; }
+  }
+  hover = nearest(x, y);
+  showTip(hover, x, y);
+});
+cv.addEventListener("pointerup", e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.moved && Math.abs(d.x - d.x0) > 10 && Math.abs(d.y - d.y0) > 10) {
+    const xa = ix(Math.min(d.x0, d.x)), xb = ix(Math.max(d.x0, d.x)), ya = iy(Math.max(d.y0, d.y)), yb = iy(Math.min(d.y0, d.y));
+    S.domain = [xa, xb, ya, yb];
+    draw(); return;
+  }
+  const [x, y] = pos(e), q = nearest(x, y);
+  if (q) select(q);
+  draw();
+});
+cv.addEventListener("pointerleave", () => { tip.hidden = true; });
+cv.addEventListener("dblclick", () => { S.domain = null; draw(); });
+$("fit-all").onclick = () => { S.domain = defaultDomain(true); draw(); };
+$("fit-reset").onclick = () => { S.domain = null; draw(); };
+
+// ------------------------------------------------------------------ fiche du profil
+const svgNS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(svgNS, tag);
+  for (const [a, v] of Object.entries(attrs)) e.setAttribute(a, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function drawProfiles(svg, list, withRadar) {
+  svg.replaceChildren();
+  el("line", { x1: -0.01, y1: 0, x2: 1.01, y2: 0, stroke: C.line, "stroke-dasharray": "0.01 0.008", "stroke-width": 1, "vector-effect": "non-scaling-stroke" }, svg);
+  if (withRadar) {
+    const s = SECTORS[S.sector], L = 0.3, pts = [];
+    for (let a = s.lo; a <= s.hi + 1e-9; a += 2) { const r = a * Math.PI / 180; pts.push(`${(-L * Math.cos(r)).toFixed(4)},${(-L * Math.sin(r)).toFixed(4)}`); }
+    el("path", { d: `M0,0L${pts.join("L")}Z`, fill: C.sim, "fill-opacity": 0.14, stroke: C.sim, "stroke-opacity": 0.6, "stroke-width": 1, "vector-effect": "non-scaling-stroke" }, svg);
+    const t = el("text", { x: -0.33, y: s.lo < -30 ? -0.2 : 0.215, fill: C.soft, "font-size": 0.046, "font-family": "Inter, Arial, sans-serif" }, svg);
+    t.textContent = `radar ${S.sector} : ${s.txt}`;
+  }
+  list.forEach(([q, color], j) => {
+    el("path", { d: pathD(q), fill: j === 0 ? color : "none", "fill-opacity": 0.08, stroke: color, "stroke-width": j === 0 ? 2 : 1.8, "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }, svg);
+  });
+}
+function profileList() {
+  const out = [];
+  if (S.sel) out.push([S.sel, C.fg]);
+  S.pins.forEach((q, j) => { if (!S.sel || q.i !== S.sel.i) out.push([q, PIN_COLORS[j]]); });
+  return out;
+}
+function metricRows() {
+  const pb = S.pb, rows = [
+    [pb === "V1" ? "Traînée à α = 2°" : "Traînée de croisière", q => fmt(q.cd, 1) + " counts"],
+    [`SER ${SECTORS[S.sector].txt}${pb === "V2" ? ` (${S.src})` : pb === "V1" || pb === "CST" ? " (PO)" : ""}`, q => fmt(ser(q), 2) + " dB"],
+  ];
+  if (pb !== "V1") rows.push(["C_L,max (1,2 exigé)", q => fmt(q.clmax, 2)], ["Incidence de croisière", q => fmt(q.al, 2) + "°"]);
+  else rows.push(["C_L à α = 2° (0,3 exigé)", q => fmt(q.cl, 3)]);
+  rows.push([pb === "CST" ? "Épaisseur maximale" : "Épaisseur t", q => fmt(100 * q.t, 1) + " %"]);
+  if (pb !== "CST") rows.push(["Cambrure m, à x = p", q => `${pct(q.m)}, à ${fmt(q.p, 2)}`]);
+  if (pb === "V2") rows.push(["Indice de nez I", q => fmt(q.I, 0)]);
+  rows.push([pb === "CST" ? "Rayon de BA, ext. / int." : "Rayon de bord d’attaque", q => rle(q).map(r => fmt(100 * r, 2)).join(" / ") + " % c"]);
+  if (pb === "CST") rows.push(["Niveaux A_ext · A_int", q => `<span class="mono">${q.id.slice(0, 5)} · ${q.id.slice(5)}</span>`]);
+  return rows;
+}
+function renderProfile() {
+  const q = S.sel;
+  $("p-name").textContent = q ? name(q) : "Aucun profil";
+  if (!q) return;
+  const [cls, txt] = status(q);
+  $("p-pill").innerHTML = `<span class="pill ${cls}">${sub(txt)}</span>`;
+  const list = profileList();
+  drawProfiles($("p-svg"), list, true);
+  drawProfiles($("p-nose"), list, false);
+  const cols = list.map(([p, color]) => {
+    const j = S.pins.findIndex(x => x.i === p.i);
+    return [p, color, p === S.sel ? (j >= 0 ? `Sélection (${PIN_LETTERS[j]})` : "Sélection") : PIN_LETTERS[j]];
+  });
+  const head = cols.length > 1 ? `<thead><tr><th></th>${cols.map(([, c, l]) => `<th><span class="dot" style="background:${c}"></span>${l}</th>`).join("")}</tr></thead>` : "";
+  $("p-table").innerHTML = head + "<tbody>" + metricRows().map(([lab, f]) =>
+    `<tr><td>${sub(lab)}</td>${cols.map(([p]) => `<td>${f(p)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  const pinned = S.pins.some(x => x.i === q.i);
+  $("pin").textContent = pinned ? "Retirer l’épingle" : "Épingler pour comparer";
+  $("pin").disabled = !pinned && S.pins.length >= 3;
+  $("pin-list").innerHTML = S.pins.map((p, j) => `<span class="chip"><span class="dot" style="background:${PIN_COLORS[j]}"></span>${PIN_LETTERS[j]} · ${fmt(p.cd, 1)} counts<button type="button" data-unpin="${j}" aria-label="Retirer l’épingle ${PIN_LETTERS[j]}">×</button></span>`).join("");
+}
+$("pin").onclick = () => {
+  const j = S.pins.findIndex(x => x.i === S.sel.i);
+  if (j >= 0) S.pins.splice(j, 1); else if (S.pins.length < 3) S.pins.push(S.sel);
+  render();
+};
+$("pin-list").onclick = e => { const b = e.target.closest("[data-unpin]"); if (b) { S.pins.splice(+b.dataset.unpin, 1); render(); } };
+
+// ------------------------------------------------------------------ bande du front
+function renderStrip() {
+  const rs = replayState(), list = rs ? rs.fr : front(), ref = new Set(P.fronts[serKey()]);
+  $("strip-title").textContent = rs
+    ? `Front trouvé : ${list.length} profil${list.length > 1 ? "s" : ""}, dont ${rs.hit} sur ${rs.nref} du front de référence`
+    : `Les ${list.length} profils du front ${S.pb === "CST" ? "de référence" : "exact"} · ${SECTORS[S.sector].label}`;
+  const strip = $("strip");
+  strip.replaceChildren();
+  if (!list.length) { strip.innerHTML = `<p class="mute">Aucun profil faisable simulé pour l’instant.</p>`; return; }
+  for (const q of list) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "mini";
+    if (S.sel && S.sel.i === q.i) b.setAttribute("aria-current", "true");
+    const j = S.pins.findIndex(x => x.i === q.i);
+    const tag = rs ? (ref.has(q.i) ? "front de réf." : "dominé par la réf.") : (S.pb === "V2" ? `nez I = ${fmt(q.I, 0)}` : `t = ${pct(q.t)}`);
+    b.innerHTML = `<span class="k"><span>${tag}</span><span>${j >= 0 ? "épingle " + PIN_LETTERS[j] : ""}</span></span>`;
+    const svg = el("svg", { viewBox: "-0.02 -0.13 1.04 0.26", role: "img", "aria-label": name(q) });
+    el("path", { d: pathD(q), fill: rs ? C.found : C.front, "fill-opacity": 0.18, stroke: rs ? C.found : C.front, "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }, svg);
+    b.appendChild(svg);
+    b.insertAdjacentHTML("beforeend", `<span class="v">${fmt(q.cd, 1)} counts<br>${fmt(ser(q), 2)} dB</span><span class="k"><span>${S.pb === "CST" ? `C<sub>L,max</sub> ${fmt(q.clmax, 2)} · t ${fmt(100 * q.t, 1)} %` : name(q)}</span></span>`);
+    b.onclick = () => select(q);
+    strip.appendChild(b);
+  }
+}
+
+// ------------------------------------------------------------------ légende, commandes, rendu
+function renderLegend() {
+  const rs = replayState(), items = [];
+  if (rs) {
+    items.push(`<span><i style="background:${C.sim}"></i>simulé, faisable</span>`, `<span><i class="ring" style="border-color:${C.bad}"></i>simulé, infaisable</span>`,
+               `<span><i style="background:${C.found}"></i>front trouvé</span>`, `<span><i class="ring" style="border-color:${C.front}"></i>front ${S.pb === "CST" ? "de référence" : "exact"}</span>`);
+    if (S.pb === "V2") items.push(`<span><i class="ring" style="border-color:${C.fg}"></i>candidats de l’itération</span>`);
+  } else {
+    const cf = colorField();
+    if (cf) {
+      const v = P.pts.filter(q => q.f && q[cf[0]] != null).map(q => q[cf[0]]);
+      items.push(`<span>${cf[1]} : ${cf[2](Math.min(...v))} <i class="bar" style="background:linear-gradient(90deg,${ramp(0)},${ramp(1)})"></i> ${cf[2](Math.max(...v))}</span>`);
+    } else items.push(`<span><i style="background:${C.ctx}"></i>profil faisable</span>`);
+    items.push(`<span><i style="background:${C.front}"></i>front ${S.pb === "CST" ? "de référence" : "exact"}</span>`);
+    if (S.showInf) items.push(`<span><i class="ring" style="border-color:${C.bad}"></i>${sub(PB[S.pb].why.cl)}</span>`, `<span><i class="ring" style="border-color:${C.ctx}"></i>autre contrainte</span>`);
+  }
+  $("legend").innerHTML = items.join("");
+}
+function seg(id, options, current, onPick, disabled) {
+  const box = $(id);
+  box.innerHTML = options.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === current}" ${disabled ? "disabled" : ""}>${l}</button>`).join("");
+  box.onclick = e => { const b = e.target.closest("button"); if (b && !b.disabled) onPick(b.dataset.v); };
+}
+function renderControls() {
+  const pb = PB[S.pb], locked = S.mode === "replay" && S.pb === "V2";   // la trace V2 est en S2, SER par MoM
+  $("tabs").innerHTML = Object.entries(PB).map(([k, v]) => `<button type="button" role="tab" class="tab" aria-selected="${k === S.pb}" data-pb="${k}"><b>${v.tab}</b><span>${v.sub}</span></button>`).join("");
+  seg("sector", pb.sectors.map(s => [s, SECTORS[s].label]), S.sector, v => { S.sector = v; S.domain = null; keepSelection(); render(); }, locked);
+  $("src-ctl").hidden = !pb.srcs;
+  if (pb.srcs) seg("src", [["MoM", "méthode des moments"], ["PO", "optique physique"]], S.src, v => { S.src = v; S.domain = null; keepSelection(); render(); }, locked);
+  $("colorby").innerHTML = `<option value="none">rien</option>` + pb.colorby.map(([k, l]) => `<option value="${k}" ${k === S.color ? "selected" : ""}>${l}</option>`).join("");
+  $("colorby").disabled = S.mode === "replay";
+  $("showinf").checked = S.showInf; $("showinf").disabled = S.mode === "replay";
+  [...$("mode").children].forEach(b => { b.setAttribute("aria-pressed", b.dataset.mode === S.mode); b.disabled = b.dataset.mode === "replay" && !P.replay; });
+  $("mode").children[1].title = P.replay ? "" : "Pas de trace de recherche enregistrée pour la V1";
+  // rejeu
+  $("replay").hidden = S.mode !== "replay";
+  if (S.mode === "replay") {
+    const sl = $("rp-slider");
+    if (S.pb === "V2") {
+      $("rp-method").innerHTML = `<option>${P.replay.label}</option>`;
+      $("rp-seed").hidden = true;
+      const n = P.replay.steps.length - 1;
+      sl.max = n; sl.value = S.rp.step ?? n;
+      $("rp-slider-label").textContent = "Itération";
+    } else {
+      $("rp-method").innerHTML = Object.entries(P.replay).map(([k, v]) => `<option value="${k}" ${k === S.rp.method ? "selected" : ""}>${v.label}</option>`).join("");
+      $("rp-seed").hidden = false;
+      $("rp-seed").innerHTML = P.replay[S.rp.method].seeds.map((_, j) => `<option value="${j}" ${j === S.rp.seed ? "selected" : ""}>graine ${j}</option>`).join("");
+      sl.max = P.replay[S.rp.method].seeds[S.rp.seed].length; sl.value = S.rp.n;
+      $("rp-slider-label").textContent = "Simulations";
+    }
+  }
+}
+function renderStatus() {
+  const rs = replayState();
+  if (!rs) return;
+  const inf = rs.sims.length - rs.feas.length;
+  const head = S.pb === "V2" ? `Itération ${S.rp.step ?? P.replay.steps.length - 1} sur ${P.replay.steps.length - 1} (0 = tirage initial) · ` : "";
+  $("rp-status").innerHTML = `${head}<b>${rs.sims.length}</b> simulations, dont ${inf} infaisables · front trouvé : <b>${rs.fr.length}</b> profil${rs.fr.length > 1 ? "s" : ""}, dont <b>${rs.hit} sur ${rs.nref}</b> du front ${S.pb === "CST" ? "de référence" : "exact"}.`;
+}
+function render() {
+  renderControls(); renderLegend(); renderProfile(); renderStrip(); renderStatus(); draw();
+  $("context").innerHTML = sub(PB[S.pb].context(P));
+  $("sources").innerHTML = "Sources : " + P.sources.map(s => `<code>Code/resultats/${s}</code>`).join(", ") + (P.replay && P.replay.source ? `, <code>Code/resultats/${P.replay.source}</code>` : "");
+}
+function select(q) { S.sel = q; render(); }
+function keepSelection() { if (!S.sel || S.sel.cd == null) S.sel = front()[0]; }
+
+function setProblem(key) {
+  stop();
+  S.pb = key; P = prepare(key);
+  S.sector = PB[key].sectors.includes(S.sector) ? S.sector : PB[key].sectors[0];
+  S.color = "none"; S.domain = null; S.pins = [];
+  if (S.mode === "replay" && !P.replay) S.mode = "explore";
+  if (S.mode === "replay" && key === "V2") { S.sector = "S2"; S.src = "MoM"; }
+  const fr = front();
+  S.sel = fr[0];
+  if (fr.length > 1) S.pins = [fr[fr.length - 1]];   // d'emblée, les deux extrémités du front
+  render();
+}
+$("tabs").onclick = e => { const b = e.target.closest("[data-pb]"); if (b && b.dataset.pb !== S.pb) setProblem(b.dataset.pb); };
+$("colorby").onchange = e => { S.color = e.target.value; render(); };
+$("showinf").onchange = e => { S.showInf = e.target.checked; S.domain = null; render(); };
+$("mode").onclick = e => {
+  const b = e.target.closest("button"); if (!b || b.disabled || b.dataset.mode === S.mode) return;
+  stop();
+  S.mode = b.dataset.mode; S.domain = null;
+  if (S.mode === "replay" && S.pb === "V2") { S.sector = "S2"; S.src = "MoM"; S.rp.step = null; }
+  if (S.mode === "replay" && S.pb === "CST") S.rp.n = P.replay[S.rp.method].seeds[S.rp.seed].length;
+  keepSelection(); render();
+};
+$("rp-method").onchange = e => { if (S.pb === "CST") { S.rp.method = e.target.value; S.rp.n = P.replay[S.rp.method].seeds[S.rp.seed].length; render(); } };
+$("rp-seed").onchange = e => { S.rp.seed = +e.target.value; render(); };
+$("rp-slider").oninput = e => { if (S.pb === "V2") S.rp.step = +e.target.value; else S.rp.n = +e.target.value; renderStatus(); renderLegend(); renderStrip(); draw(); };
+function stop() { if (S.playing) { clearInterval(S.playing); S.playing = null; } $("rp-play").textContent = "Lecture"; }
+$("rp-play").onclick = () => {
+  if (S.playing) { stop(); return; }
+  const sl = $("rp-slider"), max = +sl.max;
+  if (+sl.value >= max) { if (S.pb === "V2") S.rp.step = 0; else S.rp.n = 0; }
+  $("rp-play").textContent = "Pause";
+  S.playing = setInterval(() => {
+    if (S.pb === "V2") S.rp.step = Math.min(max, (S.rp.step ?? max) + 1); else S.rp.n = Math.min(max, S.rp.n + 4);
+    sl.value = S.pb === "V2" ? S.rp.step : S.rp.n;
+    renderStatus(); renderLegend(); renderStrip(); draw();
+    if (+sl.value >= max) stop();
+  }, S.pb === "V2" ? 450 : 120);
+};
+
+new ResizeObserver(resize).observe($("chart"));
+fetch("explorateur_data.json")
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { D = d; setProblem("V2"); resize(); })
+  .catch(err => {
+    $("context").innerHTML = `<span class="err">Impossible de lire explorateur_data.json (${err.message}). En local, servez le dossier : <code>python -m http.server -d wrapup</code>, puis ouvrez http://localhost:8000/explorateur.html.</span>`;
+  });
+</script>

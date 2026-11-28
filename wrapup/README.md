@@ -16,6 +16,8 @@ Chaque chiffre du deck est recalculé depuis `Code/resultats/` et figure dans `r
 | `registre.py` → `registre.csv` | recalcule chaque affirmation et lui donne un statut : reproduit, recalculé, écart, non vérifiable |
 | `build.py` → `figures/` | régénère toutes les figures du deck depuis les données brutes |
 | `reruns/` | journaux des relances : V3 L1 (traces identiques au JSON publié), audit statistique L6, `validation.py` |
+| `explorateur.py` → `explorateur_data.json` | données de l'explorateur (profils, fronts, ordres de simulation) ; vérifie que chaque front est celui publié |
+| `explorateur.html` | explorateur des fronts traînée-SER : forme et nez de chaque profil, comparaison, rejeu des recherches V2 et L6. En ligne : https://claude.ai/artifact/Q5BAfr8CHb2uhsRDWdWqkR |
 
 État au 28/11 : 85 affirmations, 67 reproduites, 17 recalculées, 0 écart, 1 non vérifiable (XFOIL n'a pas été relancé ; ses sorties en cache sont recalculées).
 
@@ -26,6 +28,8 @@ Depuis la racine du repo, sans rien écrire dans `Code/resultats/` :
 ```bash
 python wrapup/registre.py   # registre.csv + liste des écarts
 python wrapup/build.py      # figures/ (environ 15 s)
+python wrapup/explorateur.py                 # explorateur_data.json (environ 5 s)
+python -m http.server -d wrapup              # puis http://localhost:8000/explorateur.html
 ```
 
 `registre.py` lit `wrapup/reruns/ia_qubo_audit_echelle.json` pour les tests statistiques de L6. Pour le régénérer : `cd Code && python -m ia_qubo.audit_echelle`, **dans une copie de `Code/`**, car le script écrit dans `Code/resultats/`. Même précaution pour `python -m optim.experiences_l1`.
