@@ -100,14 +100,24 @@ F1 = np.array([[float(r["CD_counts"]), float(r["SER_db"])] for r in R1])
 t1 = np.array([float(r["t"]) for r in R1])
 fr = pareto(F1)
 print(f"   V1 S1 : {len(R1)} faisables, front {len(fr)} profils, épaisseurs du front {sorted(set(t1[fr]))}")
-fig, ax = figure(1100, 600)
-ax.scatter(F1[:, 0], F1[:, 1], s=26, color=CTX, alpha=0.7, lw=0)
+fig, ax = figure(862, 470)  # affichée à cette taille sur la slide : 17,5 pt = 24 px
+ax.scatter(F1[:, 0], F1[:, 1], s=22, color=CTX, alpha=0.8, lw=0)
 o = fr[np.argsort(F1[fr, 0])]
 ax.plot(F1[o, 0], F1[o, 1], color=QUBO, lw=2)
-ax.scatter(F1[fr, 0], F1[fr, 1], s=110, color=QUBO, edgecolor=NAVY, lw=2, zorder=3)
-ax.set(xlabel="traînée (counts)", ylabel="SER de face, S1 (dB)")
+ax.scatter(F1[fr, 0], F1[fr, 1], s=90, color=QUBO, edgecolor=NAVY, lw=2, zorder=3)
+XR = 128
+ax.set(xlim=(50, XR), xlabel="traînée (counts), gauche = mieux", ylabel="SER (dB), bas = mieux")
+# chaque bande horizontale est une épaisseur : étiquetée à droite, alignée sur sa bande
+ax.text(XR + 2, F1[:, 1].max() + 0.9, "épaisseur", color=MUTE, fontsize=17.5, va="center", clip_on=False)
+for t in sorted(set(t1)):
+    ax.text(XR + 2, np.median(F1[t1 == t, 1]), f"{100 * t:.0f} %", color=TXT if t == t1[fr].min() else MUTE,
+            fontsize=17.5, va="center", clip_on=False)
+ax.annotate(f"front de Pareto :\n{len(fr)} profils, tous à {100 * t1[fr].min():.0f} %", xy=(F1[fr, 0].max() + 1, F1[fr, 1].mean()),
+            xytext=(126, F1[fr, 1].mean() + 0.9), color=QUBO, fontsize=17.5, va="center", ha="right",
+            bbox=dict(facecolor=NAVY, edgecolor="none", pad=3),
+            arrowprops=dict(arrowstyle="->", color=QUBO, lw=1.5))
 ax.spines[["top", "right"]].set_visible(False)
-fig.subplots_adjust(left=0.12, right=0.97, top=0.95, bottom=0.15)
+fig.subplots_adjust(left=0.1, right=0.83, top=0.93, bottom=0.17)
 save(fig, "v1_front.png")
 
 # ------------------------------------------------------------------ 4. V2 : la boucle construit le front (GIF, S2 graine 0)
