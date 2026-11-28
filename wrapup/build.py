@@ -170,7 +170,7 @@ print("-> v2_boucle.gif")
 
 # ------------------------------------------------------------------ 5. V3 L1 : simulations par graine, S1 et S2
 L1 = load("pipeline_L1_V3.json")
-METH = [("loop_exact", "Boucle QUBO", QUBO), ("quad_mean", "Contrôle sans QUBO", CTRL),
+METH = [("loop_exact", "Boucle QUBO", QUBO), ("quad_mean", "Même boucle, sans QUBO", CTRL),
         ("gp_mean", "Krigeage + minimum", CTX), ("quad_ei", "Quadratique + EI", CTX),
         ("gp_ei", "Optimisation bayésienne", CLASS), ("parego", "ParEGO", CTX)]
 
