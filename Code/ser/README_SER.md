@@ -1,6 +1,6 @@
 # Le dossier `ser/` expliqué
 
-> **Dernière mise à jour : 28/11/2026 à 16h09**, d'après le code du commit `a9861c4` (branche
+> **Dernière mise à jour : 28/11/2026 à 16h09**, d'après le code du commit `30d54af` (branche
 > `branch_meddi`). Si un fichier de `ser/` a été modifié après cette date
 > (`git log -- Code/ser`), ce README n'est peut-être plus à jour.
 

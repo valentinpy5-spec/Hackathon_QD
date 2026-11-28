@@ -1,9 +1,9 @@
 # Le dossier `quantique/` expliqué
 
-> **Dernière mise à jour : 28/11/2026 à 16h09**, d'après le code du commit `a9861c4` (branche
-> `branch_meddi`, avec la modification locale de `qaoa.py` : le commentaire PennyLane). Si un fichier
-> de `quantique/` ou `optim/qubo_loop.py` a été modifié après cette date (`git log -- Code/quantique`),
-> ce README n'est peut-être plus à jour.
+> **Dernière mise à jour : 28/11/2026 à 17h03**, d'après le code du commit `30d54af` (branche
+> `branch_meddi`). Ajout de `trace_boucle_v2.py` (arrivé par la fusion de la branche V3) par rapport à la
+> version de 16h09. Si un fichier de `quantique/` ou `optim/qubo_loop.py` a été modifié après cette date
+> (`git log -- Code/quantique`), ce README n'est peut-être plus à jour.
 
 Ce document explique **ce que fait chaque fichier du dossier `quantique/`**, **comment il s'insère
 dans le reste du code** (surtout `optim/qubo_loop.py`) et **juste assez de théorie** pour comprendre
@@ -291,6 +291,30 @@ les 1 024 profils). On mesure :
 - QAOA $p = 1, 2, 3$ sur 6 QUBO, **avec** contraintes (14 qubits) et **sans** (10 qubits) pour isoler
   l'effet des pénalités.
 
+### `trace_boucle_v2.py` — la boucle V2 pas à pas, pour l'expliquer (V3)
+
+`python -m quantique.trace_boucle_v2` → `resultats/trace_boucle_V2.json` (~2 min). Utilisé par le cours
+quantique (chapitres 8 à 12).
+
+On **rejoue une exécution** de `optim/qubo_loop.py` (scénario S2, graine 0, solveur exact, mêmes réglages
+que `optim/experiences_v2.py`) et on **enregistre tout**, itération par itération, jusqu'à ce que le front
+exact soit complet :
+- les 10 profils initiaux, puis à chaque itération : les modèles ajustés, les 5 QUBO (un par poids $w$),
+  le candidat retenu, son **rang** dans le classement du QUBO, sa **prédiction** et sa **vraie valeur** une
+  fois simulé, et s'il appartient au front exact ;
+- pour le premier QUBO à $w = 0{,}5$ : la **matrice $Q$ complète** (14 × 14) et la **décomposition de
+  l'énergie** du minimum en objectif + pénalité d'épaisseur + pénalité de manœuvre. On vérifie aussi que
+  forcer $t = 6\,\%$ coûte exactement la pénalité $P = 3$ (la réduction de Rosenberg est exacte) ;
+- le **recuit simulé** sur les 5 QUBO de la première itération, avec deux réglages de température : celui de
+  `recuit.py` (réglé sur le plus grand coefficient de $Q$, donc sur les **pénalités**) et un réglage sur
+  l'**objectif**.
+
+**Vérification intégrée** : la trace doit simuler exactement les mêmes profils que `qubo_loop` au même
+budget (`trace_identique_a_qubo_loop`, vaut `True`).
+
+C'est **le bon fichier à montrer au jury** pour expliquer concrètement « ce que fait la boucle » sur un
+exemple réel.
+
 ---
 
 ## 4. Qui utilise quoi : interactions avec le reste du code
@@ -312,11 +336,14 @@ quantique/experiences.py     ──► utilise qubo, qaoa, recuit           ; li
 quantique/montee_en_taille.py ─► utilise qubo, qaoa, recuit + optim.qubo_loop.fit_quadratic
                                                                        ; lit resultats/base_complete_S1_note.csv
 quantique/anatomie_qubo.py   ──► utilise qubo, qaoa + optim.problem_v2, optim.qubo_loop, optim.experiences_v2
+quantique/trace_boucle_v2.py ──► utilise qubo, recuit + optim.problem(_v2), optim.qubo_loop, optim.pareto,
+                                  optim.experiences_v2                 ; écrit resultats/trace_boucle_V2.json
 ```
 
 Les trois modules `qubo.py`, `recuit.py`, `qaoa.py` sont des **briques** (aucune dépendance au reste du
-projet, seulement NumPy/SciPy). Les trois scripts `experiences.py`, `montee_en_taille.py`,
-`anatomie_qubo.py` sont des **expériences** qui produisent des JSON lus par les cours et la fiche projet.
+projet, seulement NumPy/SciPy). Les quatre scripts `experiences.py`, `montee_en_taille.py`,
+`anatomie_qubo.py`, `trace_boucle_v2.py` sont des **expériences** qui produisent des JSON lus par les cours
+et la fiche projet.
 
 ### Le chemin complet d'un solveur QAOA dans la boucle
 
@@ -416,6 +443,25 @@ par rapport au hasard), quel que soit le solveur. QAOA, quand il est utilisé co
 boucle, fait **aussi bien** que l'exact, parce que la boucle tolère des candidats « presque optimaux » ;
 mais il n'apporte pas d'avantage à cette taille.
 
+### 5.5 Une exécution réelle de la boucle, pas à pas
+*(`trace_boucle_V2.json`, scénario S2, graine 0, solveur exact)*
+
+- Le front exact (10 profils) est complet après **180 simulations** (35 itérations). Le premier profil du
+  front est trouvé à l'itération 5, puis la progression est rapide (7 sur 10 à 75 simulations), puis lente
+  pour les derniers profils.
+- **Premier QUBO à $w = 0{,}5$** (14 qubits, 81 couplages non nuls) : le plus grand coefficient de $Q$ vaut
+  **35** (pénalités), contre **0,30** pour l'objectif ; l'étendue des énergies vaut **132**, celle de
+  l'objectif **1,45** (~1 %). C'est le constat de §5.4 sur un exemple concret.
+- Son minimum ($m = 2\,\%$, $p = 0{,}55$, $t = 8\,\%$, $I = 2$) a un $\hat C_{L,\max}$ prédit de 1,18, donc
+  **légèrement sous** la limite de 1,2 : la pénalité, douce, laisse passer ce profil limite, au prix de
+  0,037 d'énergie. C'est voulu : le front est au bord de la contrainte.
+- **Recuit simulé, réglage de la température** : avec la température de `recuit.py` (réglée sur les
+  pénalités), **aucune** des 40 lectures ne trouve l'optimum, pour les 5 poids. Réglée sur l'objectif :
+  0 à 7,5 % des lectures. Les pénalités « écrasent » aussi le recuit. D'où la correction faite dans
+  `ia_qubo/boucle.py` (température réglée sur l'objectif).
+
+### 5.6 Contrainte en boîte noire (V3)
+
 V3 (`ia_qubo/qaoa_contraintes.py`) : traiter la contrainte en **boîte noire** (au lieu de variables
 d'écart) passe à 11 qubits et fait monter la part de l'objectif à ~5–10 %, mais le gain de QAOA reste
 du même ordre (quelques unités).
@@ -484,6 +530,7 @@ Depuis le dossier `Code/` (sous Windows, `python` au lieu de `python3`) :
 python3 -m quantique.experiences        # jouet 3 qubits, aéro 9 qubits, boucle V0 -> resultats/experiences_quantique.json
 python3 -m quantique.montee_en_taille   # QAOA de 6 à 18 qubits                     -> resultats/montee_en_taille.json
 python3 -m quantique.anatomie_qubo      # anatomie des QUBO V2 (~10 min)            -> resultats/anatomie_qubo_V3.json
+python3 -m quantique.trace_boucle_v2    # une exécution de la boucle, pas à pas (~2 min) -> resultats/trace_boucle_V2.json
 python3 -m optim.experiences_v2         # boucle complète avec les 3 solveurs (~1 h) -> resultats/pipeline_V2.json
 ```
 
