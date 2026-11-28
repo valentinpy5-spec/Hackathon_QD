@@ -1,0 +1,86 @@
+affirmation,annonce,recalcule,source,commande,statut,note
+"V3 L1 S1 : loop_exact, simulations médianes pour le front exact complet (20 graines)",75,75.0,Code/resultats/pipeline_L1_V3.json:S1.loop_exact,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S1 : quad_mean, simulations médianes pour le front exact complet (20 graines)",75,75.0,Code/resultats/pipeline_L1_V3.json:S1.quad_mean,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S1 : Wilcoxon apparié boucle QUBO contre quad_mean, p",0.35,0.3494,"pipeline_L1_V3.json:S1 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S1 : gp_mean, simulations médianes pour le front exact complet (20 graines)",87.5,87.5,Code/resultats/pipeline_L1_V3.json:S1.gp_mean,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S1 : Wilcoxon apparié boucle QUBO contre gp_mean, p",0.18,0.1847,"pipeline_L1_V3.json:S1 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S1 : quad_ei, simulations médianes pour le front exact complet (20 graines)",85,85.0,Code/resultats/pipeline_L1_V3.json:S1.quad_ei,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S1 : Wilcoxon apparié boucle QUBO contre quad_ei, p",0.11,0.1071,"pipeline_L1_V3.json:S1 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S1 : gp_ei, simulations médianes pour le front exact complet (20 graines)",125,125.0,Code/resultats/pipeline_L1_V3.json:S1.gp_ei,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S1 : Wilcoxon apparié boucle QUBO contre gp_ei, p",0.001,0.0004,"pipeline_L1_V3.json:S1 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S1 : parego, simulations médianes pour le front exact complet (20 graines)",157.5,157.5,Code/resultats/pipeline_L1_V3.json:S1.parego,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S1 : Wilcoxon apparié boucle QUBO contre parego, p",0.001,0.0002,"pipeline_L1_V3.json:S1 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S2 : loop_exact, simulations médianes pour le front exact complet (20 graines)",142.5,142.5,Code/resultats/pipeline_L1_V3.json:S2.loop_exact,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S2 : quad_mean, simulations médianes pour le front exact complet (20 graines)",95,95.0,Code/resultats/pipeline_L1_V3.json:S2.quad_mean,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S2 : Wilcoxon apparié boucle QUBO contre quad_mean, p",0.001,0.0003,"pipeline_L1_V3.json:S2 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S2 : gp_mean, simulations médianes pour le front exact complet (20 graines)",110,110.0,Code/resultats/pipeline_L1_V3.json:S2.gp_mean,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S2 : Wilcoxon apparié boucle QUBO contre gp_mean, p",0.002,0.0018,"pipeline_L1_V3.json:S2 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S2 : quad_ei, simulations médianes pour le front exact complet (20 graines)",117.5,117.5,Code/resultats/pipeline_L1_V3.json:S2.quad_ei,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S2 : Wilcoxon apparié boucle QUBO contre quad_ei, p",0.03,0.0267,"pipeline_L1_V3.json:S2 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S2 : gp_ei, simulations médianes pour le front exact complet (20 graines)",127.5,127.5,Code/resultats/pipeline_L1_V3.json:S2.gp_ei,python wrapup/registre.py,reproduit,succès 20/20
+"V3 L1 S2 : Wilcoxon apparié boucle QUBO contre gp_ei, p",0.06,0.0644,"pipeline_L1_V3.json:S2 (cours 5, ch06_resultats.tex:39-47)",python wrapup/registre.py,reproduit,"p<0,001 annoncé noté 0,001 ; tolérance 0,02"
+"V3 L1 S2 : parego, simulations médianes pour le front exact complet (20 graines)",170,170.0,Code/resultats/pipeline_L1_V3.json:S2.parego,python wrapup/registre.py,reproduit,succès 19/20
+"V2 S1 : hasard, simulations médianes pour le front exact",911,911.0,pipeline_V2.json:S1.summary.random,python wrapup/registre.py,reproduit,
+"V2 S1 : NSGA-II (N=16), taux de succès (%)",5,5.0,pipeline_V2.json:S1.summary.nsga2_16,python wrapup/registre.py,reproduit,le pitch dit « fails in 95 % of runs »
+"V2 S1 : boucle QAOA, taux de succès (%)",100,100.0,pipeline_V2.json:S1.summary.loop_qaoa,python wrapup/registre.py,reproduit,"5 graines (cours 4, ch14:54)"
+"V2 S1 : boucle QAOA, simulations médianes",105,105.0,pipeline_V2.json:S1.summary.loop_qaoa,python wrapup/registre.py,reproduit,contre 75 pour le solveur exact
+"V2 S2 : boucle QAOA, taux de succès (%)",60,60.0,pipeline_V2.json:S2.summary.loop_qaoa,python wrapup/registre.py,reproduit,
+"V1 S1_note : boucle QUBO exacte, simulations médianes",35,35.0,pipeline.json:S1_note.summary.loop_exact,python wrapup/registre.py,reproduit,
+"V1 S1_note : NSGA-II, simulations médianes",106.5,106.5,pipeline.json:S1_note.summary.nsga2,python wrapup/registre.py,reproduit,
+"V1 S2_sol : boucle QUBO exacte, simulations médianes",67.5,67.5,pipeline.json:S2_sol.summary.loop_exact,python wrapup/registre.py,reproduit,
+"V1 S2_sol : NSGA-II, simulations médianes",106,106.0,pipeline.json:S2_sol.summary.nsga2,python wrapup/registre.py,reproduit,
+"Pitch « 12× fewer simulations » (hasard / boucle, V2-V3 S1)",12,12.1467,911 / 75,python wrapup/registre.py,reproduit,
+"Ratio réel contre l'optimisation bayésienne, S1",,1.6667,125 / 75,python wrapup/registre.py,recalculé,
+"Ratio contre l'optimisation bayésienne, S2 (< 1 : la boucle perd)",,0.8947,"127,5 / 142,5",python wrapup/registre.py,recalculé,
+"L6 CST 30 bits : quadz_modele, hypervolume BRUT médian à 300 simulations",0.882,0.8818,ia_qubo_echelle.json:quadz_modele.hv_final,python wrapup/registre.py,reproduit,
+"L6 CST 30 bits : quadz_modele, hypervolume RELATIF au front de référence (hv_ref=1.198)",,0.7362,ia_qubo_echelle.json,python wrapup/registre.py,recalculé,le pitch présente le brut comme une fraction
+"L6 CST 30 bits : fm_modele, hypervolume BRUT médian à 300 simulations",0.895,0.8949,ia_qubo_echelle.json:fm_modele.hv_final,python wrapup/registre.py,reproduit,
+"L6 CST 30 bits : fm_modele, hypervolume RELATIF au front de référence (hv_ref=1.198)",,0.7471,ia_qubo_echelle.json,python wrapup/registre.py,recalculé,le pitch présente le brut comme une fraction
+"L6 CST 30 bits : bocs_modele, hypervolume BRUT médian à 300 simulations",0.897,0.8971,ia_qubo_echelle.json:bocs_modele.hv_final,python wrapup/registre.py,reproduit,
+"L6 CST 30 bits : bocs_modele, hypervolume RELATIF au front de référence (hv_ref=1.198)",,0.7489,ia_qubo_echelle.json,python wrapup/registre.py,recalculé,le pitch présente le brut comme une fraction
+"L6 CST 30 bits : hybride_modele, hypervolume BRUT médian à 300 simulations",0.913,0.913,ia_qubo_echelle.json:hybride_modele.hv_final,python wrapup/registre.py,reproduit,
+"L6 CST 30 bits : hybride_modele, hypervolume RELATIF au front de référence (hv_ref=1.198)",,0.7622,ia_qubo_echelle.json,python wrapup/registre.py,recalculé,le pitch présente le brut comme une fraction
+"L6 CST 30 bits : nsga2_16, hypervolume BRUT médian à 300 simulations",0.812,0.8121,ia_qubo_echelle.json:nsga2_16.hv_final,python wrapup/registre.py,reproduit,
+"L6 CST 30 bits : nsga2_16, hypervolume RELATIF au front de référence (hv_ref=1.198)",,0.6779,ia_qubo_echelle.json,python wrapup/registre.py,recalculé,le pitch présente le brut comme une fraction
+"L6 CST 30 bits : hasard, hypervolume BRUT médian à 300 simulations",0.771,0.7707,ia_qubo_echelle.json:hasard.hv_final,python wrapup/registre.py,reproduit,
+"L6 CST 30 bits : hasard, hypervolume RELATIF au front de référence (hv_ref=1.198)",,0.6434,ia_qubo_echelle.json,python wrapup/registre.py,recalculé,le pitch présente le brut comme une fraction
+"L6 : boucle (modèle en z) contre NSGA-II à 100 simulations, Wilcoxon p",0.008,0.0078,reruns/ia_qubo_audit_echelle.json:quadz_vs_nsga2,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),reproduit,8/8 graines ; p minimal possible à n=8 ; meilleur p sur 15 budgets
+L6 : même test après correction de Holm (non significatif à 5 %),,0.0547,reruns/ia_qubo_audit_echelle.json:holm,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,
+"L6 : boucle contre NSGA-II à 300 simulations, Wilcoxon p (brut / Holm)",,0.0391,reruns/ia_qubo_audit_echelle.json,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,Holm 0.156
+"L6 : témoin hybride contre modèle en z à 300 simulations, Wilcoxon p",0.11,0.1094,reruns/ia_qubo_audit_echelle.json,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),reproduit,"IC 90 % de l'écart hybride - z : [0.002, 0.044]"
+"L6 : quadz_modele, hypervolume normalisé sur le front de référence, à 300 simulations",,0.6173,reruns/ia_qubo_audit_echelle.json:mediane.front,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,"normalisation la plus discriminante (cours 6, ch09:124-138)"
+"L6 : hybride_modele, hypervolume normalisé sur le front de référence, à 300 simulations",,0.6089,reruns/ia_qubo_audit_echelle.json:mediane.front,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,"normalisation la plus discriminante (cours 6, ch09:124-138)"
+"L6 : nsga2_16, hypervolume normalisé sur le front de référence, à 300 simulations",,0.2511,reruns/ia_qubo_audit_echelle.json:mediane.front,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,"normalisation la plus discriminante (cours 6, ch09:124-138)"
+"L6 : hasard, hypervolume normalisé sur le front de référence, à 300 simulations",,0.1569,reruns/ia_qubo_audit_echelle.json:mediane.front,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,"normalisation la plus discriminante (cours 6, ch09:124-138)"
+Pénalités : part de l'étendue des énergies du QUBO (%),98,98.2717,anatomie_qubo_V3.json:spectre.obj_share,python wrapup/registre.py,reproduit,
+QAOA avec contraintes : p_opt / hasard (médiane sur les QUBO de la boucle),5,4.3978,anatomie_qubo_V3.json:qaoa.*.complet,python wrapup/registre.py,reproduit,cours 4 ch14 : « 5 fois le hasard »
+XFOIL : secondes par profil,0.34,0.3428,anatomie_qubo_V3.json:xfoil_s_par_profil,python wrapup/registre.py,reproduit,
+"10⁹ profils × XFOIL, en années",10.8,10.861,calcul,python wrapup/registre.py,reproduit,avec 2^30 profils exactement : 11.7 ans
+"16 384 profils × XFOIL, en minutes",93,93.6,calcul,python wrapup/registre.py,reproduit,le pitch demande des « compute hours » pour cette grille
+"SER S1, t=12% : gain I=6→I=2 par optique physique (dB, médiane sur m,p)",-7.3,-7.0644,ser_mom_V2.csv + base_V2.csv,python wrapup/registre.py,reproduit,cours 2 ch08_v2.tex:47
+"SER S1, t=12% : gain I=6→I=2 par méthode des moments, exacte (dB)",-5.1,-5.0047,ser_mom_V2.csv + base_V2.csv,python wrapup/registre.py,reproduit,"le pitch annonce −7,3 dB « by method of moments »"
+"SER S1, t=8% : gain I=6→I=2 par optique physique (dB, médiane sur m,p)",-7.4,-7.3126,ser_mom_V2.csv + base_V2.csv,python wrapup/registre.py,reproduit,cours 2 ch08_v2.tex:47
+"SER S1, t=8% : gain I=6→I=2 par méthode des moments, exacte (dB)",-4.0,-4.0058,ser_mom_V2.csv + base_V2.csv,python wrapup/registre.py,reproduit,"le pitch annonce −7,3 dB « by method of moments »"
+"MoM 2D TM contre série de Mie (cylindre), écart max en dB, ka = 0,5 à 31",0.02,0.0041,Code/ser/mom2d.py (recalcul),python wrapup/registre.py,reproduit,cours 2 ch08_v2.tex:37
+XFOIL : profils convergés sur 512,498,498.0,base_xfoil_a2.csv,python wrapup/registre.py,reproduit,
+Modèle rapide contre XFOIL : biais moyen sur CD (%),27,27.0227,base_*_a2.csv,python wrapup/registre.py,reproduit,
+Modèle rapide contre XFOIL : corrélation de rang sur CD,0.91,0.9101,base_*_a2.csv,python wrapup/registre.py,reproduit,
+Modèle rapide contre XFOIL : corrélation de rang sur CL,0.94,0.935,base_*_a2.csv,python wrapup/registre.py,reproduit,
+"V0 : boucle sur la traînée seule, simulations médianes jusqu'au vrai minimum",25,25.0,archives/V0_note_intention/resultats/experiences_quantique.json:boucle.median_sims,python wrapup/registre.py,reproduit,fiche : valeur en dur
+"V0 : hasard, simulations attendues",256,256.5,experiences_quantique.json:boucle.random_expected,python wrapup/registre.py,reproduit,
+"V0 : QAOA p=1, probabilité de l'optimum (9 qubits)",0.018,0.0177,experiences_quantique.json:aero.qaoa,python wrapup/registre.py,reproduit,
+"V0 : QAOA p=5, probabilité de l'optimum",0.142,0.142,experiences_quantique.json:aero.qaoa,python wrapup/registre.py,reproduit,
+V1 S1 : profils sur le front exact,7,7.0,base_complete_S1_note.csv,python wrapup/registre.py,reproduit,
+V1 S1 : étendue de SER le long du front (dB),0.13,0.1315,base_complete_S1_note.csv,python wrapup/registre.py,reproduit,épaisseurs du front : [0.08]
+"PO contre MoM, 1 024 profils S1 : écart moyen (dB)",-1.05,-1.0506,ser_mom_V2.csv,python wrapup/registre.py,reproduit,
+PO contre MoM : corrélation de rang,0.999,0.9994,ser_mom_V2.csv,python wrapup/registre.py,reproduit,
+"V2, t=12 %, nez I=2 : CL,max médian (XFOIL)",1.01,1.0112,base_V2.csv,python wrapup/registre.py,reproduit,
+"V2, t=12 %, nez I=6 : CL,max médian (XFOIL)",1.61,1.609,base_V2.csv,python wrapup/registre.py,reproduit,
+"V2, nez I=2 : part des profils faisables (%)",32,32.0312,base_V2.csv,python wrapup/registre.py,reproduit,
+"V2, nez I=6 : part des profils faisables (%)",84,83.5938,base_V2.csv,python wrapup/registre.py,reproduit,
+V3 L1 relancé (5 méthodes × 2 scénarios × 20 graines) : traces identiques au JSON publié,,oui,reruns/experiences_l1.log,cd Code && python -m optim.experiences_l1 S1 S2 loop_exact quad_mean gp_mean quad_ei gp_ei,recalculé,
+L6 audit relancé : hypervolumes recalculés depuis le cache égaux aux publiés (assert),,oui,reruns/ia_qubo_audit_echelle.json,cd Code && python -m ia_qubo.audit_echelle (copie isolée ; sortie dans wrapup/reruns/),recalculé,
+Panneaux : pente dCL/dalpha NACA 0012 (/rad),6.89,6.9,reruns/validation.log,cd Code && python validation.py (journal : wrapup/reruns/validation.log),reproduit,
+Thwaites contre Blasius sur plaque plane : écart max sur theta (%),1.0,1.02,reruns/validation.log,cd Code && python validation.py (journal : wrapup/reruns/validation.log),reproduit,
+Head contre loi en 1/7 : écart max sur theta (%),,4.9,reruns/validation.log,cd Code && python validation.py (journal : wrapup/reruns/validation.log),recalculé,
+"Comparaison XFOIL (validation V5, grille XFOIL)",,,"validation.py, validation_xfoil_grille.py",cd Code && python validation.py (journal : wrapup/reruns/validation.log),non vérifiable,XFOIL absent sur cette machine (Windows) : non relancé ; résumé recalculé depuis base_xfoil_a2.csv
