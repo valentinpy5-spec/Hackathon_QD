@@ -1,0 +1,56 @@
+\chapter{Le constat}\label{ch:constat}
+\iterbanner{V3}
+
+\section{Quatre signes, une même cause}
+Chaque lot de la V3 a rencontré les contraintes, sans les traiter comme un sujet en soi :
+\begin{enumerate}
+\item \textbf{Le budget part en infaisables.} Dans la seconde campagne CST (cours IA et QUBO, chapitre~9), l'approche actuelle ne propose que 43~\% de profils faisables ; le reste se partage entre échecs d'XFOIL (28~\%) et $C_{L,\max}$ trop faibles (29~\%). Le hasard, lui, en propose 76~\%. Plus de la moitié des simulations sert à découvrir des contraintes.
+\item \textbf{Une contrainte oubliée détourne tout.} Dans la première campagne CST, la géométrie n'était ni modélisée ni filtrée : 73~\% du budget est parti en profils qu'aucun solveur n'aurait dû recevoir.
+\item \textbf{Les pénalités écrasent l'objectif.} Dans le QUBO de la V2, l'objectif n'occupe que 1,7~\% de l'étendue des énergies (cours de calcul quantique, chapitre~15) : pour un solveur quantique, le problème est presque entièrement fait de pénalités.
+\item \textbf{Un modèle de contrainte trop sévère exclut le front.} Le réseau de neurones de la V2 prédisait la contrainte de manœuvre trop fidèlement, et il refusait les profils du front, qui sont au bord.
+\end{enumerate}
+Dans les quatre cas, on a traité des contraintes de natures très différentes avec un seul outil : la pénalité quadratique, ou rien. Ce cours sépare les contraintes selon leur nature (chapitre~\ref{ch:taxonomie}), puis donne à chacune le traitement que la pratique industrielle lui réserve.
+
+\section{Le problème}
+On garde le problème CST du lot L6 : 10 coefficients de Kulfan à 8 niveaux (30 bits), deux objectifs (traînée en croisière, SER en secteur S2), et quatre contraintes :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.4cm} >{\raggedright\arraybackslash}X}
+\toprule
+contrainte & ce qu'il faut pour la connaître \\
+\midrule
+faces sans croisement & la géométrie seule, quelques microsecondes \\
+épaisseur maximale $\ge8~\%$ & la géométrie seule \\
+$C_{L,\max}\ge1{,}2$ (manœuvre) & une simulation XFOIL en rampe d'incidence \\
+convergence d'XFOIL en croisière & une simulation ; on sait seulement si elle a abouti \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Le problème V2 (4 variables, 1\,024 profils, front exact connu) sert de banc d'essai : toutes ses simulations sont tabulées, et l'on peut y comparer des formulations sans lancer XFOIL.
+
+\section{Ce que l'on compare}
+\begin{itemize}
+\item \textbf{Bits d'écart} (\code{modele}) : l'approche actuelle, pénalité $P(\hat C_{L,\max}-1{,}2-s)^2$ avec $s\ge0$ codé sur 3 qubits.
+\item \textbf{Pénalité déséquilibrée} (\code{desequilibree}) : une pénalité sans bit d'écart proposée pour les machines quantiques (Montañez-Barrera et al., 2024).
+\item \textbf{Lagrangien vérifié} (\code{lagrange}) : un terme linéaire dans le QUBO, des multiplicateurs ajustés en quelques résolutions, et une vérification classique de chaque échantillon.
+\item \textbf{Lagrangien vérifié et classifieur} (\code{lagrange\_clf}) : la même chose, plus une probabilité de convergence d'XFOIL apprise.
+\end{itemize}
+Le modèle d'objectif est toujours le modèle quadratique en $z$, pour n'isoler que l'effet de la contrainte.
+
+\begin{resultat}
+\begin{itemize}
+\item Plus de la moitié du budget de la boucle part en profils infaisables, et les pénalités occupent 98~\% du spectre du QUBO.
+\item On traitait toutes les contraintes de la même façon. Ce cours les sépare selon leur nature, puis compare quatre formulations à modèle d'objectif identique.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:constat-budget}
+Sur 300 simulations, l'approche actuelle en dépense 28~\% en échecs d'XFOIL et 29~\% en $C_{L,\max}$ trop faibles. (a) Combien de profils faisables obtient-elle ? (b) Si un meilleur traitement des contraintes divisait par deux ces deux pertes, combien de profils faisables obtiendrait-on, et à quel budget de l'approche actuelle cela correspond-il ? (c) Pourquoi ne peut-on pas espérer 100~\% de faisables, même avec des modèles parfaits ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Mesurer la même répartition des infaisables pour la machine de factorisation et le modèle bayésien : la part d'échecs d'XFOIL de ce dernier (41~\%) suggère que le modèle d'objectif influe aussi sur l'endroit où l'on propose.
+\end{itemize}
+\end{pistes}

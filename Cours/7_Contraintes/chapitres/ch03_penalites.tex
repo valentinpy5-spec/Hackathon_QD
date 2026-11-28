@@ -1,0 +1,63 @@
+\chapter{Ce que valent les pénalités}\label{ch:penalites}
+\iterbanner{V3}
+
+\section{La pénalité avec bits d'écart}
+Pour une contrainte $h(\mathbf b)\ge0$ affine en bits, la formulation classique introduit un écart $s\ge0$ et pénalise l'égalité $h=s$ :
+\[ P\,\big(h(\mathbf b)-s\big)^2,\qquad s=\frac{s_{\max}}{2^{n_s}-1}\sum_{j=0}^{n_s-1}2^j\,a_j,\quad a_j\in\{0,1\}. \]
+Au minimum sur les bits d'écart $a_j$, ce terme vaut $P\,h^2$ si $h<0$ (on paie le carré de la violation) et $P\,(h-s^\star)^2$ si $h\ge0$, où $s^\star$ est le niveau d'écart le plus proche de $h$. Dans notre boucle : $P=75$, 3 bits d'écart, $s_{\max}$ égal à la plus grande marge possible.
+
+\paragraph{Quatre défauts, tous observés.}
+\begin{enumerate}
+\item \textbf{Une petite violation coûte presque rien.} Une violation de 0,05 sur $C_{L,\max}$ coûte $75\times0{,}05^2\approx0{,}19$, alors que l'objectif normalisé s'étend sur environ 1. Si violer la contrainte fait gagner plus de 0,19 sur l'objectif, l'optimum du QUBO la viole. C'est ce qu'on mesure au chapitre~\ref{ch:hors-ligne} : le candidat retenu a un $\hat C_{L,\max}$ médian de 1,20, \emph{pile} sur la borne, et viole la contrainte du modèle une fois sur deux. Une pénalité quadratique n'est exacte que pour $P\to\infty$ ; une pénalité exacte serait en $|h|$, qui n'est pas quadratique.
+\item \textbf{Les dents de scie.} Pour $h\ge0$, l'écart ne prend que 8 valeurs : le terme vaut $P(h-s^\star)^2$, nul seulement aux niveaux de l'écart, jusqu'à $P\Delta^2/4$ entre eux ($\Delta=s_{\max}/7$). Des profils également faisables reçoivent des pénalités différentes, sans raison physique (figure~\ref{fig:penalites}).
+\item \textbf{Trois qubits de plus}, couplés à tous les bits de conception : 33 qubits au lieu de 30 à l'échelle, 93 couplages supplémentaires.
+\item \textbf{Le spectre est écrasé.} Pour que la pénalité tienne, $P$ doit être grand ; l'objectif n'occupe alors que 1,7~\% (V2) ou 0,8~\% (CST) de l'étendue des énergies. Pour un recuit simulé réglé sur l'objectif, c'est gérable ; pour QAOA ou un recuit quantique, dont la précision est relative à l'étendue totale, c'est rédhibitoire.
+\end{enumerate}
+Il y a un cinquième défaut, de principe : le carré d'une contrainte quadratique est de degré 4. On ne peut donc pénaliser ainsi qu'une contrainte \emph{affine}, ce qui exclut un modèle quadratique de $C_{L,\max}$ et le classifieur du chapitre~\ref{ch:classifieur}.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/penalites}
+\caption{Les trois termes ajoutés à l'énergie, en fonction de la marge $h$ ($P=75$, échelle de $C_{L,\max}$). Bits d'écart : violation payée au carré, dents de scie du côté faisable. Pénalité déséquilibrée : pas de qubit, mais minimum en $h^\star$ et croissance du côté faisable. Lagrangien : une droite, qui récompense la marge au lieu de la pénaliser.}\label{fig:penalites}
+\end{figure}
+
+\section{La pénalité déséquilibrée}
+Montañez-Barrera, Willsch, Maldonado-Romo et Michielsen (\emph{Unbalanced penalization}, Quantum Science and Technology, 2024) suppriment les bits d'écart. L'idée part de la pénalité idéale $e^{-h}$, grande pour $h<0$ et presque nulle pour $h>0$, et en garde le développement de degré 2 : $1-h+h^2/2$. Le terme ajouté est $-\lambda_1h+\lambda_2h^2$, quadratique si $h$ est affine. Nous l'écrivons
+\[ P\,\big(h^2-2h^\star h\big)=P\,\big[(h-h^\star)^2-h^{\star2}\big], \]
+nulle en $h=0$, minimale en $h=h^\star>0$, positive pour $h<0$. Elle a été testée sur le voyageur de commerce, le sac à dos et le rangement en boîtes ; sur ce dernier, elle permet de traiter sur machine D-Wave des instances de 29 objets, contre 11 avec les bits d'écart.
+
+\paragraph{Son défaut chez nous.} Elle pénalise aussi le côté faisable : avec $P=75$ et $h^\star=0{,}05$, un profil de marge $0{,}3$ paie $75\times(0{,}09-0{,}03)=4{,}5$, quatre fois l'étendue de l'objectif. Elle attire donc tous les candidats vers $h\approx h^\star$, ce qui déforme l'objectif (les « faux minimums » relevés dans la littérature). Sur des problèmes combinatoires où la contrainte est saturée à l'optimum (un sac à dos plein), c'est sans conséquence ; sur un front de Pareto dont une partie est loin de la contrainte, c'est un biais.
+
+\section{Régler les poids : ce que dit la littérature}
+Le réglage de $P$ est un sujet de recherche à lui seul. Les méthodes publiées se rangent en trois familles :
+\begin{itemize}
+\item \textbf{bornes exactes} : un $P$ assez grand pour qu'aucune violation ne soit rentable, calculé à partir des coefficients de l'objectif. Sûr, mais il écrase le spectre ;
+\item \textbf{poids séquentiels} : partir d'un petit $P$ et l'augmenter tant que les échantillons sont infaisables (travaux de l'université d'Exeter, d'Ayodele) ;
+\item \textbf{poids par contrainte} réglés sur le taux de faisabilité des échantillons, par exemple avec une loi sigmoïde.
+\end{itemize}
+Notre $P=75$, fixé à la main sur le problème V2, n'appartient à aucune. La deuxième famille est très proche du lagrangien du chapitre suivant, qui ajuste lui aussi un poids d'après les échantillons, mais sur un terme linéaire.
+
+\begin{resultat}
+\begin{itemize}
+\item La pénalité quadratique avec bits d'écart rend les petites violations rentables, crée des dents de scie, ajoute 3 qubits et écrase le spectre. Elle ne s'applique qu'à une contrainte affine.
+\item La pénalité déséquilibrée supprime les bits d'écart, mais attire tous les candidats vers une marge fixée : elle déforme l'objectif loin de la contrainte.
+\item Toute pénalité au carré est limitée aux contraintes affines.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:pen-rentable}
+Objectif normalisé : un profil faisable de marge $h=0$ vaut $-0{,}80$ ; son voisin vaut $-1{,}00$ avec $h=-0{,}04$. (a) Avec la pénalité à bits d'écart ($P=75$), lequel est l'optimum du QUBO ? (b) Quel $P$ faudrait-il pour que le profil faisable gagne ? (c) Que devient alors la part de l'objectif dans le spectre, si la marge prédite varie de $-0{,}5$ à $+0{,}5$ sur la grille ?
+\end{exercice}
+\begin{exercice}\label{ex:pen-deseq}
+Pénalité déséquilibrée avec $P=75$, $h^\star=0{,}05$. (a) Calculer le terme en $h=-0{,}05$, $h=0$, $h=0{,}05$, $h=0{,}3$. (b) Pour quelles marges $h>0$ la pénalité est-elle positive ? (c) Proposer $P$ et $h^\star$ pour que le terme reste inférieur à 0,5 jusqu'à $h=0{,}3$, et dire ce que l'on perd.
+\end{exercice}
+\begin{exercice}\label{ex:pen-degre}
+Le modèle de $C_{L,\max}$ devient quadratique en $z$. Montrer sur l'exemple $h=z_1z_2-0{,}2$ (deux variables à 1 bit, $z_i=2b_i-1$) que $h^2$ contient un monôme de degré supérieur à 2 en bits, sauf simplification due à $b_i^2=b_i$. Conclure pour des variables à 3 bits.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Régler $P$ par la méthode séquentielle (augmenter tant que la meilleure lecture viole la contrainte) au lieu de $P=75$ : c'est la comparaison la plus juste entre bits d'écart et lagrangien.
+\end{itemize}
+\end{pistes}

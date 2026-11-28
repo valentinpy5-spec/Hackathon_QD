@@ -1,0 +1,12 @@
+\chapter{La campagne avec XFOIL}\label{ch:campagne}
+\iterbanner{V3}
+
+\section{Protocole}
+Exactement celui de la seconde campagne CST du lot L6 (\code{contraintes/experiences\_cst.py}) : filtre géométrique avant simulation, traînée de plus de 200 counts comptée comme un échec, budget de 300 simulations, 8 graines, \emph{mêmes profils initiaux par graine}, ce qui permet une comparaison appariée. Les méthodes de la seconde campagne ne sont pas relancées : leurs exécutions sont relues, et le front de référence est recalculé sur l'union des deux campagnes. Deux méthodes nouvelles, toutes deux avec le modèle en $z$ et le recuit simulé, à 30 qubits :
+\begin{itemize}
+\item \code{quadz\_lagrange} : $C_{L,\max}$ et les six contraintes de non-croisement en termes lagrangiens, 6 résolutions par QUBO, lectures vérifiées ;
+\item \code{quadz\_lagrange\_clf} : la même chose, plus le classifieur de convergence d'XFOIL avec $p_{\min}=0{,}1$.
+\end{itemize}
+La pénalité déséquilibrée, moins bonne que le lagrangien sur les deux études hors ligne, n'a pas été relancée.
+
+\textit{Résultats à venir.}

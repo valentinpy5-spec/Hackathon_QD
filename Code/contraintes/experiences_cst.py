@@ -10,7 +10,7 @@ Nouvelles méthodes (modèle en z, recuit simulé, 30 qubits au lieu de 33) :
     quadz_lagrange_clf   idem + classifieur de convergence d'XFOIL (P(succès) prédite >= 0,1)
     quadz_desequilibree  pénalité déséquilibrée sur C_L,max
 
-Durée : ~1 h 30 sur 11 processus (XFOIL). PC sur secteur, sans veille.
+Durée : ~1 h 10 sur 11 processus pour les deux méthodes lagrangiennes (XFOIL). PC sur secteur, sans veille.
 
     python3 -m contraintes.experiences_cst      -> resultats/contraintes_cst_campagne.json (+ _brut.json)
 """
@@ -30,7 +30,7 @@ from contraintes.experiences_v2 import wilcoxon_signe  # noqa: E402
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "resultats", "contraintes_cst_campagne.json")
 ANCIEN = os.path.join(HERE, "resultats", "ia_qubo_echelle_brut.json")
-METHODS = ["quadz_lagrange", "quadz_lagrange_clf", "quadz_desequilibree"]
+METHODS = ["quadz_lagrange", "quadz_lagrange_clf"]   # quadz_desequilibree : écartée (moins bonne hors ligne)
 P_MIN = 0.1
 
 

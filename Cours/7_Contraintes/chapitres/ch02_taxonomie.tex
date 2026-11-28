@@ -1,0 +1,69 @@
+\chapter{Classer les contraintes avant de les traiter}\label{ch:taxonomie}
+\iterbanner{V3}
+
+\section{Quatre questions}
+En optimisation par simulation, la référence est la taxonomie de Le Digabel et Wild (\emph{A taxonomy of constraints in black-box simulation-based optimization}, Optimization and Engineering, 2023). Elle range chaque contrainte en répondant à quatre questions :
+\begin{description}
+\item[Connue ou cachée ?] Une contrainte \emph{connue} est écrite dans la formulation ; une contrainte \emph{cachée} n'apparaît que parce que le simulateur échoue (maillage impossible, solveur qui diverge).
+\item[A priori ou issue de la simulation ?] Une contrainte \emph{a priori} se vérifie sans simuler (une borne, une géométrie) ; les autres demandent le calcul.
+\item[Quantifiable ou non ?] Sait-on \emph{de combien} elle est violée, ou seulement \emph{si} elle l'est ?
+\item[Relâchable ou non ?] Le simulateur donne-t-il encore des sorties utiles quand elle est violée ? Une contrainte non relâchable (une géométrie qui se croise) rend la simulation impossible ou dénuée de sens.
+\end{description}
+Une contrainte cachée est la pire : non quantifiable, non relâchable, issue de la simulation. Les auteurs la décrivent comme « du logiciel qui plante ».
+
+\section{Nos quatre contraintes}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}p{3.8cm} >{\raggedright\arraybackslash}X}
+\toprule
+contrainte & classe & traitement adapté \\
+\midrule
+faces sans croisement & connue, a priori, quantifiable, \textbf{non relâchable} & ne jamais simuler un profil qui la viole : filtre avant simulation (« barrière extrême ») \\
+épaisseur $\ge8~\%$ & connue, a priori, quantifiable, relâchable & filtre, ou formulation qui l'impose \\
+$C_{L,\max}\ge1{,}2$ & connue, \textbf{issue de la simulation}, quantifiable, relâchable & un modèle de la contrainte, appris à part, avec son incertitude \\
+convergence d'XFOIL & \textbf{cachée}, non quantifiable, non relâchable & une probabilité de succès apprise (classifieur) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+La boucle de la V2 les traitait toutes par une pénalité quadratique, sauf la convergence, qu'elle ignorait jusqu'à la simulation. Le lot L6 a ajouté le filtre géométrique, qui est la bonne réponse pour les deux premières.
+
+\section{Ce que fait la pratique industrielle}
+Les chaînes d'optimisation de conception (aérodynamique, structures, moteurs) suivent la taxonomie, plus ou moins explicitement :
+\begin{itemize}
+\item \textbf{Contraintes a priori} : vérifiées avant de lancer un calcul, ou rendues impossibles à violer par la paramétrisation (on paramètre une loi d'épaisseur positive plutôt que deux faces indépendantes).
+\item \textbf{Contraintes issues de la simulation} : un modèle de substitution \emph{par contrainte}, à côté de ceux des objectifs. En optimisation bayésienne contrainte (méthode SEGO, outils SMT et SEGOMOE de l'ONERA, utilisés dans le lot L1), le critère d'acquisition est multiplié par la \emph{probabilité d'être faisable} prédite. Une contrainte n'est jamais mélangée à l'objectif.
+\item \textbf{Contraintes cachées} : un classifieur sépare les points où le code a abouti des autres (Gramacy et Lee, 2010 ; Gelbart et al., 2014), et sa probabilité de succès pondère le critère, comme celle d'une contrainte ordinaire.
+\item \textbf{Solveurs} : un solveur industriel en variables binaires ou mixtes (CPLEX, Gurobi, SCIP, ou le solveur hybride contraint de D-Wave) reçoit l'objectif \emph{et} la liste des contraintes, et c'est lui qui choisit comment les traiter (chapitre~\ref{ch:cqm}).
+\end{itemize}
+Le QUBO est l'exception : il n'admet pas de contrainte, donc tout doit devenir un terme d'énergie. La question du cours est de savoir \emph{quels} termes, et ce qui peut rester en dehors du QUBO.
+
+\begin{projet}
+Une machine quantique, recuit ou circuit, rend une \emph{liste d'échantillons}, pas une seule réponse. On peut toujours les vérifier en classique avant de simuler : c'est déjà ce que fait le filtre géométrique. Cela ouvre une troisième voie entre « tout dans le QUBO » et « rien dans le QUBO » : mettre dans le QUBO ce qui \emph{oriente} la recherche, et laisser à la vérification ce qui \emph{garantit} la faisabilité.
+\end{projet}
+
+\begin{piege}[ : relâchable ne veut pas dire « peu importante »]
+La contrainte de manœuvre est relâchable (XFOIL calcule quand même un profil qui ne tient pas $C_{L,\max}=1{,}2$), mais elle est dure pour le résultat : un profil qui la viole est inutilisable. « Relâchable » dit seulement qu'on peut apprendre quelque chose d'un point infaisable, ce qui est précieux pour un modèle de contrainte.
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item On classe une contrainte par quatre questions : connue ou cachée, a priori ou simulée, quantifiable ou non, relâchable ou non.
+\item Contrainte a priori : on filtre. Contrainte simulée quantifiable : on la modélise à part. Contrainte cachée : on apprend une probabilité de succès.
+\item Les solveurs industriels reçoivent les contraintes séparément de l'objectif. Le QUBO ne le permet pas, mais ses échantillons peuvent être vérifiés en classique.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:taxo-classer}
+Classer selon les quatre questions : (a) l'envergure d'une aile, bornée à 2~m ; (b) un mailleur qui échoue sur certaines géométries ; (c) une contrainte de flutter calculée par un code aéroélastique, qui donne une marge de vitesse ; (d) un calcul RANS qui converge mais vers une solution instationnaire, détectée par l'oscillation des résidus. Proposer un traitement pour chacune.
+\end{exercice}
+\begin{exercice}\label{ex:taxo-filtre}
+Pourquoi vaut-il mieux filtrer une contrainte a priori non relâchable que la pénaliser, même lourdement ? Donner un argument sur le budget de simulations et un argument sur le modèle de substitution.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Enregistrer la \emph{cause} des échecs d'XFOIL (non-convergence, décollement massif, traînée aberrante) : un indicateur d'échec plus riche transforme une contrainte cachée en contrainte connue et non quantifiable, mieux modélisable.
+\end{itemize}
+\end{pistes}

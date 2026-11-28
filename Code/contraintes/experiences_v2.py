@@ -10,6 +10,8 @@ Méthodes <modele>_<contrainte> :
 On ajoute la part de profils simulés faisables, le budget « utile ».
 
     python3 -m contraintes.experiences_v2          # 20 graines -> resultats/contraintes_V2.json (~5 min)
+    python3 -m contraintes.experiences_v2 seuils   # seuil du classifieur (0,05 à 0,5) et diagnostic du
+                                                   # front -> resultats/contraintes_V2_seuils.json (~3 min)
 """
 import json
 import os
@@ -85,7 +87,66 @@ def premier(tr, k, thr):
     return np.inf
 
 
-if __name__ == "__main__":
+def _run_seuil(args):
+    pm, sec, s = args
+    SPEC["p_min"] = pm
+    return _run_one(("quadz_lagrange_clf", sec, s, 250))
+
+
+def seuils():
+    """Balayage du seuil p_min du classifieur, et probabilité de convergence prédite sur le front exact."""
+    from multiprocessing import Pool
+    from optim.problem_v2 import build_table_v2, with_objective  # noqa: F401
+    from contraintes.classifieur import LogistiqueQuadZ, auc
+    S = (0.05, 0.1, 0.2, 0.3, 0.5)
+    jobs = [(pm, sec, s) for pm in S for sec in ("S1", "S2") for s in range(20)]
+    with Pool(max(1, min(12, (os.cpu_count() or 2) - 1))) as pool:
+        out = pool.map(_run_seuil, jobs, chunksize=1)
+    res = dict(seuils=list(S))
+    ref = json.load(open(OUT))
+    for sec in ("S1", "S2"):
+        R = {}
+        r0 = [premier(t, 1, 1.0) for t in ref[sec]["quadz_modele"]]
+        rl = [premier(t, 1, 1.0) for t in ref[sec]["quadz_lagrange"]]
+        for pm in S:
+            sel = [o for j, o in zip(jobs, out) if j[0] == pm and j[1] == sec]
+            ff = [premier(o[0], 1, 1.0) for o in sel]
+            hv = [premier(o[0], 2, 0.99) for o in sel]
+            fin = lambda v: np.where(np.isfinite(v), v, BUDGET_ECHEC)  # noqa: E731
+            R[str(pm)] = dict(front_median=float(np.median(fin(ff))), succes=float(np.mean(np.isfinite(ff))),
+                              hv99_median=float(np.median(fin(hv))),
+                              part_faisable=float(np.median([o[2]["faisable"] / o[3] for o in sel])),
+                              p_vs_modele=wilcoxon_signe(ff, r0), p_vs_lagrange=wilcoxon_signe(ff, rl),
+                              mieux_vs_modele=int(sum(fin(ff) < fin(r0))), pire_vs_modele=int(sum(fin(ff) > fin(r0))))
+            print(sec, pm, R[str(pm)], flush=True)
+        # diagnostic : classifieur appris sur toute la table, probabilité sur le front exact
+        T, feas, F, fr, exact, norm, refp, hv_ = setup(sec, "MoM")
+        I = np.array([[r[k] for k in KEYS] for r in T])
+        v = np.array([r["valid"] for r in T])
+        clf = LogistiqueQuadZ(SP.n_levels).fit(I, v)
+        tab = {tuple(r[k] for k in KEYS): r for r in T}
+        front = []
+        for x in sorted(exact):
+            nb = []
+            for i in range(4):
+                for d in (-1, 1):
+                    y = list(x)
+                    y[i] += d
+                    if tuple(y) in tab:
+                        nb.append(bool(tab[tuple(y)]["valid"]))
+            front.append(dict(profil=list(x), proba=float(clf.proba(np.array([x]))[0]),
+                              voisins=len(nb), voisins_echec=nb.count(False)))
+        R["diagnostic"] = dict(n_echecs=int((~v).sum()), n_profils=len(T), auc_apprentissage=auc(clf.proba(I), v),
+                               front=front)
+        res[sec] = R
+    with open(OUT.replace(".json", "_seuils.json"), "w") as f:
+        json.dump(res, f)
+    print("->", OUT.replace(".json", "_seuils.json"))
+
+
+if __name__ == "__main__" and "seuils" in sys.argv:
+    seuils()
+elif __name__ == "__main__":
     from multiprocessing import Pool
     names = [m for m in METHODS if m in sys.argv] or METHODS
     n_seeds, budget = 20, 250

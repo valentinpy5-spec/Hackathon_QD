@@ -1,0 +1,94 @@
+\chapter{Ce que l'on mesure sans XFOIL}\label{ch:hors-ligne}
+\iterbanner{V3}
+
+Trois études ne demandent aucune simulation nouvelle : le problème V2, dont toutes les simulations sont tabulées ; le rejeu de la seconde campagne CST à partir du cache ; et QAOA sur de petites instances. Toutes utilisent le modèle en $z$ pour l'objectif.
+
+\section{Le problème V2 : la boucle complète, 20 graines}
+Même protocole que les lots L1 et L6 : 10 profils initiaux identiques par graine, 5 poids, budget 250, solveur exact (\code{contraintes/experiences\_v2.py}). On compte les simulations pour retrouver le front exact (251 si jamais retrouvé) et pour atteindre 99~\% de son hypervolume.
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X c c c c c}
+\toprule
+& front complet & succès & HV 99~\% & faisables & vs bits d'écart \\
+\midrule
+\multicolumn{6}{l}{\textit{S1 (front exact : 4 profils)}}\\
+bits d'écart (actuel) & 75 (60--96) & 100~\% & 62,5 & 53~\% & --- \\
+lagrangien vérifié & 77,5 (65--131) & 100~\% & 57,5 & 58~\% & 9 mieux, 10 pire, $p=0{,}50$ \\
+lagrangien + classifieur ($p_{\min}=0{,}5$) & 85 (60--106) & 100~\% & 60 & 64~\% & 7 / 11, $p=0{,}38$ \\
+déséquilibrée & 120 (70--146) & 100~\% & 65 & 58~\% & 5 / 14, $p=0{,}03$ \\
+\midrule
+\multicolumn{6}{l}{\textit{S2 (front exact : 10 profils)}}\\
+bits d'écart (actuel) & 142,5 (116--191) & 100~\% & 75 & 61~\% & --- \\
+lagrangien vérifié & \textbf{102,5} (90--116) & 100~\% & 75 & 60~\% & \textbf{17 / 3}, $p=0{,}0002$ \\
+lagrangien + classifieur ($p_{\min}=0{,}5$) & --- & 15~\% & 62,5 & 76~\% & 2 / 18, $p=0{,}002$ \\
+déséquilibrée & --- & 0~\% & 72,5 & 60~\% & 0 / 20, $p<0{,}001$ \\
+\bottomrule
+\end{tabularx}
+\end{center}
+(Médianes, entre parenthèses les quartiles ; test de Wilcoxon apparié sur le nombre de simulations pour le front complet.)
+
+\paragraph{Lecture.} Avec le solveur exact, les lectures sont les 600 meilleures chaînes : la vérification choisit alors l'optimum \emph{exact} du problème contraint par les modèles, quels que soient les $\lambda$. La ligne « lagrangien vérifié » mesure donc ce que coûte la pénalité à bits d'écart, à modèles identiques. En S1, rien ; en S2, dont le front longe la contrainte de manœuvre (lot L1), elle fait perdre 40 simulations en médiane : les petites violations rentables du chapitre~\ref{ch:penalites} envoient la boucle sur des profils que le modèle lui-même jugeait infaisables. La pénalité déséquilibrée, qui vise une marge de 0,05, ne retrouve jamais le front S2 : ses profils sont collés à la frontière. Le classifieur avec un seuil de 0,5 coupe les extrémités du front (chapitre~\ref{ch:classifieur}).
+
+\paragraph{Une question du lot L1 résolue.} Le lot L1 avait trouvé qu'un « contrôle sans QUBO » (mêmes modèles, minimum de la prédiction cherché directement) retrouvait le front S2 en 95 simulations, contre 142,5 pour la boucle QUBO, sans pouvoir isoler la cause : variable d'écart discrète, régularisation ou filtre d'épaisseur. Le lagrangien vérifié, qui garde le QUBO mais retire la variable d'écart, fait 102,5. L'essentiel de l'écart venait donc de la pénalité à bits d'écart, pas de la forme QUBO.
+
+\section{Le problème CST : rejeu de la seconde campagne}
+On rejoue les 8 exécutions de l'approche actuelle (\code{contraintes/etude\_cst.py}) : pour chaque profil proposé, on réajuste les modèles sur les profils simulés avant lui, comme la boucle à cette itération.
+
+\paragraph{D'où viennent les $C_{L,\max}$ trop faibles ?} Sur 1\,609 profils proposés où XFOIL a convergé, 678 (42~\%) ont $C_{L,\max}<1{,}2$. Pour \textbf{317} d'entre eux, le modèle affine prédisait \emph{déjà} moins de 1,2 : la contrainte était connue du modèle, et c'est la formulation qui ne l'a pas fait respecter. Pour les 361 autres, le modèle s'est trompé (erreur absolue médiane 0,15, biais $+0{,}02$). La moitié des $C_{L,\max}$ trop faibles est donc un défaut de formulation, l'autre moitié un défaut de modèle.
+
+\paragraph{Les formulations sur les mêmes QUBO.} À 60, 150 et 300 simulations des 8 exécutions, pour les 5 poids (120 QUBO), on construit le QUBO de chaque formulation, on le résout par recuit simulé (128 lectures), et l'on retient le candidat comme le ferait la boucle.
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lcccc}
+\toprule
+& qubits & part de l'objectif & candidat prédit faisable & $\hat C_{L,\max}$ du candidat \\
+\midrule
+bits d'écart (actuel) & 33 & 0,8~\% & 61~\% & 1,20 \\
+déséquilibrée & 30 & 2,4~\% & 97~\% & 1,25 \\
+lagrangien vérifié & 30 & $\approx100$~\% & 92~\% & 1,23 à 1,34 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Comparés deux à deux sur les QUBO où les deux candidats sont prédits faisables, le lagrangien retient un meilleur objectif que les bits d'écart dans 63~\% des cas (68 QUBO), et que la pénalité déséquilibrée dans 75~\% (110 QUBO) ; les écarts d'objectif sont faibles (0,015 en médiane, pour une étendue de l'ordre de 1). La différence est donc d'abord la \textbf{faisabilité} : les bits d'écart rendent un candidat que leur propre modèle juge infaisable 4 fois sur 10.
+
+\section{QAOA sur de petites instances}
+Mêmes QUBO de début de boucle que le cours IA et QUBO (V2, S2, 30 profils, 3 graines, 3 poids ; \code{contraintes/qaoa\_formulations.py}). Pour comparer des QUBO de tailles différentes, on mesure la probabilité, sous QAOA ($p=2$), d'obtenir la \emph{conception} optimale du problème contraint (bits auxiliaires marginalisés), rapportée au tirage uniforme d'une conception ($1/1024$).
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lcccc}
+\toprule
+& qubits & part de l'objectif & gain sur l'optimum contraint & échantillons faisables \\
+\midrule
+bits d'écart (actuel) & 14 & 1,7~\% & 1,4 (1,0 à 1,8) & 80~\% \\
+déséquilibrée & 11 & 3,8~\% & 1,9 (0,0 à 3,3) & 64~\% \\
+lagrangien & 10 & 100~\% & \textbf{10,3} (0,0 à 72,9) & 37~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+\paragraph{Lecture.} Le lagrangien multiplie par 7 en médiane la probabilité que QAOA trouve l'optimum contraint, mais avec une forte dispersion. La vérification explique les deux. Dans 8 instances sur 9, \emph{aucun} $\lambda$ ne fait de l'optimum contraint l'état fondamental du lagrangien : c'est le saut de dualité, aggravé ici par l'épaisseur, laissée hors du QUBO. Mais dans 7 cas sur 9 l'optimum est parmi les 17 états les plus bas du spectre (sur 1\,024), et QAOA, qui répartit sa probabilité sur les états de basse énergie, le trouve souvent. Dans les deux cas où $\lambda$ est grand (3,2), l'optimum est au rang 196 ou 320, et QAOA ne le voit pas. Les échantillons sont moins souvent faisables (37~\%), ce qui ne coûte rien : la vérification les trie. Avec le solveur exact, la vérification retrouve l'optimum contraint dans les 9 cas.
+
+\begin{resultat}
+\begin{itemize}
+\item V2 : le lagrangien vérifié retrouve le front S2 en 102 simulations au lieu de 142 (17 graines sur 20) ; c'est le coût de la pénalité à bits d'écart, à modèles identiques.
+\item CST : la moitié des $C_{L,\max}$ trop faibles vient de la formulation ; les bits d'écart rendent un candidat que leur propre modèle juge infaisable 4 fois sur 10, le lagrangien moins d'une fois sur 10.
+\item QAOA : sans pénalité, l'objectif retrouve le spectre et QAOA trouve l'optimum contraint 7 fois plus souvent en médiane, à condition que $\lambda$ reste petit.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:hl-exact}
+Pourquoi, avec le solveur exact et la vérification, les multiplicateurs n'ont-ils aucune influence sur le profil retenu dans le problème V2 ? Combien de chaînes faudrait-il garder pour que ce soit encore vrai à 30 bits, et pourquoi est-ce impossible ?
+\end{exercice}
+\begin{exercice}\label{ex:hl-gain}
+Dans le QUBO à bits d'écart (14 qubits), la conception optimale peut être associée à 16 valeurs des bits auxiliaires. (a) Pourquoi marginaliser sur ces bits pour comparer à un QUBO de 10 qubits ? (b) Un gain de 1 signifie-t-il que QAOA ne fait rien ? (c) Pourquoi le gain mesuré dans le cours IA et QUBO (4,5) diffère-t-il de celui-ci (1,4) pour la même formulation ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Rejouer de même les exécutions de la machine de factorisation et du modèle bayésien : les défauts de formulation devraient être les mêmes, puisque la contrainte est la même.
+\item Mesurer le gain de QAOA sur la meilleure \emph{lecture vérifiée} parmi $k$ tirs, plutôt que sur la probabilité de l'optimum : c'est la quantité utile dans la boucle.
+\end{itemize}
+\end{pistes}

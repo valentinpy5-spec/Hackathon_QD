@@ -1,0 +1,84 @@
+\chapter{Le lagrangien vérifié}\label{ch:lagrangien}
+\iterbanner{V3}
+
+\section{Un terme linéaire au lieu d'un carré}
+Le problème que l'on veut résoudre à chaque itération, pour un poids $w$, est
+\[ \min_{\mathbf b}\ f(\mathbf b)\quad\text{sous}\quad h_k(\mathbf b)\ge0,\ k=1,\dots,K, \]
+où $f$ est l'objectif pondéré prédit et les $h_k$ les contraintes prédites, toutes écrites sous forme QUBO ($h_k(\mathbf b)=\mathbf b^\top H_k\mathbf b+h_{0,k}$). Le \textbf{lagrangien} remplace les contraintes par des termes linéaires :
+\[ L(\mathbf b,\boldsymbol\lambda)=f(\mathbf b)-\sum_k\lambda_k\,\frac{h_k(\mathbf b)}{s_k},\qquad\lambda_k\ge0, \]
+où $s_k$ est une échelle typique de $h_k$ (l'étendue de $C_{L,\max}$ sur les données, par exemple). Trois propriétés en font le bon outil pour un QUBO :
+\begin{enumerate}
+\item \textbf{le degré ne monte pas} : si $f$ et les $h_k$ sont quadratiques, $L$ l'est aussi. On peut donc garder une contrainte quadratique (un modèle quadratique de $C_{L,\max}$, le classifieur du chapitre~\ref{ch:classifieur}), ce qu'aucune pénalité au carré ne permet ;
+\item \textbf{aucun qubit supplémentaire} : 30 qubits à l'échelle, ceux de la conception seule ;
+\item \textbf{l'objectif garde le spectre} : avec des $\lambda_k$ petits, $L$ diffère peu de $f$, et la part de l'objectif dans l'étendue des énergies passe de 0,8~\% à environ 100~\% (chapitre~\ref{ch:hors-ligne}).
+\end{enumerate}
+Le prix : $-\lambda h$ \emph{récompense} la marge, sans limite. Le minimum de $L$ n'a aucune raison d'être sur la frontière ; avec des $\lambda$ trop grands, il part loin à l'intérieur du domaine faisable.
+
+\section{Le saut de dualité, et pourquoi il faut vérifier}
+En optimisation continue convexe, il existe des multiplicateurs $\boldsymbol\lambda^\star$ pour lesquels le minimum de $L(\cdot,\boldsymbol\lambda^\star)$ est exactement l'optimum contraint. En variables binaires, ce n'est plus vrai : il peut n'exister \emph{aucun} $\boldsymbol\lambda$ dont le minimum soit l'optimum contraint. C'est le \textbf{saut de dualité}. Le cas typique : l'optimum contraint est dominé, dans le plan (marge, objectif), par une combinaison d'un point très faisable et d'un point infaisable très bon (exercice~\ref{ex:lag-saut}).
+
+La réponse est de ne pas demander au QUBO de rendre l'optimum, mais de bons \emph{échantillons} :
+\begin{enumerate}
+\item on résout le QUBO $L(\cdot,\boldsymbol\lambda)$ pour quelques valeurs de $\boldsymbol\lambda$ (6 résolutions) ;
+\item après chaque résolution, on regarde la meilleure lecture : si elle viole la contrainte $k$, on double $\lambda_k$, sinon on le divise par deux (montée duale multiplicative), en partant de $\lambda_k=0{,}05$ ;
+\item on réunit toutes les lectures de toutes les résolutions et l'on \textbf{vérifie} chacune en classique : on garde la meilleure, \emph{au sens de l'objectif seul}, parmi celles qui respectent toutes les contraintes prédites et le filtre géométrique.
+\end{enumerate}
+Les multiplicateurs servent à \emph{orienter} les lectures vers la frontière ; c'est la vérification qui garantit la faisabilité prédite et qui choisit selon l'objectif. Les $\lambda$ finaux d'une itération servent de départ à la suivante, pour le même poids.
+
+\begin{codebox}[ : \code{contraintes/formulations.py}, \code{resout\_lagrange}]
+\begin{lstlisting}
+lam = np.full(K, lam_min)                  # 0,05 : presque l'objectif seul
+for _ in range(n_tours):                   # 6 résolutions
+    S, E = solve(*lagrangien(Qo, co, ctrs, lam))
+    pool.append(S)
+    m = filtre(S)                          # géométrie exacte
+    best = S[m][np.argmin(E[m])]
+    for k, ct in enumerate(ctrs):          # montée duale multiplicative
+        lam[k] = 2 * lam[k] if ct.h(best) < 0 else lam[k] / 2
+S = np.unique(np.vstack(pool), axis=0)     # vérification de toutes les lectures
+ok = filtre(S) & all(ct.h(S) >= 0 for ct in ctrs if ct.verifiee)
+ordre = faisables par objectif croissant, puis les autres par violation croissante
+\end{lstlisting}
+\end{codebox}
+
+\begin{piege}[ : des multiplicateurs partis trop haut]
+Une première version partait de $\lambda_k=1$. Avec sept contraintes (une de $C_{L,\max}$, six géométriques) dont les termes valent chacun 1 à 3, le lagrangien écrasait l'objectif : les candidats retenus avaient un $\hat C_{L,\max}$ médian de 1,53 et un objectif prédit moins bon de 0,95 (une étendue entière) que ceux des bits d'écart. Partir de $\lambda=0{,}05$ et ne monter qu'en cas de violation corrige ce défaut (chapitre~\ref{ch:hors-ligne}). Avec un terme linéaire, « trop contraint » n'est pas « plus sûr » : c'est un autre biais.
+\end{piege}
+
+\section{La géométrie est exactement affine en $z$}
+Sans la géométrie dans le QUBO, le lagrangien retrouve le défaut de la première campagne CST : l'optimum du modèle est dans le coin des profils trop minces, dont les faces se croisent. Sur 40 QUBO de test, 13 ne donnaient \emph{aucune} lecture admissible. Or la géométrie s'écrit exactement. L'épaisseur à l'abscisse $x$ vaut
+\[ e(x)=C(x)\sum_{i=0}^{4}B_i(x)\,\big(A_{{\rm ext},i}-A_{{\rm int},i}\big),\qquad A_j=\mathrm{LO}_j+\frac{\mathrm{HI}_j-\mathrm{LO}_j}{2}\,(z_j+1), \]
+où $C(x)=\sqrt x(1-x)$ est la fonction de classe, $B_i$ les polynômes de Bernstein, et $A_j$ le coefficient $j$, affine en sa variable normalisée $z_j$. À $x$ fixé, $e(x)$ est donc \textbf{affine en $z$}, donc linéaire en bits (vérifié : écart de $10^{-16}$ avec la géométrie calculée).
+\begin{itemize}
+\item \textbf{Faces sans croisement} : $\sum_iB_i(x_j)(A_{{\rm ext},i}-A_{{\rm int},i})\ge0$ aux six points $x_j=0{,}02$ ; $0{,}1$ ; $0{,}25$ ; $0{,}5$ ; $0{,}75$ ; $0{,}95$. Aucun des 10 profils du front de référence ne viole ces contraintes. Sur 2\,000 profils tirés au hasard, 98~\% de ceux qui les respectent sont admissibles.
+\item \textbf{Épaisseur} : $t_{\max}\ge8~\%$ est un maximum sur $x$, donc une disjonction (« il existe $x$ tel que\dots »), qui n'est pas affine. La condition suffisante $e(0{,}3)\ge0{,}08$ est affine, mais elle est violée par \textbf{7 des 10 profils du front} : ils sont minces, avec leur épaisseur maximale ailleurs. On l'a écartée.
+\end{itemize}
+Les contraintes de croisement entrent dans le lagrangien avec le drapeau \code{verifiee=False} : elles orientent les lectures, mais c'est le filtre géométrique exact qui juge. On ne vérifie pas une approximation quand on dispose du vrai test.
+
+\begin{projet}
+On applique ici une règle générale : \emph{dans le QUBO, ce qui oriente ; dans la vérification, ce qui garantit.} Une contrainte approchée (six points de contrôle pour une contrainte en chaque point de la corde) est utile pour orienter, dangereuse pour exclure. La condition suffisante d'épaisseur montre la limite : même comme simple orientation, une condition qui exclut 7 profils du front sur 10 détournerait la recherche.
+\end{projet}
+
+\begin{resultat}
+\begin{itemize}
+\item Le lagrangien garde le degré 2 même pour une contrainte quadratique, n'ajoute aucun qubit et rend le spectre à l'objectif.
+\item En variables binaires, il y a un saut de dualité : on ne demande pas l'optimum au QUBO, on résout pour quelques $\lambda$, on réunit les lectures et l'on choisit en classique la meilleure lecture faisable.
+\item Les multiplicateurs doivent partir petits : un terme linéaire trop fort pousse loin à l'intérieur du domaine faisable.
+\item Les contraintes géométriques sont exactement affines en $z$ : elles orientent les lectures, le filtre exact juge.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:lag-saut}
+Quatre conceptions, (marge $h$, objectif $f$) : $A=(2;\,0)$, $B=(1;\,-0{,}2)$, $C=(-1;\,-3)$, $D=(-3;\,5)$. (a) Quel est l'optimum contraint ($h\ge0$) ? (b) Écrire $L=f-\lambda h$ pour chaque conception et montrer qu'aucun $\lambda\ge0$ ne fait de $B$ le minimum. (c) Avec deux résolutions, $\lambda=0$ puis $\lambda=2$, et les deux meilleures lectures de chacune, la vérification retrouve-t-elle $B$ ? (d) Interpréter graphiquement dans le plan $(h,f)$.
+\end{exercice}
+\begin{exercice}\label{ex:lag-geo}
+Avec $N=4$ (5 polynômes de Bernstein), $B_i(x)=\binom4i x^i(1-x)^{4-i}$. (a) Calculer les $B_i(0{,}5)$. (b) En déduire la contrainte de non-croisement en $x=0{,}5$ en fonction des coefficients $A_{{\rm ext},i}$ et $A_{{\rm int},i}$. (c) Pourquoi des coefficients d'épaisseur $A_{{\rm ext},i}-A_{{\rm int},i}$ tous positifs garantissent-ils l'absence de croisement en tout $x$ ? Pourquoi n'a-t-on pas imposé cette condition (voir le lot L6) ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Un lagrangien \emph{augmenté} ($-\lambda h+\tfrac\rho2\min(h,0)^2$, ici sans le $\min$ pour rester quadratique) combine les deux mondes ; à tester avec un petit $\rho$.
+\item Choisir $\lambda$ par dichotomie plutôt que par montée multiplicative, quand une seule contrainte domine.
+\end{itemize}
+\end{pistes}
