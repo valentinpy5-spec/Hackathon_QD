@@ -1,0 +1,117 @@
+\chapter{La précision des modèles selon le nombre de données}\label{ch:precision}
+\iterbanner{V3}
+
+\section{Ce qu'on mesure}
+Avant de mettre les modèles dans la boucle, on mesure leur précision seule, avec le script \code{precision\_modeles.py}. Pour chacune des trois grandeurs ($C_D$, SER du secteur S2, $C_{L,\max}$), pour chaque modèle et pour chaque taille $N$ de jeu d'entraînement de 10 à 500, on tire 10 jeux de $N$ profils au hasard sur la grille V2, on ajuste, et l'on mesure sur tous les autres profils :
+\begin{itemize}
+\item l'\textbf{erreur relative} : l'erreur quadratique moyenne divisée par l'écart-type de la grandeur. Elle vaut 0 pour un modèle parfait et 1 pour un modèle qui prédirait toujours la moyenne ;
+\item la \textbf{corrélation de rang} de Spearman entre prédictions et vraies valeurs : 1 si le modèle classe les profils exactement dans le bon ordre. Pour choisir le prochain profil, c'est le classement qui compte.
+\end{itemize}
+On rapporte la médiane des 10 tirages. Les modèles de traînée et de SER sont ajustés sur les profils faisables (sans le profil aberrant à plus de 200 counts), celui de $C_{L,\max}$ sur les profils où XFOIL a convergé.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/precision_v2}
+\caption{Précision des quatre modèles sur la grille V2, en fonction du nombre de profils d'entraînement (échelle logarithmique, médiane de 10 tirages). En haut, l'erreur relative (plus bas est meilleur) ; en bas, la corrélation de rang (plus haut est meilleur).}\label{fig:precision-v2}
+\end{figure}
+
+\section{Ce qu'on observe}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{l cccc cccc}
+\toprule
+& \multicolumn{4}{c}{erreur relative} & \multicolumn{4}{c}{corrélation de rang} \\
+$C_D$, $N=$ & 15 & 30 & 80 & 300 & 15 & 30 & 80 & 300 \\
+\midrule
+quadratique en $z$ & 1,39 & 0,53 & 0,38 & 0,35 & 0,66 & 0,89 & 0,93 & 0,93 \\
+machine de factorisation & 0,90 & 0,68 & 0,46 & 0,34 & 0,54 & 0,77 & 0,89 & 0,94 \\
+bayésien sur les bits & 0,89 & 0,68 & 0,48 & 0,34 & 0,54 & 0,73 & 0,88 & 0,94 \\
+réseau de neurones & 0,62 & 0,48 & 0,32 & 0,20 & 0,83 & 0,89 & 0,95 & 0,98 \\
+\midrule
+$C_{L,\max}$, $N=$ & 15 & 30 & 80 & 300 & 15 & 30 & 80 & 300 \\
+\midrule
+quadratique en $z$ & 2,35 & 0,70 & 0,56 & 0,54 & 0,58 & 0,79 & 0,90 & 0,92 \\
+machine de factorisation & 1,33 & 1,20 & 0,86 & 0,57 & 0,53 & 0,49 & 0,69 & 0,91 \\
+réseau de neurones & 0,81 & 0,72 & 0,71 & 0,53 & 0,79 & 0,83 & 0,81 & 0,92 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{1. Le réseau de neurones est le plus précis, même avec peu de données.} Sur la traînée et la SER, il a la plus petite erreur et le meilleur classement à presque toutes les tailles. Sur la SER, son erreur relative vaut 0,29 dès 10 profils, contre 0,73 pour le modèle en $z$. La régularisation $L_2$ et l'ensemble de réseaux le protègent du surapprentissage, et son entrée $z$ lui donne la continuité des niveaux.
+
+\paragraph{2. Les modèles en bits sont en retard tant que les données sont rares.} La machine de factorisation et le modèle bayésien sur les bits ne rejoignent le modèle en $z$ qu'à partir de 80 à 120 profils. Au-delà, les trois modèles quadratiques se valent (erreur relative 0,34 à 0,36 sur $C_D$ à 300 profils) : ils ont atteint ce qu'une forme quadratique peut représenter. La différence se joue donc entièrement au début de la boucle, là où elle compte.
+
+\paragraph{3. Le modèle en $z$ a un mauvais moment à 15 profils.} Son erreur sur $C_D$ vaut 1,07 à 10 profils, \textbf{1,39 à 15}, puis 0,66 à 20. C'est le régime « juste déterminé » décrit dans le cours de calcul quantique (chapitre~8, régularisation) : avec autant de profils que de coefficients, le modèle interpole aussi le bruit avec de grands coefficients. Les modèles en bits, plus régularisés, n'ont pas ce pic.
+
+\paragraph{4. $C_{L,\max}$ est difficile pour tous.} Même avec 300 à 500 profils, l'erreur relative reste de 0,5 à 0,6 pour tous les modèles. La grandeur est irrégulière : les échecs d'XFOIL sur la rampe de manœuvre et la façon dont on retient le plus grand $C_L$ convergé créent des sauts d'un profil à son voisin. Aucun modèle lisse ne peut les représenter, et c'est sur cette grandeur que se joue la faisabilité du front.
+
+\section{Sur le problème mis à l'échelle}
+On refait la même étude sur les profils du problème CST (chapitre~\ref{ch:echelle}), en prenant pour données les profils simulés pendant la première campagne. Le modèle en $z$ a maintenant \textbf{66 coefficients} par grandeur ; la machine de factorisation en a 151 et le modèle bayésien 466.
+\begin{figure}[htbp]
+\centering
+\input{figures/precision_cst}
+\caption{Précision des quatre modèles sur le problème CST (30 bits), même présentation que la figure~\ref{fig:precision-v2}.}\label{fig:precision-cst}
+\end{figure}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{l ccc ccc}
+\toprule
+& \multicolumn{3}{c}{erreur relative} & \multicolumn{3}{c}{corrélation de rang} \\
+SER, $N=$ & 30 & 80 & 300 & 30 & 80 & 300 \\
+\midrule
+quadratique en $z$ & 0,73 & 0,17 & 0,09 & 0,79 & 0,99 & 1,00 \\
+machine de factorisation & 0,67 & 0,41 & 0,15 & 0,79 & 0,94 & 0,99 \\
+bayésien sur les bits & 0,58 & 0,32 & 0,23 & 0,85 & 0,96 & 0,97 \\
+réseau de neurones & 0,22 & 0,08 & 0,06 & 0,98 & 1,00 & 1,00 \\
+\midrule
+$C_D$, $N=$ & 30 & 80 & 300 & 30 & 80 & 300 \\
+\midrule
+quadratique en $z$ & 1,24 & \textbf{1,71} & 0,73 & 0,37 & 0,37 & 0,76 \\
+machine de factorisation & 1,01 & 1,06 & 0,94 & 0,41 & 0,46 & 0,63 \\
+bayésien sur les bits & 0,94 & 0,89 & 0,76 & 0,45 & 0,53 & 0,70 \\
+réseau de neurones & 1,03 & 0,81 & 0,73 & 0,55 & 0,71 & 0,78 \\
+\midrule
+$C_{L,\max}$, $N=$ & 30 & 80 & 300 & 30 & 80 & 300 \\
+\midrule
+quadratique en $z$ & 1,92 & 1,43 & 0,69 & $-0{,}05$ & 0,43 & 0,76 \\
+machine de factorisation & 1,10 & 1,03 & 0,90 & 0,35 & 0,50 & 0,63 \\
+bayésien sur les bits & 0,93 & 0,80 & 0,70 & 0,43 & 0,65 & 0,75 \\
+réseau de neurones & 0,98 & 0,90 & 0,79 & 0,52 & 0,58 & 0,69 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{5. Le pic « juste déterminé » se déplace avec le nombre de coefficients.} Sur $C_D$, l'erreur du modèle en $z$ culmine à 1,71 pour $N=80$, juste au-dessus de ses 66 coefficients, comme elle culminait à $N=15$ en V2 (15 coefficients). Tant que $N$ n'a pas largement dépassé 66, le modèle en $z$ classe mal la traînée et la contrainte : sa corrélation de rang reste sous 0,45 jusqu'à 80 profils. Les modèles en bits, régularisés (pénalité $L_2$ pour la machine de factorisation, a priori bayésien pour BOCS), n'ont pas ce pic. \textbf{Le rapport s'est inversé} : en V2, la boucle disposait de 5 fois plus de profils que de coefficients du modèle en $z$ ; à l'échelle, elle en a à peine autant.
+
+\paragraph{6. La traînée devient la grandeur difficile.} Même à 300 profils, aucun modèle ne descend sous 0,73 d'erreur relative sur $C_D$, alors que la SER est très bien prédite (0,06 à 0,23). Deux explications plausibles, non vérifiées séparément : la traînée calculée par XFOIL varie fortement près du décollement, et les profils de la base, choisis par les méthodes d'optimisation, sont concentrés dans les régions extrêmes de la grille, où c'est le cas.
+
+\begin{piege}[ : précision moyenne et utilité dans la boucle]
+Le chapitre suivant montrera que le modèle le plus précis en moyenne, le réseau de neurones, est le \emph{moins} bon dans la boucle. La précision moyenne sur toute la grille n'est pas ce qui compte : ce qui compte est de bien classer les profils \emph{près du front}, et de ne pas exclure à tort les profils du front par la contrainte. Une mesure de précision globale ne le dit pas.
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item Le réseau de neurones est le plus précis, même avec 10 à 30 profils.
+\item Les modèles en bits ne rattrapent le modèle en $z$ qu'au-delà de 80 à 120 profils.
+\item Le modèle en $z$ est fragile autour de $N=15$, nombre de ses coefficients.
+\item $C_{L,\max}$ reste mal prédit par tous (erreur relative de 0,5 à 0,6) : la contrainte est la grandeur la plus incertaine.
+\item À l'échelle, le modèle en $z$ a 66 coefficients, et son pic de mauvaise précision arrive vers 80 profils, au milieu du budget : les modèles en bits régularisés prennent l'avantage.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:prec-lecture}
+Un modèle a une erreur relative de 0,35 sur $C_D$, dont l'écart-type sur la grille vaut environ 10 counts. Quelle est son erreur en counts ? Les profils du front de S2 vont de 38 à 59 counts (hors profil aberrant) : cette erreur suffit-elle à les classer correctement ?
+\end{exercice}
+\begin{exercice}\label{ex:prec-rang}
+Pourquoi la corrélation de rang peut-elle être bonne (0,93) alors que l'erreur relative est médiocre (0,35) ? Donner un exemple de modèle qui aurait une corrélation de rang de 1 et une erreur relative de 1.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Mesurer la précision seulement sur les profils proches du front, ou pondérée par la proximité au front, plutôt que sur toute la grille.
+\item Régulariser le modèle en $z$ (ridge choisi par validation croisée au lieu de $\lambda=10^{-6}$), ce qui devrait effacer son pic à $N\approx66$.
+\end{itemize}
+\end{pistes}

@@ -1,0 +1,66 @@
+\chapter{Ce que l'IA peut apporter d'autre}\label{ch:ia-autres}
+\iterbanner{V3}
+
+Ce cours a testé une idée précise : apprendre le QUBO. L'apprentissage automatique peut intervenir ailleurs dans la chaîne, et parfois là où le coût se trouve vraiment, c'est-à-dire dans la simulation. Ce chapitre fait le point, à partir d'une recherche bibliographique faite en novembre 2026. Les références sont à vérifier dans les articles avant d'être citées : plusieurs sont des prépublications récentes.
+
+\section{Remplacer le simulateur aérodynamique}
+\paragraph{L'idée.} Entraîner un réseau de neurones sur des milliers de calculs CFD pour qu'il prédise $C_L$, $C_D$, voire le champ de pression, en quelques millisecondes. L'optimisation se fait ensuite sur le réseau.
+\paragraph{L'état de l'art.} Une revue de 2025 (\emph{Physics of Fluids}) recense les réseaux \og pilotés par les données\fg{} (convolutifs, génératifs) et \og pilotés par la physique\fg{} (PINN, opérateurs neuronaux DeepONet et FNO) utilisés pour l'optimisation de profils et d'aubes. Les opérateurs neuronaux ont été testés comme substituts pour l'optimisation de forme de profils (2023). NeuralFoil (2025) est un outil ouvert, entraîné sur des calculs de type XFOIL, qui donne $C_L$ et $C_D$ quasi instantanément avec une estimation de son incertitude.
+\paragraph{Pour nous.} NeuralFoil pourrait servir de simulateur \emph{basse fidélité} gratuit, XFOIL restant la référence. C'est la piste la plus directe pour réduire le coût, et elle ne demande rien au quantique.
+
+\section{Remplacer le calcul de SER}
+\paragraph{L'état de l'art.} Des réseaux informés par la physique apprennent les courants induits sur la surface d'une cible métallique 3D, puis en déduisent la SER par l'intégrale de rayonnement, dans toutes les directions (U-PINet, 2025). Les auteurs soulignent que les réseaux sans contrainte physique généralisent mal à des géométries nouvelles. Des réseaux à deux branches ciblent les objets diélectriques 3D (IEEE TAP, 2025).
+\paragraph{Pour nous.} C'est pertinent pour le passage au 3D (aile complète), où la méthode des moments devient très coûteuse ; à discuter avec le groupe SER.
+
+\section{Combiner plusieurs fidélités}
+\paragraph{L'idée.} On dispose souvent d'un modèle rapide mais approché et d'un modèle lent mais précis. Un modèle multi-fidélité apprend la correction de l'un vers l'autre, et l'optimisation choisit à chaque pas quel niveau évaluer.
+\paragraph{L'état de l'art.} Le co-krigeage reste la référence quand les calculs haute fidélité sont rares : une étude de Chalmers (RANS contre MISES) et une étude de 2025 sur une aube de redresseur trouvent le co-krigeage meilleur que les réseaux de neurones multi-fidélité avec quelques dizaines de calculs haute fidélité. Les réseaux deviennent intéressants avec plus de données ou des sorties de grande dimension (champs complets).
+\paragraph{Pour nous.} Le projet a déjà une paire naturelle : l'optique physique (rapide) et la méthode des moments (exacte), dont le classement est presque identique (corrélation de rang 0,999). Une boucle multi-fidélité explorerait avec la PO et ne confirmerait que les candidats prometteurs par la MoM. C'est la piste la plus rentable à court terme.
+
+\section{L'optimisation bayésienne en grande dimension}
+\paragraph{L'état de l'art.} Deux méthodes de référence : TuRBO (Eriksson et al., 2019), qui remplace un modèle global par plusieurs modèles locaux dans des régions de confiance qui rétrécissent ou redémarrent ; SAASBO (Eriksson et Jankowiak, UAI 2021), un krigeage avec un a priori qui suppose que peu de variables comptent vraiment, et qui les trouve. BAxUS étend TuRBO en augmentant progressivement la dimension du sous-espace. SAASBO coûte cher (inférence en $N^3$) et se limite à de petits budgets, ce qui est justement notre cas.
+\paragraph{Pour nous.} C'est le concurrent classique naturel du problème mis à l'échelle : la question \og un modèle global quadratique suffit-il en dimension 20 ?\fg{} a déjà une réponse de la littérature, plutôt négative, et des méthodes locales.
+
+\section{La conception générative et les espaces latents}
+\paragraph{L'idée.} Apprendre, sur une base de formes existantes, un espace de petite dimension où chaque point est une forme valide (autoencodeur variationnel, réseau antagoniste génératif, modèle de diffusion), puis optimiser dans cet espace.
+\paragraph{L'état de l'art.} Les modèles de diffusion sont la tendance récente pour générer des profils à caractéristiques imposées (portance, traînée) ; un débat porte sur le fait qu'un espace latent n'est qu'une paramétrisation de plus, qui restreint l'espace de conception. Une base de 200\,000 profils (AFBench) permet de comparer ces approches. Côté QUBO, l'autoencodeur binaire de Wilson et al. (2021) donne directement un espace de bits où les contraintes sont respectées par construction.
+\paragraph{Pour nous.} C'est la seule piste qui attaque le défaut principal identifié par le projet : les pénalités. Elle demande une base de formes faisables pour entraîner l'autoencodeur, que la grille V2 (702 profils faisables) ou le cache du problème CST pourraient fournir.
+
+\section{L'IA pour le quantique lui-même}
+\paragraph{L'état de l'art.} Des réseaux de neurones sur graphes prédisent de bons angles initiaux pour QAOA à partir du graphe du problème (2024) ; d'autres travaux transfèrent les angles d'un problème à un autre et apprennent à prédire quand ce transfert marchera (2025). Le but est de réduire le nombre d'appels au processeur quantique pendant le réglage des angles.
+\paragraph{Pour nous.} Nos QUBO successifs se ressemblent d'une itération à l'autre : transférer les angles de QAOA de l'itération précédente est la version simple de cette idée, déjà notée comme piste dans le cours de calcul quantique. Elle réduirait le coût de QAOA sans changer le constat principal : le solveur n'est pas le goulot.
+
+\section{Ce qui compte, par ordre de priorité pour le projet}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{c>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}p{2.6cm}}
+\toprule
+& Piste & Gain attendu & Effort \\
+\midrule
+1 & multi-fidélité PO / MoM & moins de calculs MoM & faible, données déjà là \\
+2 & simulateur aéro appris (NeuralFoil) en basse fidélité & moins d'appels XFOIL & faible \\
+3 & espace latent binaire pour les contraintes & QUBO sans pénalités, utile au quantique & élevé \\
+4 & optimisation bayésienne locale (TuRBO) à l'échelle & concurrent classique honnête & moyen \\
+5 & SER apprise en 3D & passage à l'aile complète & élevé, avec le groupe SER \\
+6 & angles de QAOA appris ou transférés & coût de QAOA & faible, gain marginal \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{resultat}
+L'apprentissage automatique a le plus d'impact là où se trouve le coût : la \textbf{simulation} (substituts neuronaux, multi-fidélité). Pour la partie quantique, son apport principal serait de \textbf{supprimer les pénalités} en apprenant un espace de conceptions faisables, ce qui attaque directement le défaut mesuré dans ce projet.
+\end{resultat}
+
+\section*{Références de ce chapitre}
+\begin{itemize}\small
+\item Revue \og deep learning-based aerodynamic shape surrogate models and optimization for airfoils and blade profiles\fg{}, \emph{Physics of Fluids} 37(4), 2025.
+\item Deep neural operators as surrogates for shape optimization (airfoils), arXiv~2302.00807.
+\item NeuralFoil : airfoil aerodynamics analysis using physics-informed machine learning, arXiv~2503.16323.
+\item U-PINet : physics-informed hierarchical learning for 3D RCS prediction, arXiv~2508.03774.
+\item Co-kriging contre réseaux multi-fidélité : arXiv~2505.17279 ; étude Chalmers (RANS/MISES), research.chalmers.se, publication 552682.
+\item TuRBO (Eriksson et al., NeurIPS 2019) ; SAASBO (Eriksson et Jankowiak, UAI 2021, arXiv~2103.00349).
+\item Diffusion pour profils : arXiv~2408.15898 ; AFBench, arXiv~2406.18846.
+\item Wilson et al., \emph{Applied Physics Reviews} 8 (2021), arXiv~2105.02396 ; autoencodeurs binaires et FMQA, arXiv~2602.10037.
+\item Angles de QAOA par réseaux sur graphes : arXiv~2403.03310 ; transfert d'angles : arXiv~2504.10733.
+\end{itemize}

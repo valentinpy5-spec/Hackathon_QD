@@ -1,0 +1,38 @@
+% figure générée par tools/make_figures.py
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=3 by 2,horizontal sep=1.15cm,vertical sep=2.3cm},width=0.33\linewidth,height=4.6cm,
+  xmode=log,xlabel={profils d'entraînement $N$},tick label style={font=\scriptsize},label style={font=\scriptsize},
+  title style={font=\small},legend style={font=\scriptsize,draw=none,at={(-0.75,-0.45)},anchor=north,legend columns=4}]
+\nextgroupplot[title={traînée $C_D$},ylabel={erreur relative},ymin=0,ymax=1.2]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(10,1.6496) (15,1.5445) (20,1.2272) (30,1.2371) (50,1.5387) (80,1.7084) (120,0.96605) (200,0.79414) (300,0.72964) (500,0.67401)};
+\addplot[corange,very thick,mark=square*,mark size=1.2pt] coordinates {(10,1.0399) (15,1.038) (20,1.0528) (30,1.0062) (50,1.0604) (80,1.0624) (120,1.0861) (200,1.0678) (300,0.93575) (500,0.7612)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.2pt] coordinates {(10,1.0051) (15,0.99211) (20,0.97575) (30,0.93924) (50,0.89685) (80,0.88863) (120,0.82813) (200,0.78753) (300,0.76202) (500,0.73489)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.2pt] coordinates {(10,1.3268) (15,1.1865) (20,0.99513) (30,1.0322) (50,0.88074) (80,0.81249) (120,0.78326) (200,0.80308) (300,0.72709) (500,0.62105)};
+\nextgroupplot[title={SER},ylabel={erreur relative},ymin=0,ymax=1.2]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(10,1.2119) (15,1.0276) (20,0.91884) (30,0.73046) (50,0.56012) (80,0.17266) (120,0.12144) (200,0.089704) (300,0.085095) (500,0.078537)};
+\addplot[corange,very thick,mark=square*,mark size=1.2pt] coordinates {(10,0.89888) (15,0.80702) (20,0.75167) (30,0.66848) (50,0.52418) (80,0.41089) (120,0.29845) (200,0.20303) (300,0.15222) (500,0.11385)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.2pt] coordinates {(10,0.88319) (15,0.79761) (20,0.71858) (30,0.58009) (50,0.38934) (80,0.31607) (120,0.27835) (200,0.25215) (300,0.23134) (500,0.1869)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.2pt] coordinates {(10,0.64754) (15,0.39075) (20,0.27033) (30,0.21768) (50,0.11191) (80,0.084752) (120,0.077736) (200,0.065246) (300,0.060054) (500,0.054701)};
+\nextgroupplot[title={$C_{L,\max}$},ylabel={erreur relative},ymin=0,ymax=1.2]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(10,2.147) (15,2.03) (20,1.9631) (30,1.9226) (50,2.0626) (80,1.4347) (120,0.97656) (200,0.75518) (300,0.6944) (500,0.65612)};
+\addplot[corange,very thick,mark=square*,mark size=1.2pt] coordinates {(10,1.0214) (15,1.1017) (20,0.95844) (30,1.1037) (50,1.069) (80,1.0301) (120,1.1879) (200,1.0485) (300,0.8969) (500,0.71712)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.2pt] coordinates {(10,0.99577) (15,1.0169) (20,0.92292) (30,0.92755) (50,0.85232) (80,0.80111) (120,0.77597) (200,0.73498) (300,0.70434) (500,0.68611)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.2pt] coordinates {(10,1.2654) (15,1.2877) (20,1.0455) (30,0.98396) (50,0.95736) (80,0.9036) (120,0.894) (200,0.90686) (300,0.78768) (500,0.73796)};
+\nextgroupplot[title={traînée $C_D$},ylabel={corrélation de rang},ymin=0,ymax=1]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(10,0.19589) (15,0.26361) (20,0.3362) (30,0.37082) (50,0.33741) (80,0.37069) (120,0.64616) (200,0.73611) (300,0.76313) (500,0.80966)};
+\addplot[corange,very thick,mark=square*,mark size=1.2pt] coordinates {(10,0.24038) (15,0.32291) (20,0.35623) (30,0.41448) (50,0.40841) (80,0.46494) (120,0.48334) (200,0.52989) (300,0.62815) (500,0.73671)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.2pt] coordinates {(10,0.24993) (15,0.31283) (20,0.36353) (30,0.45019) (50,0.51747) (80,0.53354) (120,0.6296) (200,0.67017) (300,0.70113) (500,0.73329)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.2pt] coordinates {(10,0.20575) (15,0.46828) (20,0.54958) (30,0.54888) (50,0.63792) (80,0.70763) (120,0.73864) (200,0.71668) (300,0.77647) (500,0.84335)};
+\nextgroupplot[title={SER},ylabel={corrélation de rang},ymin=0,ymax=1]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(10,0.61693) (15,0.63385) (20,0.73689) (30,0.78636) (50,0.88133) (80,0.98659) (120,0.99282) (200,0.99581) (300,0.99656) (500,0.99716)};
+\addplot[corange,very thick,mark=square*,mark size=1.2pt] coordinates {(10,0.49401) (15,0.63244) (20,0.695) (30,0.79269) (50,0.88964) (80,0.93776) (120,0.96102) (200,0.97949) (300,0.98849) (500,0.99357)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.2pt] coordinates {(10,0.5869) (15,0.657) (20,0.75183) (30,0.84541) (50,0.93159) (80,0.95654) (120,0.95968) (200,0.96802) (300,0.97362) (500,0.98164)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.2pt] coordinates {(10,0.7724) (15,0.91659) (20,0.97142) (30,0.98021) (50,0.99422) (80,0.99655) (120,0.99699) (200,0.99783) (300,0.99831) (500,0.99853)};
+\nextgroupplot[title={$C_{L,\max}$},ylabel={corrélation de rang},ymin=0,ymax=1]
+\addplot[cblue,very thick,mark=*,mark size=1.2pt] coordinates {(10,-0.20489) (15,-0.20562) (20,-0.10526) (30,-0.050621) (50,0.18674) (80,0.43273) (120,0.59003) (200,0.70027) (300,0.75991) (500,0.7846)};
+\addplot[corange,very thick,mark=square*,mark size=1.2pt] coordinates {(10,0.27866) (15,0.25074) (20,0.38232) (30,0.34959) (50,0.47324) (80,0.49835) (120,0.41627) (200,0.55481) (300,0.629) (500,0.73841)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.2pt] coordinates {(10,0.28108) (15,0.31317) (20,0.41874) (30,0.43034) (50,0.57438) (80,0.64976) (120,0.67772) (200,0.71466) (300,0.74959) (500,0.7661)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.2pt] coordinates {(10,0.3568) (15,0.40905) (20,0.45653) (30,0.51508) (50,0.55018) (80,0.57532) (120,0.5778) (200,0.60261) (300,0.69381) (500,0.7457)};
+\legend{quadratique en $z$, machine de factorisation, bayésien sur les bits, réseau de neurones}
+\end{groupplot}
+\end{tikzpicture}

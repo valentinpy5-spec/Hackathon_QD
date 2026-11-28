@@ -1,0 +1,17 @@
+% figure générée par tools/make_figures.py
+\begin{tikzpicture}
+\begin{axis}[width=0.95\linewidth,height=6.2cm,xlabel={profils simulés},ylabel={part du front exact retrouvée (médiane)},
+  xmin=10,xmax=250,ymin=0,ymax=1.02,tick label style={font=\scriptsize},label style={font=\small},
+  legend style={font=\scriptsize,draw=none,at={(0.5,-0.22)},anchor=north,legend columns=2},legend cell align=left]
+\addplot[cblue,very thick,mark=*,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0.1) (40,0.1) (50,0.3) (60,0.4) (70,0.55) (80,0.7) (90,0.75) (100,0.85) (110,0.85) (120,0.9) (130,0.9) (140,0.95) (150,1) (160,1) (170,1) (180,1) (190,1) (200,1) (210,1) (220,1) (230,1) (240,1) (250,1)};
+\addplot[corange,very thick,mark=square*,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0.1) (40,0.2) (50,0.3) (60,0.4) (70,0.5) (80,0.6) (90,0.7) (100,0.8) (110,0.8) (120,0.85) (130,0.9) (140,0.9) (150,0.95) (160,1) (170,1) (180,1) (190,1) (200,1) (210,1) (220,1) (230,1) (240,1) (250,1)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0.1) (40,0.1) (50,0.2) (60,0.2) (70,0.3) (80,0.4) (90,0.5) (100,0.55) (110,0.6) (120,0.7) (130,0.75) (140,0.8) (150,0.85) (160,0.9) (170,0.9) (180,0.9) (190,1) (200,1) (210,1) (220,1) (230,1) (240,1) (250,1)};
+\addplot[cviolet,very thick,mark=diamond*,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0.1) (40,0.3) (50,0.4) (60,0.5) (70,0.7) (80,0.85) (90,0.9) (100,0.9) (110,0.9) (120,0.9) (130,0.9) (140,0.9) (150,0.9) (160,0.9) (170,0.9) (180,0.9) (190,0.9) (200,0.9) (210,0.9) (220,0.9) (230,0.9) (240,0.9) (250,0.9)};
+\addplot[cblue,very thick,mark=*,dashed,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0) (40,0) (50,0) (60,0) (70,0) (80,0) (90,0) (100,0) (110,0) (120,0.05) (130,0.05) (140,0.05) (150,0.05) (160,0.05) (170,0.15) (180,0.2) (190,0.25) (200,0.35) (210,0.4) (220,0.4) (230,0.4) (240,0.4) (250,0.4)};
+\addplot[corange,very thick,mark=square*,dashed,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0) (40,0.05) (50,0.1) (60,0.1) (70,0.1) (80,0.1) (90,0.1) (100,0.1) (110,0.15) (120,0.2) (130,0.2) (140,0.2) (150,0.2) (160,0.25) (170,0.25) (180,0.25) (190,0.25) (200,0.3) (210,0.3) (220,0.3) (230,0.3) (240,0.3) (250,0.35)};
+\addplot[cgreen,very thick,mark=triangle*,dashed,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0) (40,0) (50,0) (60,0.05) (70,0.05) (80,0.05) (90,0.1) (100,0.15) (110,0.2) (120,0.2) (130,0.2) (140,0.3) (150,0.3) (160,0.35) (170,0.4) (180,0.4) (190,0.5) (200,0.55) (210,0.6) (220,0.6) (230,0.6) (240,0.6) (250,0.6)};
+\addplot[cviolet,very thick,mark=diamond*,dashed,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0) (40,0) (50,0) (60,0) (70,0.05) (80,0.1) (90,0.15) (100,0.2) (110,0.25) (120,0.3) (130,0.3) (140,0.35) (150,0.35) (160,0.35) (170,0.35) (180,0.4) (190,0.4) (200,0.4) (210,0.4) (220,0.4) (230,0.4) (240,0.4) (250,0.4)};
+\addplot[cteal,very thick,mark=pentagon*,mark size=1pt,mark repeat=3] coordinates {(10,0) (20,0) (30,0.1) (40,0.25) (50,0.4) (60,0.7) (70,0.85) (80,0.9) (90,1) (100,1) (110,1) (120,1) (130,1) (140,1) (150,1) (160,1) (170,1) (180,1) (190,1) (200,1) (210,1) (220,1) (230,1) (240,1) (250,1)};
+\legend{{quadratique en $z$ (actuel)}, {machine de factorisation}, {bayésien sur les bits}, {réseau de neurones}, {quadratique en $z$, boîte noire}, {factorisation, boîte noire}, {bayésien, boîte noire}, {réseau, boîte noire}, {hybride (réseau + contrainte affine)}}
+\end{axis}
+\end{tikzpicture}
