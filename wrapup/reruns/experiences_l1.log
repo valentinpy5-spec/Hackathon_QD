@@ -1,0 +1,18 @@
+S1 : front exact 4 profils parmi 702 faisables, 20 graines
+   loop_exact  front complet [60.0, 75.0, 96.25], HV99 [55.0, 62.5, 76.25], succès 100 %, arrêt réaliste : [43.75, 52.5, 60.0] sim., front [0.4375, 0.5, 0.75], HV [0.9369942111472, 0.9428848410286603, 0.9995737699575296] ; 4 s par graine
+   quad_mean   front complet [70.0, 75.0, 111.25], HV99 [53.75, 65.0, 70.0], succès 100 %, arrêt réaliste : [45.0, 65.0, 71.25] sim., front [0.5, 0.5, 0.8125], HV [0.9370372776753544, 0.9370372776753544, 0.9996803274681472] ; 1 s par graine
+   gp_mean     front complet [75.0, 87.5, 105.0], HV99 [65.0, 72.5, 81.25], succès 100 %, arrêt réaliste : [45.0, 50.0, 60.0] sim., front [0.4375, 0.5, 0.5], HV [0.9370372776753544, 0.9370372776753544, 0.9507895284608338] ; 27 s par graine
+   quad_ei     front complet [80.0, 85.0, 105.0], HV99 [60.0, 72.5, 80.0], succès 100 %, arrêt réaliste : [38.75, 57.5, 66.25] sim., front [0.25, 0.5, 0.75], HV [0.9356948366876763, 0.9370372776753544, 0.960229504372642] ; 0 s par graine
+   gp_ei       front complet [110.0, 125.0, 136.25], HV99 [82.5, 100.0, 111.25], succès 100 %, arrêt réaliste : [40.0, 55.0, 65.0] sim., front [0.1875, 0.5, 0.5], HV [0.9313461598377226, 0.9370372776753544, 0.9370372776753544] ; 39 s par graine
+S2 : front exact 10 profils parmi 702 faisables, 20 graines
+   loop_exact  front complet [116.25, 142.5, 191.25], HV99 [63.75, 75.0, 85.0], succès 100 %, arrêt réaliste : [43.75, 67.5, 91.25] sim., front [0.1, 0.55, 0.8250000000000001], HV [0.89299795478196, 0.962485191668787, 0.9993715774656] ; 8 s par graine
+   quad_mean   front complet [85.0, 95.0, 110.0], HV99 [68.75, 75.0, 81.25], succès 100 %, arrêt réaliste : [90.0, 100.0, 110.0] sim., front [0.9, 1.0, 1.0], HV [0.9998072236606729, 1.0, 1.0] ; 1 s par graine
+   gp_mean     front complet [88.75, 110.0, 121.25], HV99 [65.0, 85.0, 112.5], succès 100 %, arrêt réaliste : [75.0, 95.0, 106.25] sim., front [0.6, 0.9, 1.0], HV [0.9832477537582158, 0.9941234675121509, 1.0] ; 46 s par graine
+   quad_ei     front complet [108.75, 117.5, 145.0], HV99 [73.75, 85.0, 95.0], succès 100 %, arrêt réaliste : [60.0, 70.0, 111.25] sim., front [0.3, 0.55, 0.8250000000000001], HV [0.9508428651571936, 0.9684681837408204, 0.9997027992767179] ; 1 s par graine
+   gp_ei       front complet [110.0, 127.5, 140.0], HV99 [108.75, 110.0, 135.0], succès 100 %, arrêt réaliste : [78.75, 100.0, 121.25] sim., front [0.6499999999999999, 0.9, 0.925], HV [0.9832995454130902, 0.9868032490802466, 0.999895575616045] ; 53 s par graine
+durée totale 517 s sur 10 processus
+-> resultats/pipeline_L1_V3.json (dans une copie isolée de Code/, pas dans le repo)
+
+real	8m39.856s
+user	0m0.000s
+sys	0m0.000s

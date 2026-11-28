@@ -1,0 +1,34 @@
+
+=== V1 : méthode des panneaux ===
+profil alpha  n_pan   CL(Cp)   CL(KJ)      CD_p   CM_c/4
+  0012   5.0     50   0.6013   0.6093  1.15e-03  -0.0059
+  0012   5.0    100   0.6021   0.6064  4.07e-04  -0.0063
+  0012   5.0    200   0.6026   0.6048  1.66e-04  -0.0065
+  0012   5.0    400   0.6028   0.6039  7.45e-05  -0.0067
+  2412   0.0     50   0.2448   0.2578  7.28e-04  -0.0515
+  2412   0.0    100   0.2527   0.2593  2.60e-04  -0.0536
+  2412   0.0    200   0.2564   0.2596  1.05e-04  -0.0546
+  2412   0.0    400   0.2580   0.2597  4.64e-05  -0.0550
+  4412   4.0     50   0.9685   1.0008 -1.97e-03  -0.1083
+  4412   4.0    100   0.9852   1.0017 -1.07e-03  -0.1128
+  4412   4.0    200   0.9928   1.0011 -5.54e-04  -0.1150
+  4412   4.0    400   0.9964   1.0006 -2.81e-04  -0.1160
+pente dCL/dalpha NACA 0012 = 6.900 /rad  (profil mince : 6.283, l'épaisseur l'augmente d'environ 0.77 t)
+
+=== V2/V3 : plaque plane (Ue = 1) ===
+Thwaites / Blasius : écart max sur theta = 1.02 %  (attendu ~1 %, 0.671 contre 0.664)
+H laminaire = 2.610  (Blasius 2.59)
+Head / loi 1/7 : écart max sur theta (x > 0.3) = 4.9 %  (H final 1.343)
+
+=== V4 : sensibilité aux paramètres numériques (NACA 2412, alpha 2, Re 3e6) ===
+n_half=  60  CL=0.4950  CD=0.00690  xtr_up=0.279
+n_half= 100  CL=0.4975  CD=0.00692  xtr_up=0.279
+n_half= 150  CL=0.4987  CD=0.00692  xtr_up=0.280
+n_half= 200  CL=0.4993  CD=0.00692  xtr_up=0.280
+x_stop=0.970  CD=0.00682
+x_stop=0.980  CD=0.00688
+x_stop=0.985  CD=0.00692
+x_stop=0.990  CD=0.00698
+
+=== V5 : comparaison XFOIL ===
+xfoil absent du PATH : installer XFOIL (paquet `xfoil`) puis relancer.
