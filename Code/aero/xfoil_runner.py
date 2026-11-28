@@ -45,6 +45,9 @@ def xfoil_env():
     locale), pour qu'aucune fenêtre d'XFOIL ne s'affiche ; l'écran réel si XFOIL_FENETRES=1, ou si Xvfb
     est introuvable."""
     env = dict(os.environ)
+    # V3 : sous Windows, xfoil.exe (build Win32) n'utilise pas X11 : aucun écran à fournir.
+    if os.name == "nt":
+        return env
     xvfb = shutil.which("Xvfb") or (LOCAL_XVFB if os.path.exists(LOCAL_XVFB) else None)
     if env.get("DISPLAY") and (env.get("XFOIL_FENETRES") == "1" or xvfb is None):
         return env
