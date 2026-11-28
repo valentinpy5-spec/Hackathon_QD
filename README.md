@@ -71,3 +71,4 @@ Détails dans [`Code/README.md`](Code/README.md).
 
 Lire [`METHODE_DE_TRAVAIL.md`](METHODE_DE_TRAVAIL.md) : une branche par lot de travail,
 commits préfixés par l'itération (`[V3] ...`), fusion par demande de fusion relue.
+
