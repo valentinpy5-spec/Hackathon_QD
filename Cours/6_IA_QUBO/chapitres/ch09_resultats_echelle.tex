@@ -1,1 +1,169 @@
-\chapter{(à venir)}\label{ch:resultats-echelle}
+\chapter{Résultats sur le problème mis à l'échelle}\label{ch:resultats-echelle}
+\iterbanner{V3}
+
+\section{Le protocole, et pourquoi il y a deux campagnes}
+Sept méthodes (chapitre~\ref{ch:echelle}), 8 graines chacune, un budget de 300 simulations, la même mesure : l'hypervolume des profils faisables simulés, rapporté à celui du front de référence de la campagne. Les deux méthodes à modèle libre sont présentes pour une raison différente : \code{hybride\_modele} est un \emph{témoin} non quantique (chapitre~\ref{ch:resultats-v2}), et \code{fm\_bn} teste la contrainte en boîte noire.
+
+On a fait \textbf{deux campagnes}. La première a révélé un défaut du protocole, qui changeait le sens des résultats ; la seconde le corrige. Les deux sont gardées, parce que le défaut est lui-même une leçon sur les contraintes, et qu'il se reproduirait sur un vrai problème.
+
+\begin{center}
+\small
+\begin{tabular}{lcc}
+\toprule
+& première campagne & seconde campagne \\
+\midrule
+filtre géométrique avant simulation & non & oui \\
+traînée $>200$ counts & faisable & échec d'XFOIL \\
+profils distincts simulés & 16\,242 & 16\,244 \\
+durée (11 processus) & 102 min & 113 min \\
+résultats & \code{ia\_qubo\_echelle\_sansfiltre.json} & \code{ia\_qubo\_echelle.json} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Première campagne : un résultat trop beau}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lccc}
+\toprule
+Méthode & HV à 300 (médiane) & meilleure que \code{quadz} & $p$ (Wilcoxon) \\
+\midrule
+hasard & 0,852 & 0 / 8 & 0,008 \\
+NSGA-II & 0,871 & 1 / 8 & 0,023 \\
+\textbf{quadratique en $z$ (actuel)} & \textbf{0,918} & --- & --- \\
+machine de factorisation & 0,971 & 8 / 8 & 0,008 \\
+factorisation, boîte noire & 0,841 & 0 / 8 & 0,008 \\
+bayésien sur les bits & 0,967 & 8 / 8 & 0,008 \\
+hybride (témoin) & 0,940 & 5 / 8 & 0,38 \\
+\bottomrule
+\end{tabular}
+\end{center}
+La machine de factorisation et le modèle bayésien battent l'approche actuelle sur les 8 graines : c'est le résultat le plus net possible avec 8 graines (exercice~\ref{ex:ech-wilcoxon}). Le classement de la V2 semble inversé. Avant de l'écrire, on a regardé \emph{pourquoi} les méthodes à modèle ne proposaient que 9 à 39~\% de profils faisables, contre 70~\% pour le hasard :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Profils proposés & géométrie invalide & trop mince & échec XFOIL & $C_{L,\max}<1{,}2$ & faisable \\
+\midrule
+hasard & 4~\% & 6~\% & 5~\% & 15~\% & 70~\% \\
+quadratique en $z$ & \textbf{59~\%} & 14~\% & 6~\% & 7~\% & 14~\% \\
+machine de factorisation & 27~\% & 22~\% & 9~\% & 16~\% & 26~\% \\
+bayésien sur les bits & 9~\% & 18~\% & 23~\% & 11~\% & 39~\% \\
+hybride (témoin) & \textbf{54~\%} & 14~\% & 13~\% & 9~\% & 9~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+L'approche actuelle dépensait \textbf{59~\% de son budget} sur des profils dont l'intrados traverse l'extrados, et 14~\% sur des profils trop minces : des profils qu'aucun solveur n'aurait dû recevoir. Il ne lui restait que 36 profils faisables par graine, \emph{moins que ses 66 coefficients}.
+
+\paragraph{La cause.} En V2, la contrainte d'épaisseur était codée dans le QUBO (pénalité de Rosenberg sur l'indice $t=0$). Dans le problème CST, seule $C_{L,\max}$ l'est : l'épaisseur minimale et la validité géométrique ne sont pas modélisées. Or les deux objectifs poussent dans le même sens : un profil plus mince a moins de traînée \emph{et} un nez plus fin, donc moins de SER. Les modèles, ajustés sur les seuls profils faisables, ne voient jamais la frontière ; ils extrapolent vers les profils minces, jusqu'aux coins du domaine où les faces se croisent. Le modèle en $z$, une parabole sans régularisation, extrapole le plus violemment ; la machine de factorisation et le modèle bayésien, régularisés, moins. La première campagne mesurait donc surtout \emph{quel modèle sort le moins du domaine faisable quand une contrainte n'est pas modélisée}.
+
+\begin{piege}[ : une contrainte oubliée est un objectif détourné]
+Quand une contrainte n'est pas dans le modèle, l'optimiseur ne la contourne pas : il fonce dessus, dès que les objectifs poussent vers elle. C'est le cas ici (mince $=$ bon pour les deux objectifs), et c'est le cas général en conception : la meilleure aile sans contrainte de structure est infiniment fine. Toute contrainte connue doit être modélisée ou filtrée, et une proportion anormale d'infaisables dans une campagne est le premier signe à chercher.
+\end{piege}
+
+\section{La correction : filtrer ce qui est gratuit}
+Les deux contraintes oubliées ont une propriété précieuse : elles sont \textbf{géométriques}, donc connues sans aucune simulation. Contrôler un profil prend 48 microsecondes. On les traite donc comme on le ferait sur un vrai problème : on vérifie la géométrie \emph{avant} d'appeler le solveur.
+\begin{codebox}[ : \code{ia\_qubo/probleme\_cst.py}, le contrôle géométrique]
+\begin{lstlisting}
+def admissible(idx):
+    """Faces sans croisement et epaisseur >= 8 %, sans aucun solveur."""
+    ok, tmax = geometrie(idx)
+    return ok and tmax >= T_MIN
+
+# dans ProblemeSimule.__call__ : un profil non admissible n'est ni simule, ni compte
+if FILTRE and idx not in self.table and not admissible(idx):
+    return dict(..., feasible=False, cv=...)      # n'entre pas dans self.seen
+\end{lstlisting}
+\end{codebox}
+\begin{codebox}[ : \code{ia\_qubo/boucle.py}, le filtre sur les échantillons du recuit]
+\begin{lstlisting}
+for idx in ranked:                      # les 128 lectures du recuit, de la meilleure a la pire
+    if filtre is not None and not filtre(idx):
+        continue                        # geometrie invalide : lecture suivante
+    if idx not in problem._set and idx not in new:
+        new.append(idx)
+        break
+\end{lstlisting}
+\end{codebox}
+Trois remarques :
+\begin{itemize}
+\item \textbf{La règle vaut pour toutes les méthodes.} Le hasard tire parmi les profils admissibles, NSGA-II reçoit une violation de contrainte pour un enfant non admissible sans que son budget soit débité.
+\item \textbf{Le QUBO n'est pas modifié.} On garde la meilleure des 128 lectures qui passe le contrôle. C'est un post-traitement classique des échantillons d'un recuit, simulé ou quantique : une machine quantique rend elle aussi une liste d'échantillons, que l'on peut trier et filtrer en classique.
+\item \textbf{On aurait pu modéliser l'épaisseur dans le QUBO} : $t_{\max}$ est presque affine en coefficients CST, et une contrainte affine se code comme celle sur $C_{L,\max}$ (chapitre~\ref{ch:contraintes}). Cela coûte 3 qubits d'écart de plus et ne règle pas le croisement des faces, qui est une contrainte en chaque point de la corde. Le filtre est plus simple et exact.
+\end{itemize}
+On a aussi déclaré invalides les traînées de plus de 200 counts (85 profils de la première campagne, jusqu'à 967 counts à $C_L=0{,}4$) : ce sont des artefacts d'XFOIL près du décollement, qui écrasaient la normalisation de l'hypervolume.
+
+\section{Seconde campagne : les résultats}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
+\toprule
+& \multicolumn{2}{c}{hypervolume / référence (médiane)} & & \multicolumn{2}{c}{comparaison à \code{quadz}, à 300} \\
+Méthode & à 100 & à 300 (quartiles) & faisables & meilleure & $p$ \\
+\midrule
+hasard & 0,682 & 0,771 (0,75 -- 0,79) & 77~\% & 1 / 8 & 0,016 \\
+NSGA-II & 0,717 & 0,812 (0,77 -- 0,83) & 74~\% & 2 / 8 & 0,039 \\
+\textbf{en $z$ (actuel)} & 0,767 & 0,882 (0,86 -- 0,90) & 42~\% & --- & --- \\
+factorisation & \textbf{0,832} & 0,895 (0,89 -- 0,93) & 46~\% & 6 / 8 & 0,38 \\
+fact., boîte noire & 0,776 & 0,825 (0,81 -- 0,83) & 83~\% & 1 / 8 & 0,016 \\
+bayésien (bits) & 0,829 & 0,897 (0,87 -- 0,94) & 43~\% & 4 / 8 & 0,55 \\
+hybride (témoin) & 0,812 & \textbf{0,913} (0,89 -- 0,92) & 38~\% & 5 / 8 & 0,11 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/echelle_hv}
+\caption{Seconde campagne : hypervolume des profils faisables simulés, rapporté à celui du front de référence, en fonction du nombre de simulations (médiane sur 8 graines). En tirets, la contrainte en boîte noire.}\label{fig:echelle-hv}
+\end{figure}
+
+\paragraph{1. La boucle QUBO bat nettement les méthodes classiques sans modèle.} Avec n'importe lequel des trois modèles quadratiques, la boucle dépasse le hasard et NSGA-II à tous les budgets. À 100 simulations, l'approche actuelle bat NSGA-II sur les 8 graines ($p=0{,}008$) ; à 300, l'écart reste significatif (0,882 contre 0,812, $p=0{,}039$). C'est la première fois dans le projet que la boucle est testée sur un problème qu'on ne peut pas énumérer, et l'avantage observé en V2 sur NSGA-II tient.
+
+\paragraph{2. Entre les trois QUBO, pas de différence démontrée.} Une fois la géométrie filtrée, l'avantage spectaculaire de la première campagne disparaît : la machine de factorisation fait mieux sur 6 graines sur 8, le modèle bayésien sur 4, aucun écart n'est significatif. La machine de factorisation garde une avance régulière en début de budget (0,832 contre 0,767 à 100 simulations, 6 graines sur 8 à 60, 100 et 150), cohérente avec le pic de mauvaise précision du modèle en $z$ vers 66 profils (chapitre~\ref{ch:precision}). Pour la confirmer, il faudrait environ 20 graines (exercice~\ref{ex:ech-wilcoxon}).
+
+\paragraph{3. Le témoin non quantique ne fait pas significativement mieux.} L'hybride a la meilleure médiane à 300 (0,913), mais il ne bat l'approche actuelle que sur 5 graines sur 8 ($p=0{,}11$). À cette échelle, \textbf{rien ne montre que la forme quadratique coûte} : un modèle quadratique, donc compatible avec une machine quantique, fait jeu égal avec un modèle libre. C'est une bonne nouvelle pour le projet, et une différence avec le scénario S2 de la V2, où le témoin gagnait nettement.
+
+\paragraph{4. La contrainte en boîte noire reste perdante.} \code{fm\_bn} propose 83~\% de profils faisables, mais elle reste sous l'approche actuelle (1 graine sur 8, $p=0{,}016$), comme en V2. Ne pas modéliser la contrainte rend la méthode prudente : elle reste loin de la frontière, là où le front n'est pas.
+
+\paragraph{5. Les méthodes à modèle vivent au bord du domaine faisable.} Même avec le filtre, elles ne proposent que 38 à 46~\% de profils faisables, contre 74 à 77~\% pour le hasard et NSGA-II. Ce n'est pas un défaut : le front est au bord des contraintes, et une méthode qui le cherche y propose forcément des profils de part et d'autre. Les infaisables restants sont des échecs d'XFOIL (25 à 39~\%) et des $C_{L,\max}$ trop faibles (16 à 29~\%) : les deux grandeurs que l'on sait le moins bien prédire.
+
+\paragraph{6. Le modèle bayésien explore les extrémités du front.} Sur les 10 profils du front de référence, le modèle bayésien en a trouvé 7 (en cumulant ses 8 graines), les autres méthodes 0 ou 1. Le tirage de Thompson (chapitre~\ref{ch:bocs}) va chercher des régions que le modèle moyen jugerait médiocres ; il trouve ainsi des profils du front que les autres méthodes manquent, sans que cela se voie beaucoup dans l'hypervolume médian.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/echelle_front}
+\caption{Front de référence de la seconde campagne : les 10 profils non dominés parmi les 9\,234 profils faisables simulés par toutes les méthodes.}\label{fig:echelle-front}
+\end{figure}
+
+\section{Le temps de calcul}
+Par graine, le hasard prend environ 1 minute (presque uniquement des simulations, beaucoup déjà dans le cache) ; les boucles à QUBO 28 à 35 minutes, l'hybride 37. L'écart vient de l'apprentissage des modèles et du recuit : 5 QUBO de 33 qubits par itération, 128 lectures de 200 balayages chacun. Avec XFOIL à environ une seconde par profil, ce surcoût n'est pas négligeable ; avec une vraie simulation CFD de plusieurs heures, il le devient complètement. C'est la situation que visent FMQA et BOCS, et celle d'un vrai problème industriel.
+
+\begin{resultat}
+\begin{itemize}
+\item Sur un problème de 30 bits qu'on ne peut pas énumérer, la boucle QUBO, avec n'importe lequel des trois modèles quadratiques, bat nettement le hasard et NSGA-II.
+\item Entre le modèle actuel, la machine de factorisation et le modèle bayésien, aucune différence n'est démontrée avec 8 graines ; la machine de factorisation est en avance en début de budget.
+\item Le témoin non quantique ne fait pas significativement mieux : à cette échelle, la forme quadratique ne coûte rien de mesurable.
+\item Une contrainte non modélisée détourne l'optimisation : sans filtre géométrique, l'approche actuelle perdait 73~\% de son budget en profils invalides, et la comparaison des modèles mesurait autre chose que leur qualité.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:ech-wilcoxon}
+Avec 8 graines, le test de Wilcoxon bilatéral donne au mieux $p=0{,}0078$. (a) Montrer que cette valeur vaut $2/2^8$ : quelle configuration des signes la donne ? (b) La machine de factorisation fait mieux que le modèle en $z$ sur 6 graines sur 8. Avec un test des signes (on ne regarde que le nombre de graines gagnées), quelle est la valeur de $p$ ? (c) Si la proportion de 75~\% de graines gagnées se maintenait, combien de graines faudrait-il, environ, pour qu'elle devienne significative à 5~\% ? (Essayer 20.)
+\end{exercice}
+\begin{exercice}\label{ex:ech-budget}
+Dans la première campagne, l'approche actuelle a proposé, par graine, 59~\% de géométries invalides et 14~\% de profils trop minces. (a) Combien de simulations, sur 300, restaient pour des profils admissibles ? (b) Elle a fini avec 36 profils faisables par graine. Comparer à ses 66 coefficients par grandeur, et dire dans quel régime de précision du chapitre~\ref{ch:precision} elle se trouvait. (c) Pourquoi un modèle régularisé souffre-t-il moins de ce manque de données ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Passer à 20 graines pour trancher entre la machine de factorisation et le modèle en $z$ en début de budget.
+\item Régulariser le modèle en $z$ (ridge par validation croisée) : s'il rattrape la machine de factorisation, l'écart venait seulement de la régularisation.
+\item Modéliser les échecs d'XFOIL (classifieur de convergence) : c'est maintenant la première cause d'infaisabilité des méthodes à modèle.
+\item Distiller l'hybride en machine de factorisation, pour récupérer en QUBO ce qu'il a de mieux.
+\end{itemize}
+\end{pistes}

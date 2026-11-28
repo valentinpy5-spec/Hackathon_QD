@@ -4,7 +4,8 @@ Même structure que la boucle QUBO de la V2 (optim/qubo_loop.py) : 10 profils in
 un profil par poids et par itération, jamais deux fois le même. On choisit séparément :
 
     modele      "quadz" (approche actuelle), "fm" (machine de factorisation, FMQA),
-                "bocs" (quadratique bayésien sur les bits, tirage de Thompson), "mlp" (réseau de neurones)
+                "bocs" (quadratique bayésien sur les bits, tirage de Thompson), "mlp" (réseau de neurones),
+                "hybride" (réseaux de neurones pour C_D et la SER, modèle affine en z pour C_L,max)
     contrainte  "modele" : C_L,max modélisé (affine en z) et pénalisé avec variables d'écart, comme en V2
                 "boite_noire" : aucun modèle de contrainte ; les profils infaisables entrent dans les
                 données avec une valeur dégradée (pratique de FMQA), le modèle apprend seul à les éviter
@@ -98,7 +99,7 @@ def fabrique(modele, spec, seed):
         return FactorizationMachine(n, k=spec.get("fm_k", 4), seed=seed)
     if modele == "bocs":
         return BayesQuadBits(n, seed=seed)
-    if modele == "mlp":
+    if modele in ("mlp", "hybride"):
         return MLPEnsemble(spec["bits"], spec["levels"], epochs=spec.get("mlp_epochs", 1500),
                            n_models=spec.get("mlp_models", 5), seed=seed)
     raise ValueError(modele)
@@ -148,6 +149,7 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
     bits, levels, keys = spec["bits"], spec["levels"], spec["keys"]
     nd = sum(bits)
     tv = spec.get("t_var")
+    direct = modele in ("mlp", "hybride")     # modèle non quadratique : recherche directe, pas de QUBO
     if spec.get("init") is not None:
         init = spec["init"](rng, n_init)
     else:
@@ -183,14 +185,20 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
                 m_ser = fabrique(modele, spec, seed + 7919 * it + 1).fit(B[ok], ser[ok])
                 if modele == "mlp":
                     m_cl = fabrique(modele, spec, seed + 7919 * it + 2).fit(B[vl], cl[vl]) if vl.sum() >= 4 else None
+                elif modele == "hybride":
+                    m_cl = None
+                    cl_aff = coef_cl
             for w in weights:
                 if contrainte == "modele":
-                    if modele == "mlp":
+                    if direct:
                         def score(Ic, w=w):
                             Bc = encode(Ic, bits)
                             f = w * m_cd.predict(Bc) / s_cd + (1 - w) * m_ser.predict(Bc) / s_ser
                             if m_cl is not None:
                                 f = f + 75.0 * np.maximum(0.0, cl_min - m_cl.predict(Bc)) ** 2
+                            elif modele == "hybride" and cl_aff is not None:
+                                pred = predict_z(cl_aff, np.asarray(Ic), levels)
+                                f = f + 75.0 * np.maximum(0.0, cl_min - pred) ** 2
                             if tv is not None:
                                 f = f + 3.0 * (np.asarray(Ic)[:, tv] == 0)
                             return f
@@ -210,7 +218,7 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
                     worst = np.nanmax(f) + PENALITE_INFAISABLE * max(np.nanmax(f) - np.nanmin(f), 1e-6)
                     f[~ok] = worst
                     m = fabrique(modele, spec, seed + 7919 * it + int(100 * w)).fit(B, f)
-                    if modele == "mlp":
+                    if direct:
                         def score(Ic, m=m):
                             s = m.predict(encode(Ic, bits))
                             if tv is not None:
@@ -218,14 +226,17 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
                             return s
                     else:
                         Q, c = m.sample_qubo() if modele == "bocs" else m.to_qubo()
-                if modele == "mlp":
+                if direct:
                     ranked = recherche_directe(score, spec, rng, problem._set)
                 else:
                     T_obj = float(np.abs(Q).max())
                     Q, c = ajoute_contraintes(Q, c, coef_cl, spec, cl_min, modele_cl=(contrainte == "modele" and modele_cl))
                     states = classer(Q, c, solveur, rng, nd, T_obj=T_obj)
                     ranked = [tuple(int(v) for v in x) for x in decode_bits(states, bits)]
+                filtre = spec.get("filtre")
                 for idx in ranked:
+                    if filtre is not None and not filtre(idx):
+                        continue          # post-traitement classique des échantillons : géométrie gratuite
                     if idx not in problem._set and idx not in new:
                         new.append(idx)
                         break

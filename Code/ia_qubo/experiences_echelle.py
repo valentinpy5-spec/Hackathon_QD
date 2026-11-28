@@ -1,12 +1,19 @@
 """Itération V3, lot L6 : les méthodes sur le problème mis à l'échelle (CST, 30 bits, ~10^9 profils).
 
+Seconde campagne (probleme_cst.FILTRE = True) : la géométrie (faces sans croisement, épaisseur >= 8 %) est
+contrôlée avant de simuler, pour toutes les méthodes, et une traînée > 200 counts compte comme un échec
+d'XFOIL. La première campagne, sans filtre, est archivée dans resultats/ia_qubo_echelle_sansfiltre*.json :
+le modèle en z y dépensait 59 % de son budget sur des géométries invalides.
+
 Le front exact n'est plus connu. On mesure l'hypervolume des profils faisables simulés, normalisé par
 celui du front de référence : le front non dominé de TOUS les profils faisables simulés par toutes les
-méthodes et toutes les graines (lu dans le cache). Budget : 300 simulations, 5 graines.
+méthodes et toutes les graines (lu dans le cache). Budget : 300 simulations, 8 graines.
 
 Méthodes : hasard, NSGA-II (population 16), et la boucle avec chaque modèle :
     quadz_modele (l'approche actuelle : 66 coefficients en z, QUBO de 33 qubits résolu par recuit),
-    fm_modele, fm_bn, bocs_modele, mlp_modele.
+    fm_modele, fm_bn, bocs_modele,
+    et un seul témoin non quantique (pas un QUBO) : hybride_modele (réseaux pour C_D et la SER, modèle affine
+    pour C_L,max). mlp_modele est retiré : sur V2 il échoue à cause de son modèle de contrainte.
 
     python3 -m ia_qubo.experiences_echelle          -> resultats/ia_qubo_echelle.json
 """
@@ -25,8 +32,8 @@ from ia_qubo import probleme_cst as P  # noqa: E402
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "resultats", "ia_qubo_echelle.json")
-METHODS = ["hasard", "nsga2_16", "quadz_modele", "fm_modele", "fm_bn", "bocs_modele", "mlp_modele"]
-BUDGET, N_SEEDS = 300, 5
+METHODS = ["hasard", "nsga2_16", "quadz_modele", "fm_modele", "fm_bn", "bocs_modele", "hybride_modele"]
+BUDGET, N_SEEDS = 300, 8
 
 
 def _run_one(args):
@@ -49,7 +56,9 @@ def _run_one(args):
 
 def post_traitement(runs):
     cache = P._charge_cache()
-    feas = {k: r for k, r in cache.items() if r["feasible"]}
+    # front de référence : les profils de CETTE campagne seulement (le cache peut en contenir d'autres)
+    vus = {tuple(s) for lst in runs.values() for seen, _ in lst for s in seen}
+    feas = {k: r for k, r in cache.items() if r["feasible"] and k in vus}
     keys = list(feas)
     F = np.array([[feas[k]["CD_counts"], feas[k]["SER_db"]] for k in keys])
     fr = pareto_front(F)
@@ -57,7 +66,7 @@ def post_traitement(runs):
     ref = np.array([1.1, 1.1])
     hv_ref = hypervolume_2d(norm(F[fr]), ref)
     front_ref = {keys[i] for i in fr}
-    res = dict(n_simules_total=len(cache), n_faisables_total=len(feas), front_ref=[list(keys[i]) for i in fr],
+    res = dict(n_simules_total=len(vus), filtre=P.FILTRE, cd_aberrant=P.CD_ABERRANT, n_faisables_total=len(feas), front_ref=[list(keys[i]) for i in fr],
                front_ref_F=F[fr].tolist(), hv_ref=hv_ref)
     grille = list(range(20, BUDGET + 1, 20))
     for m, lst in runs.items():
@@ -86,7 +95,7 @@ if __name__ == "__main__":
     from multiprocessing import Pool
     names = [m for m in METHODS if m in sys.argv] or METHODS
     jobs = [(m, s) for m in names for s in range(N_SEEDS)]
-    jobs.sort(key=lambda j: 0 if j[0].startswith("mlp") or j[0].startswith("bocs") else 1)
+    jobs.sort(key=lambda j: 0 if j[0].startswith(("mlp", "hybride", "bocs")) else 1)
     workers = max(1, min(11, (os.cpu_count() or 2) - 1))
     t0 = time.time()
     with Pool(workers) as pool:

@@ -44,10 +44,10 @@ Chaque évaluation d'un profil (\code{evaluer}) fait, dans l'ordre :
 \item \textbf{XFOIL en manœuvre} : rampe de 4 à 14° $\to$ $C_{L,\max}$ ;
 \item \textbf{la SER} : optique physique sur le secteur S2 ($-60^\circ$ à $0^\circ$, 81 directions, 10~GHz), à l'incidence de croisière.
 \end{enumerate}
-Contraintes : épaisseur maximale $\ge8~\%$, $C_{L,\max}\ge1{,}2$, convergence d'XFOIL, géométrie valide. Une évaluation prend de 0,5 à 2 secondes.
+Contraintes : épaisseur maximale $\ge8~\%$, $C_{L,\max}\ge1{,}2$, convergence d'XFOIL, géométrie valide. Comme pour le profil aberrant de la V2, une traînée de plus de 200 counts à $C_L=0{,}4$ compte comme un échec d'XFOIL : 85 profils de la première campagne, jusqu'à 967 counts, sont des artefacts du solveur près du décollement. Une évaluation prend de 0,5 à 2 secondes.
 
 \begin{piege}[ : pourquoi l'optique physique et pas la méthode des moments]
-À l'échelle, chaque méthode demande 300 évaluations, et l'on compare 7 méthodes sur 5 graines : plus de 6\,000 profils distincts. La méthode des moments, à plusieurs secondes par profil et par secteur, rendrait l'étude trop longue. L'optique physique sous-estime la SER d'environ 1~dB mais garde le classement (corrélation de rang 0,999 sur la grille V2, cours SER) : c'est le classement qui compte pour comparer des méthodes d'optimisation. Sur un cas réel, ce serait exactement la place d'une approche multi-fidélité (chapitre~\ref{ch:ia-autres}).
+À l'échelle, chaque méthode demande 300 évaluations, et l'on compare 7 méthodes sur 8 graines : la première campagne a simulé 16\,242 profils distincts. La méthode des moments, à plusieurs secondes par profil et par secteur, rendrait l'étude trop longue. L'optique physique sous-estime la SER d'environ 1~dB mais garde le classement (corrélation de rang 0,999 sur la grille V2, cours SER) : c'est le classement qui compte pour comparer des méthodes d'optimisation. Sur un cas réel, ce serait exactement la place d'une approche multi-fidélité (chapitre~\ref{ch:ia-autres}).
 \end{piege}
 
 \paragraph{Le cache.} Chaque profil évalué est écrit dans \code{resultats/cache\_cst.jsonl}. Un profil demandé par deux méthodes n'est calculé qu'une fois ; mais le \emph{compteur} de chaque exécution compte toujours les profils distincts qu'elle a demandés, comme \code{CountedProblem}. Le cache économise du temps de calcul, pas des simulations au sens de la mesure.
@@ -84,7 +84,7 @@ NSGA-II (population 16) & --- & --- & algorithme génétique \\
 \code{fm\_modele} & 151 & 33 & recuit \\
 \code{fm\_bn} & 151 (un par poids) & 30 & recuit \\
 \code{bocs\_modele} & 466 & 33 & recuit (tirage de Thompson) \\
-\code{mlp\_modele} & 1\,441 & --- & tirage et recherche locale \\
+\code{hybride\_modele} (témoin) & $2\times1\,441+11$ & --- & tirage et recherche locale \\
 \bottomrule
 \end{tabular}
 \end{center}

@@ -34,6 +34,8 @@ N_BERN = 4
 N_VAR = 2 * (N_BERN + 1)
 LEVELS = 8
 RE, CL_CRUISE, CL_MAX_MIN, T_MIN = 3e6, 0.4, 1.2, 0.08
+CD_ABERRANT = 200.0     # counts : au-delà, XFOIL est hors de son domaine de validité (comme le profil aberrant V2)
+FILTRE = True           # seconde campagne : géométrie contrôlée avant toute simulation (voir admissible)
 MAN_ALPHAS = (4, 6, 8, 9, 10, 11, 12, 13, 14)
 SECTEUR = (-60.0, 0.0)                      # S2 : radar en contrebas, comme le scénario étudié en V2
 FREQ = 10e9
@@ -98,11 +100,32 @@ def coefficients(idx):
     return A[:N_BERN + 1], A[N_BERN + 1:]
 
 
+def geometrie(idx):
+    """Contrôle géométrique, sans aucun solveur : (faces sans croisement, épaisseur maximale)."""
+    Au, Al = coefficients(idx)
+    X, Y = cst_coords(Au, Al, n_half=120)
+    epaisseur = Y[:121][::-1] - Y[120:]                  # y_ext(x) - y_int(x) sur la même grille
+    return bool(np.all(epaisseur[1:-1] > 0)), float(epaisseur.max())
+
+
+def admissible(idx):
+    """Profil géométriquement admissible : faces sans croisement et épaisseur >= T_MIN. Gratuit
+    (quelques dizaines de microsecondes), donc vérifié AVANT de simuler, pour toutes les méthodes."""
+    ok, tmax = geometrie(idx)
+    return ok and tmax >= T_MIN
+
+
 def init_aleatoire(rng, n):
-    return [tuple(int(v) for v in rng.integers(0, LEVELS, N_VAR)) for _ in range(n)]
+    out = []
+    while len(out) < n:
+        x = tuple(int(v) for v in rng.integers(0, LEVELS, N_VAR))
+        if not FILTRE or admissible(x):
+            out.append(x)
+    return out
 
 
 SPEC["init"] = init_aleatoire
+SPEC["filtre"] = admissible if FILTRE else None
 
 
 # ------------------------------------------------------------ évaluation (boîtes noires)
@@ -136,6 +159,16 @@ def evaluer(idx):
     return row
 
 
+def corrige(r):
+    """Applique le seuil de validité de la traînée (le cache garde les valeurs brutes d'XFOIL)."""
+    r = dict(r)
+    if r["valid"] and np.isfinite(r["CD_counts"]) and r["CD_counts"] > CD_ABERRANT:
+        r["valid"] = False
+        r["cv"] = r["cv"] + 1.0
+        r["feasible"] = False
+    return r
+
+
 def _charge_cache():
     cache = {}
     if os.path.exists(CACHE):
@@ -145,12 +178,16 @@ def _charge_cache():
                     r = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                cache[tuple(r[k] for k in KEYS)] = r
+                cache[tuple(r[k] for k in KEYS)] = corrige(r)
     return cache
 
 
 class ProblemeSimule:
-    """Même interface que optim.problem.CountedProblem, mais les profils sont simulés à la demande."""
+    """Même interface que optim.problem.CountedProblem, mais les profils sont simulés à la demande.
+
+    Avec FILTRE, un profil géométriquement non admissible n'est pas simulé et n'est PAS compté : il est
+    rendu comme infaisable (cv > 0) sans entrer dans seen. Cela vaut pour toutes les méthodes (NSGA-II
+    et hasard compris), qui ne dépensent leur budget que sur des profils qu'un solveur peut recevoir."""
 
     def __init__(self):
         self.cache = _charge_cache()
@@ -159,6 +196,13 @@ class ProblemeSimule:
 
     def __call__(self, idx):
         idx = tuple(int(i) for i in idx)
+        if FILTRE and idx not in self.table and not admissible(idx):
+            ok, tmax = geometrie(idx)
+            r = dict(zip(KEYS, idx), t_max=tmax, geom_ok=ok, alpha=np.nan, CD_counts=np.nan, CLmax=np.nan,
+                     valid=False, SER_db=np.nan, feasible=False,
+                     cv=max(0.0, T_MIN - tmax) + (0.0 if ok else 1.0) + 1.0)
+            self.rejetes = getattr(self, "rejetes", 0) + 1
+            return r
         if idx not in self.table:
             r = self.cache.get(idx)
             if r is None:
@@ -167,6 +211,7 @@ class ProblemeSimule:
                     fcntl.flock(f, fcntl.LOCK_EX)
                     f.write(json.dumps(r) + "\n")
                     fcntl.flock(f, fcntl.LOCK_UN)
+                r = corrige(r)
                 self.cache[idx] = r
             self.table[idx] = r
         if idx not in self._set:

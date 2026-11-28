@@ -17,10 +17,11 @@ CH = {}
 NOMS = {"quadz_modele": "quadratique en $z$ (actuel)", "fm_modele": "machine de factorisation",
         "bocs_modele": "bayésien sur les bits", "mlp_modele": "réseau de neurones",
         "quadz_bn": "quadratique en $z$, boîte noire", "fm_bn": "factorisation, boîte noire",
-        "bocs_bn": "bayésien, boîte noire", "mlp_bn": "réseau, boîte noire",
+        "bocs_bn": "bayésien, boîte noire", "mlp_bn": "réseau, boîte noire", "hybride_modele": "hybride (réseau + contrainte affine)",
         "hasard": "hasard", "nsga2_16": "NSGA-II"}
 STYLE = {"quadz": "cblue,very thick,mark=*", "fm": "corange,very thick,mark=square*",
          "bocs": "cgreen,very thick,mark=triangle*", "mlp": "cviolet,very thick,mark=diamond*",
+         "hybride": "cteal,very thick,mark=pentagon*",
          "hasard": "cmuted,thick,dashed", "nsga2": "cink,thick,dotted"}
 
 

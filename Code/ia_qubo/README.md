@@ -10,13 +10,14 @@ Cours associé : `Cours/6_IA_QUBO/Cours_IA_QUBO.pdf`.
 
 | Fichier | Rôle |
 |---|---|
-| `modeles.py` | `QuadZ` (approche actuelle), `FactorizationMachine` (FMQA), `BayesQuadBits` (BOCS, tirage de Thompson), `MLPEnsemble` (réseau de neurones, pas un QUBO) ; encodage indices ↔ bits |
+| `modeles.py` | `QuadZ` (approche actuelle), `FactorizationMachine` (FMQA), `BayesQuadBits` (BOCS, tirage de Thompson), `MLPEnsemble` (réseau de neurones, pas un QUBO ; sert aussi à la méthode témoin `hybride`) ; encodage indices ↔ bits |
 | `boucle.py` | `boucle_ia` (modèle × contrainte × solveur), recuit simulé vectorisé, recherche directe, `verifier_boucle` |
-| `experiences_v2_ia.py` | 8 méthodes × S1, S2 × 20 graines sur le problème V2 → `resultats/ia_qubo_V2.json` |
+| `experiences_v2_ia.py` | 8 méthodes + témoin `hybride_modele` × S1, S2 × 20 graines sur le problème V2 → `resultats/ia_qubo_V2.json` (une méthode seule se relance et se fusionne : `... experiences_v2_ia hybride_modele`) |
+| `diagnostic_v2_ia.py` | quels points du front exact chaque modèle retrouve, et s'ils sont supportés → `resultats/ia_qubo_diagnostic_V2.json` |
 | `precision_modeles.py` | précision et corrélation de rang des modèles selon le nombre de données → `resultats/ia_qubo_precision.json` |
 | `qaoa_contraintes.py` | QAOA sur un QUBO à contrainte modélisée ou en boîte noire → `resultats/ia_qubo_qaoa_contraintes.json` |
-| `probleme_cst.py` | problème mis à l'échelle : CST à 10 coefficients, XFOIL + SER (optique physique) en boîte noire, cache `resultats/cache_cst.jsonl` |
-| `experiences_echelle.py` | 7 méthodes × 5 graines à l'échelle → `resultats/ia_qubo_echelle.json` |
+| `probleme_cst.py` | problème mis à l'échelle : CST à 10 coefficients, XFOIL + SER (optique physique) en boîte noire, cache `resultats/cache_cst.jsonl` ; filtre géométrique gratuit avant simulation (`FILTRE`, `admissible`) et seuil de traînée aberrante (`CD_ABERRANT`) |
+| `experiences_echelle.py` | 7 méthodes × 8 graines à l'échelle → `resultats/ia_qubo_echelle.json` ; la première campagne, sans filtre géométrique, est archivée dans `ia_qubo_echelle_sansfiltre*.json` ; `cache_cst.jsonl` contient les profils des deux campagnes (valeurs brutes d'XFOIL) |
 
 ## Lancer
 
@@ -24,7 +25,7 @@ Cours associé : `Cours/6_IA_QUBO/Cours_IA_QUBO.pdf`.
 cd Code
 python3 -c "from ia_qubo.boucle import verifier_boucle; verifier_boucle()"   # quelques secondes
 python3 -m ia_qubo.experiences_v2_ia          # ~25 min sur 11 processus
-python3 -m ia_qubo.experiences_echelle        # ~1 h (XFOIL), réutilise le cache
+python3 -m ia_qubo.experiences_echelle        # ~1 h 45 à cache vide (XFOIL, PC sur secteur, sans veille)
 python3 -m ia_qubo.precision_modeles          # ~15 min ; après experiences_echelle pour la partie CST
 python3 -m ia_qubo.qaoa_contraintes           # ~3 min
 ```
