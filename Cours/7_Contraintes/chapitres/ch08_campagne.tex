@@ -9,4 +9,83 @@ Exactement celui de la seconde campagne CST du lot L6 (\code{contraintes/experie
 \end{itemize}
 La pénalité déséquilibrée, moins bonne que le lagrangien sur les deux études hors ligne, n'a pas été relancée.
 
-\textit{Résultats à venir.}
+\section{Résultats}
+Hypervolume des profils faisables simulés, rapporté à celui du front de référence (11 profils, sur l'union des 20\,602 profils simulés par les deux campagnes), médiane sur 8 graines. « vs actuel » : nombre de graines où la méthode fait mieux que l'approche actuelle à 300 simulations, et $p$ du test de Wilcoxon apparié. À 100 simulations, le classifieur fait mieux sur 5 graines ($p=0{,}84$).
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{4pt}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+& à 100 & à 300 & vs actuel (300) & faisables & échecs XFOIL & $C_{L,\max}$ faible \\
+\midrule
+bits d'écart (actuel) & 0,768 & \textbf{0,882} & --- & 43~\% & 28~\% & 29~\% \\
+lagrangien vérifié & 0,768 & 0,839 & 2/8, $p=0{,}38$ & 37~\% & 40~\% & 22~\% \\
+lagrangien + classifieur & \textbf{0,815} & 0,840 & 1/8, $p=0{,}15$ & 41~\% & 34~\% & 25~\% \\
+\midrule
+factorisation (L6) & 0,833 & 0,895 & 6/8, $p=0{,}38$ & 47~\% & 25~\% & 28~\% \\
+NSGA-II & 0,718 & 0,813 & 2/8, $p=0{,}04$ & 72~\% & 13~\% & 15~\% \\
+hasard & 0,683 & 0,772 & 1/8, $p=0{,}02$ & 76~\% & 6~\% & 17~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/campagne_hv}
+\caption{Campagne CST : hypervolume relatif en fonction du nombre de simulations (médiane sur 8 graines). Les deux méthodes lagrangiennes (vert, violet) partent comme l'approche actuelle, puis plafonnent.}\label{fig:campagne-hv}
+\end{figure}
+
+\paragraph{1. Les études hors ligne ne se confirment pas.} Les deux méthodes lagrangiennes finissent \emph{sous} l'approche actuelle (0,84 contre 0,88), sans que l'écart soit significatif avec 8 graines. Le classifieur aide en début de budget (0,815 à 100 simulations, devant l'approche actuelle sur 5 graines), puis plafonne aussi.
+
+\paragraph{2. Ce qui était prévu se produit.} Les $C_{L,\max}$ trop faibles baissent, de 29~\% à 22~\% : la formulation fait mieux respecter la contrainte du modèle, comme l'annonçait le rejeu (chapitre~\ref{ch:hors-ligne}). Le classifieur fait baisser les échecs d'XFOIL de 40~\% à 34~\% par rapport au lagrangien seul.
+
+\paragraph{3. Ce qui n'était pas prévu : les échecs d'XFOIL montent.} De 28~\% à 40~\% avec le lagrangien seul. La faisabilité totale baisse donc (37~\% contre 43~\%). On a cherché pourquoi dans les profils proposés : la part des coefficients placés à un niveau \emph{extrême} de la grille (0 ou 7).
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+& coefficients aux niveaux extrêmes \\
+\midrule
+hasard & 25~\% \\
+machine de factorisation (régularisée) & 30~\% \\
+bits d'écart (actuel) & 56~\% \\
+lagrangien + classifieur & 62~\% \\
+lagrangien vérifié & \textbf{66~\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Pour les trois méthodes à modèle en $z$, les profils dont au moins 6 coefficients sur 10 sont extrêmes échouent dans XFOIL 40 à 48~\% du temps, contre 16 à 21~\% pour les autres.
+
+\paragraph{4. Le mécanisme.} Le modèle en $z$ est une parabole à 66 coefficients, sans régularisation : son minimum est souvent sur un bord de la grille, là où il extrapole. Avec les bits d'écart, la pénalité occupait 99~\% du spectre ; le recuit, réglé sur l'objectif, l'optimisait mal, et ses lectures restaient plus centrées. \emph{La pénalité régularisait par accident.} Le lagrangien rend tout le spectre à l'objectif : le recuit trouve beaucoup mieux le minimum du modèle, c'est-à-dire ses erreurs d'extrapolation dans les coins, où XFOIL décroche. La machine de factorisation, régularisée, ne va aux extrêmes que 30~\% du temps : c'est elle qu'il faudrait associer au lagrangien.
+
+\paragraph{5. Pourquoi le rejeu ne l'a pas vu.} Il mesurait la faisabilité \emph{prédite} et l'objectif \emph{prédit} du candidat, sur des états produits par l'approche actuelle. Or le défaut du lagrangien n'est pas dans le modèle de contrainte : il est dans la confiance excessive qu'il accorde au modèle d'objectif, ce qu'aucune prédiction ne peut révéler. Seule la simulation le montre.
+
+\begin{piege}[ : mieux résoudre un mauvais modèle]
+Résoudre plus exactement le problème du modèle n'aide que si le modèle est bon là où l'on va. Un solveur meilleur, quantique ou non, appliqué à un modèle qui extrapole, trouve plus sûrement ses erreurs. C'est l'argument classique des \emph{régions de confiance} en optimisation par modèle de substitution (TuRBO, par exemple) : limiter la recherche là où le modèle a des données.
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item Sur le problème CST, avec XFOIL, le lagrangien vérifié ne bat pas les bits d'écart : 0,84 contre 0,88 d'hypervolume relatif à 300 simulations (non significatif).
+\item Il respecte mieux la contrainte de $C_{L,\max}$, mais il pousse le modèle en $z$ dans ses coins, où XFOIL échoue : la pénalité à bits d'écart régularisait par accident.
+\item Le classifieur réduit les échecs et aide en début de budget, sans changer le résultat final.
+\item Une étude hors ligne sur des prédictions ne peut pas voir un défaut qui tient à la confiance accordée au modèle d'objectif.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:camp-signe}
+Avec 8 graines et un test de signe bilatéral, à partir de combien de graines favorables sur 8 un écart devient-il significatif au seuil de 5~\% ? Que peut-on conclure d'un résultat « 2 graines sur 8 » ?
+\end{exercice}
+\begin{exercice}\label{ex:camp-coins}
+Une parabole en une variable, $\hat y(z)=a z^2+bz+c$ sur $z\in[-1,1]$, ajustée sur des points tous situés dans $[-0{,}5;\,0{,}5]$. (a) Si $a<0$, où est son minimum sur $[-1,1]$ ? (b) Que vaut l'incertitude de la prédiction en $z=\pm1$ comparée à celle en $z=0$ ? (c) Expliquer pourquoi un solveur qui trouve exactement ce minimum est plus exposé qu'un solveur bruité.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Campagne \code{fm\_lagrange\_clf} (8 graines, une quarantaine de minutes) : la machine de factorisation va peu aux extrêmes, c'est l'association naturelle.
+\item Une région de confiance dans le QUBO : la distance de Hamming à un profil de référence est \emph{linéaire} en bits, donc une contrainte « au plus $k$ bits changés » entre directement dans le lagrangien.
+\item Régulariser le modèle en $z$ (ridge plus fort) avant de lui rendre le spectre.
+\end{itemize}
+\end{pistes}
+

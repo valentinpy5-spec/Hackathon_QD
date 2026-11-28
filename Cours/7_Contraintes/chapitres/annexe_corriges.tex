@@ -44,3 +44,13 @@ Binary
 End
 \end{lstlisting}
 Énumération : $00$ viole c1 ; $10$ : objectif 1, c2 vaut $-0{,}5<-0{,}2$, infaisable ; $01$ : objectif $-2$, faisable ; $11$ : objectif $2$, faisable. L'optimum est $01$. Le crochet de l'objectif est divisé par 2 : on y écrit $6$ pour un couplage de 3.
+
+\section*{Chapitre~\ref{ch:campagne} — Campagne}
+\textbf{Ex.~\ref{ex:camp-signe}.} Sous l'hypothèse « aucune différence », le nombre de graines favorables suit une loi binomiale $\mathcal B(8;\,1/2)$. Bilatéral : 8 sur 8 (ou 0) donne $p=2/256\approx0{,}008$ ; 7 sur 8 donne $p=2\times9/256\approx0{,}07$. Seul un résultat unanime est significatif à 5~\% avec 8 graines. « 2 sur 8 » donne $p=2\times37/256\approx0{,}29$ : on ne peut conclure ni à une dégradation ni à une égalité ; on peut seulement dire que le gain attendu n'est pas là.
+
+\textbf{Ex.~\ref{ex:camp-coins}.} (a) Si $a<0$, la parabole est concave : son minimum sur $[-1,1]$ est à une extrémité, $z=1$ si $b<0$, $z=-1$ sinon. (b) La variance de la prédiction croît vite hors de la zone des données : le terme en $z^2$, connu seulement sur $[-0{,}5;\,0{,}5]$, est multiplié par 4 en $z=\pm1$ par rapport à $z=\pm0{,}5$, et son incertitude avec lui ; l'écart-type de la prédiction en $\pm1$ est typiquement plusieurs fois celui en 0. (c) Un solveur exact va droit au bord, là où l'erreur est la plus grande, à chaque itération ; un solveur bruité disperse ses propositions, dont une partie reste là où le modèle a des données.
+
+\section*{Chapitre~\ref{ch:bilan} — Bilan}
+\textbf{Ex.~\ref{ex:bilan-feynman7}.} Une réponse possible : « On choisit le prochain profil à simuler en minimisant une prédiction, sous une contrainte prédite. L'ancienne formulation faisait mal respecter la contrainte, mais elle était aussi si mal posée que l'algorithme trouvait mal le minimum de la prédiction. La nouvelle respecte la contrainte et trouve vraiment ce minimum. Or la prédiction, une parabole ajustée sur trop peu de points, a son minimum au bord du domaine, là où elle n'a pas de données et où le simulateur échoue. Mieux minimiser une prédiction fausse, c'est aller plus sûrement là où elle est fausse. »
+
+\textbf{Ex.~\ref{ex:bilan-plan}.} Relancer la campagne avec la machine de factorisation, régularisée, qui va peu aux extrêmes (30~\% des coefficients) : \code{fm\_lagrange\_clf} contre \code{fm\_modele}, mêmes 8 graines et mêmes profils initiaux (environ 40 minutes). Si le lagrangien égale ou bat les bits d'écart avec ce modèle, l'explication (ii) est la bonne. On peut le doubler d'un contrôle bon marché : le modèle en $z$ avec un ridge fort.

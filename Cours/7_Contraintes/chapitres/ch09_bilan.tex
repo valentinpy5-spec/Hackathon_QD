@@ -1,3 +1,63 @@
 \chapter{Bilan}\label{ch:bilan}
 \iterbanner{V3}
-\textit{Bilan à venir.}
+
+\section{Ce que l'on sait maintenant}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.2cm} >{\raggedright\arraybackslash}X}
+\toprule
+question & réponse \\
+\midrule
+la pénalité à bits d'écart fait-elle respecter la contrainte du modèle ? & non : le candidat la viole 4 fois sur 10 (CST), les petites violations sont rentables \\
+le lagrangien vérifié fait-il mieux, à modèles identiques ? & oui sur V2 (front S2 en 102 simulations au lieu de 142, 17 graines sur 20) ; il explique l'écart laissé ouvert par le lot L1 \\
+et sur le problème CST, avec XFOIL ? & non : 0,84 contre 0,88 d'hypervolume relatif (non significatif) ; il pousse le modèle en $z$ dans ses coins \\
+le classifieur de convergence aide-t-il ? & un peu en début de budget ; il doit orienter (seuil bas) car le front est au bord des échecs \\
+la pénalité déséquilibrée ? & non : elle vise une marge fixe et manque le front S2 \\
+et pour un solveur quantique ? & le lagrangien rend tout le spectre à l'objectif, retire 3 à 4 qubits, et QAOA trouve l'optimum contraint 7 fois plus souvent \\
+l'interface industrielle ? & export LP validé : objectif et contraintes séparés, lisible par les solveurs classiques et hybrides \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{La leçon principale}
+Le traitement des contraintes et la confiance accordée au modèle d'objectif ne se règlent pas séparément. La pénalité à bits d'écart avait deux effets : un défaut (elle laisse passer les petites violations) et, sans qu'on le sache, une qualité (elle empêchait le recuit d'exploiter pleinement un modèle qui extrapole). En la retirant, on corrige le défaut et l'on perd la qualité. Sur le problème V2, où le modèle en $z$ est précis sur toute la grille, le bilan est positif ; sur le problème CST, où ses 66 coefficients manquent de données, il est négatif.
+
+C'est la même conclusion que les lots L1 et L6, vue d'un autre côté : dans une boucle à modèle de substitution, ce qui décide est \emph{où l'on fait confiance au modèle}. Les solutions industrielles le traitent explicitement : modèle de contrainte avec incertitude, probabilité de faisabilité, région de confiance. Notre boucle le traitait implicitement, par une pénalité mal réglée.
+
+\section{Ce que cela dit pour le quantique}
+\begin{enumerate}
+\item \textbf{La bonne formulation pour une machine quantique est connue} : un lagrangien sans bit d'écart, dont les échantillons sont vérifiés en classique. Elle rend le spectre à l'objectif, ce dont QAOA et un recuit quantique ont besoin, et elle accepte des contraintes quadratiques.
+\item \textbf{Mais un meilleur solveur n'aide que si le modèle le mérite.} Le cours IA et QUBO concluait que la forme QUBO ne coûte rien ; celui-ci ajoute qu'un solveur plus efficace, quantique ou non, peut coûter si le modèle extrapole. L'apport d'une machine quantique est conditionné à un modèle régularisé ou à une région de confiance.
+\item \textbf{Pour un industriel}, la boucle doit livrer un problème contraint lisible (format LP), pas une matrice pré-pénalisée : c'est fait.
+\end{enumerate}
+
+\section{Comment le présenter}
+\begin{quote}
+« Un QUBO n'a pas de contraintes : on les ajoute en pénalités, qui écrasent l'objectif et laissent passer les petites violations. Nous les avons remplacées par une formulation lagrangienne dont on vérifie les échantillons en classique, ce qui rend tout le spectre à l'objectif : c'est la formulation qu'il faut pour une machine quantique. Sur le vrai problème, cela ne suffit pas : un solveur plus efficace exploite aussi mieux les erreurs du modèle, et il faut lui associer un modèle régularisé ou une région de confiance. »
+\end{quote}
+
+\begin{resultat}
+\begin{itemize}
+\item Classer les contraintes avant de les traiter : filtre pour la géométrie, modèle pour $C_{L,\max}$, probabilité pour la convergence.
+\item Le lagrangien vérifié est la bonne formulation côté solveur : moins de qubits, spectre rendu à l'objectif, contraintes quadratiques possibles, et meilleur sur V2.
+\item Sur le problème CST, il ne bat pas l'approche actuelle, parce qu'il exploite mieux un modèle d'objectif qui extrapole : la suite est de l'associer à un modèle régularisé ou à une région de confiance.
+\item Une étude sur des prédictions ne remplace pas une campagne : ici, elle annonçait un gain que la simulation n'a pas confirmé.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:bilan-feynman7}
+Expliquer en cinq phrases, à quelqu'un qui connaît les moindres carrés mais pas le QUBO, pourquoi « mieux faire respecter la contrainte » a dégradé le résultat sur le problème CST.
+\end{exercice}
+\begin{exercice}\label{ex:bilan-plan}
+Proposer une expérience, d'une heure de calcul au plus, qui sépare les deux explications possibles : (i) le lagrangien est moins bon en soi sur le problème CST ; (ii) il ne l'est qu'associé au modèle en $z$ non régularisé.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Lagrangien vérifié avec la machine de factorisation, et avec une région de confiance en distance de Hamming (chapitre~\ref{ch:campagne}).
+\item Choisir parmi les lectures vérifiées par amélioration espérée de l'hypervolume pondérée par la probabilité de convergence, comme en optimisation bayésienne contrainte.
+\item Résoudre l'exemple CQM exactement (SCIP) pour mesurer ce que la vérification perd par rapport à l'optimum contraint du modèle.
+\end{itemize}
+\end{pistes}

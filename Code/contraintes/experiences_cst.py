@@ -66,7 +66,19 @@ def bilan(runs, res):
             tr[str(b)] = dict(mediane=float(np.median(a)), mieux=int(sum(x > y for x, y in zip(a, r0))),
                               p=wilcoxon_signe(a, r0) if m != ref else float("nan"))
         rz = [raisons(cache, seen) for seen, _ in runs[m]]
+        ext, ech6, ech = [], [], []
+        for seen, _ in runs[m]:
+            I = np.array(seen[10:])
+            e = ((I == 0) | (I == 7)).sum(1)
+            f = np.array([not cache[tuple(x)]["valid"] for x in seen[10:]])
+            ext.append(float(((I == 0) | (I == 7)).mean()))
+            if (e >= 6).any():
+                ech6.append(float(f[e >= 6].mean()))
+            ech.append(float(f[e < 6].mean()))
         out[m] = dict(hv=tr, raisons={k: float(np.median([r[k] for r in rz])) for k in rz[0]},
+                      niveaux_extremes=float(np.median(ext)),
+                      echec_si_6_extremes=float(np.median(ech6)) if ech6 else None,
+                      echec_sinon=float(np.median(ech)),
                       minutes=float(np.mean([t for _, t in runs[m]]) / 60))
     return out
 
@@ -120,5 +132,6 @@ if __name__ == "__main__":
         print(f"   {m:20s} HV à 100/200/300 : " + " ".join(
             f"{b['hv'][k]['mediane']:.3f} ({b['hv'][k]['mieux']}/8, p={b['hv'][k]['p']:.3f})" for k in ("100", "200", "300"))
             + f" ; faisables {100 * b['raisons']['faisable']:.0f} %, échecs XFOIL {100 * b['raisons']['echec_xfoil']:.0f} %, "
-              f"C_L faible {100 * b['raisons']['cl_faible']:.0f} % ; {b['minutes']:.0f} min", flush=True)
+              f"C_L faible {100 * b['raisons']['cl_faible']:.0f} % ; niveaux extrêmes {100 * b['niveaux_extremes']:.0f} % ; "
+              f"{b['minutes']:.0f} min", flush=True)
     print("->", OUT)
