@@ -1,0 +1,15 @@
+% figure générée par tools/make_figures.py
+\begin{tikzpicture}
+\begin{axis}[width=0.95\linewidth,height=6.2cm,xlabel={profils simulés},ylabel={hypervolume / référence (médiane)},
+  xmin=20,xmax=300,tick label style={font=\scriptsize},label style={font=\small},
+  legend style={font=\scriptsize,draw=none,at={(0.5,-0.22)},anchor=north,legend columns=2},legend cell align=left]
+\addplot[cblue,very thick,mark=*,mark size=1pt] coordinates {(20,0.60994) (40,0.69578) (60,0.72363) (80,0.76743) (100,0.76743) (120,0.76743) (140,0.79042) (160,0.80215) (180,0.82287) (200,0.8248) (220,0.82857) (240,0.84839) (260,0.857) (280,0.8633) (300,0.88183)};
+\addplot[corange,very thick,mark=square*,mark size=1pt] coordinates {(20,0.62863) (40,0.68659) (60,0.7613) (80,0.817) (100,0.83248) (120,0.85672) (140,0.86549) (160,0.86799) (180,0.8724) (200,0.87566) (220,0.87918) (240,0.8796) (260,0.88332) (280,0.89164) (300,0.89486)};
+\addplot[cgreen,very thick,mark=triangle*,mark size=1pt] coordinates {(20,0.58782) (40,0.72423) (60,0.78549) (80,0.80598) (100,0.82879) (120,0.83251) (140,0.83681) (160,0.84766) (180,0.86146) (200,0.88279) (220,0.88739) (240,0.88909) (260,0.89183) (280,0.89677) (300,0.89706)};
+\addplot[corange,very thick,mark=square*,dashed,mark size=1pt] coordinates {(20,0.6241) (40,0.70273) (60,0.73115) (80,0.76855) (100,0.77602) (120,0.79928) (140,0.79928) (160,0.80131) (180,0.80414) (200,0.80414) (220,0.81667) (240,0.82321) (260,0.82328) (280,0.82366) (300,0.82538)};
+\addplot[cteal,very thick,mark=pentagon*,mark size=1pt] coordinates {(20,0.71747) (40,0.75998) (60,0.79142) (80,0.79553) (100,0.81219) (120,0.82263) (140,0.82724) (160,0.84527) (180,0.84889) (200,0.8863) (220,0.8999) (240,0.90166) (260,0.90191) (280,0.91251) (300,0.91305)};
+\addplot[cmuted,thick,dashed,mark size=1pt] coordinates {(20,0.61385) (40,0.6445) (60,0.65383) (80,0.6662) (100,0.6816) (120,0.68689) (140,0.72586) (160,0.72617) (180,0.72617) (200,0.72795) (220,0.76652) (240,0.7695) (260,0.7695) (280,0.76998) (300,0.77071)};
+\addplot[cink,thick,dotted,mark size=1pt] coordinates {(20,0.60938) (40,0.61862) (60,0.62407) (80,0.65133) (100,0.71725) (120,0.71986) (140,0.74168) (160,0.76476) (180,0.76945) (200,0.77179) (220,0.7873) (240,0.78797) (260,0.78815) (280,0.81181) (300,0.81206)};
+\legend{{quadratique en $z$ (actuel)}, {machine de factorisation}, {bayésien sur les bits}, {factorisation, boîte noire}, {hybride (réseau + contrainte affine)}, {hasard}, {NSGA-II}}
+\end{axis}
+\end{tikzpicture}

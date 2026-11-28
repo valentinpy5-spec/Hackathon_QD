@@ -44,6 +44,7 @@ La colonne « depuis » donne l'itération qui a créé le fichier ; « rôle en
 | `quantique/qubo.py`, `qaoa.py`, `recuit.py` | V0 | QUBO / Ising, QAOA par vecteur d'état, recuit simulé | **actif** |
 | `quantique/montee_en_taille.py` | V2 | QAOA de 6 à 18 qubits, initialisation INTERP → `resultats/montee_en_taille.json` | **actif** |
 | `quantique/anatomie_qubo.py` | V3 | anatomie des QUBO de la boucle (part des pénalités, QAOA avec et sans contraintes) → `resultats/anatomie_qubo_V3.json` ; cours quantique, chapitre « Pourquoi QAOA n'apporte rien » | **actif** |
+| `ia_qubo/` | V3 (lot L6) | modèles appris à la place du modèle en $z$ (FMQA, BOCS, réseau de neurones), problème V2 et problème mis à l'échelle (CST, 30 bits) ; voir `ia_qubo/README.md` et le cours `Cours/6_IA_QUBO/` | **actif** |
 | `quantique/experiences.py` | V0 | expériences du cours quantique → `resultats/experiences_quantique.json` | figures V0 |
 | `validation.py` | V0 | validations du modèle rapide (V1 à V5 du cours aéro) | V0 |
 | `validation_xfoil_grille.py` | V1 | XFOIL sur les 512 profils V1, comparé au modèle rapide | V1 |
@@ -74,6 +75,7 @@ Les cours et la fiche projet relisent `resultats/` pour leurs figures et leurs c
 | `base_complete_S1_note.csv`, `base_complete_S2_sol.csv`, `pipeline.json`, `base_xfoil_a2.csv`, `check_pymoo.json` | V1 | `optim.experiences_pipeline`, `validation_xfoil_grille.py`, `optim.check_pymoo` |
 | `base_V2.csv`, `ser_mom_V2.csv`, `pipeline_V2.json`, `montee_en_taille.json` | V2 | voir « Lancer la V2 » |
 | `anatomie_qubo_V3.json` | V3 | `python3 -m quantique.anatomie_qubo` (3 min) |
+| `ia_qubo_V2.json`, `ia_qubo_precision.json`, `ia_qubo_diagnostic_V2.json`, `ia_qubo_qaoa_contraintes.json`, `ia_qubo_echelle*.json`, `cache_cst.jsonl` | V3 (L6) | scripts de `ia_qubo/` (voir son README) |
 | `montee_en_taille_init_aleatoire.json` | V2 | première version de la montée en taille (angles aléatoires), gardée pour la comparaison du cours quantique |
 
 ## Ajouter du code pour une nouvelle itération

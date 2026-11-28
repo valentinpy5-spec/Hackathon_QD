@@ -1,0 +1,104 @@
+\chapter{La machine de factorisation : un modèle appris qui est un QUBO}\label{ch:fm}
+\iterbanner{V3}
+
+\section{L'idée}
+Dans la boucle actuelle, le modèle est un polynôme de degré 2 en variables \emph{physiques} normalisées $z$, que l'on traduit ensuite en bits (cours de calcul quantique, chapitre~8). La machine de factorisation (Rendle, 2010) fait l'inverse : elle apprend \emph{directement} une fonction des bits, déjà sous la forme d'un QUBO. C'est le cœur de FMQA (Kitai et al., 2020).
+
+\begin{definition}[ (machine de factorisation de rang $k$)]
+Pour $n$ bits $b_1,\dots,b_n$ :
+\[ \hat y(\mathbf b)=w_0+\sum_{i=1}^nw_i\,b_i+\sum_{i<j}\langle\mathbf v_i,\mathbf v_j\rangle\,b_ib_j,\qquad \mathbf v_i\in\R^k,\quad\langle\mathbf v_i,\mathbf v_j\rangle=\sum_{f=1}^kv_{if}v_{jf}. \]
+Les paramètres sont $w_0$, les $n$ poids $w_i$ et les $n$ vecteurs $\mathbf v_i$ de dimension $k$ : $1+n+nk$ nombres.
+\end{definition}
+
+\paragraph{C'est un QUBO, par construction.} Il suffit de lire les coefficients :
+\[ Q_{ii}=w_i,\qquad Q_{ij}=\langle\mathbf v_i,\mathbf v_j\rangle\ (i<j),\qquad c=w_0. \]
+Aucune substitution, aucune approximation : l'énergie du QUBO \emph{est} la prédiction du modèle. Le code le vérifie à $10^{-14}$ près.
+
+\paragraph{Pourquoi factoriser les couplages ?} Un modèle quadratique complet sur les bits a un couplage libre $J_{ij}$ par paire, soit $n(n-1)/2$ coefficients estimés chacun séparément. La machine de factorisation impose $J_{ij}=\langle\mathbf v_i,\mathbf v_j\rangle$, c'est-à-dire que la matrice des couplages est de la forme $VV^\top$ (hors diagonale), de rang au plus $k$. Deux conséquences :
+\begin{itemize}
+\item \textbf{moins de paramètres} : $nk$ au lieu de $n(n-1)/2$ ;
+\item \textbf{des couplages qui partagent l'information} : le vecteur $\mathbf v_i$ est appris à partir de \emph{tous} les couplages du bit $i$. Un couplage $J_{ij}$ rarement « observé » (les bits $i$ et $j$ rarement allumés ensemble dans les données) est quand même estimé, par l'intermédiaire de $\mathbf v_i$ et $\mathbf v_j$.
+\end{itemize}
+C'est l'idée des systèmes de recommandation, pour lesquels la méthode a été inventée : prédire la note d'un utilisateur pour un film qu'il n'a pas vu, à partir de vecteurs appris sur les films qu'il a vus.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lccc}
+\toprule
+Nombre de paramètres & V2 : 10 bits & CST : 30 bits & 20 variables : 80 bits \\
+\midrule
+quadratique en $z$ (approche actuelle) & 15 & 66 & 231 \\
+machine de factorisation, $k=4$ & 51 & 151 & 401 \\
+quadratique complet sur les bits (chapitre~\ref{ch:bocs}) & 56 & 466 & 3\,241 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Un exemple à la main}
+Trois bits, rang $k=2$ : $w_0=1$, $\mathbf w=(-1,\,0{,}5,\,-2)$, et
+\[ \mathbf v_1=(1,\,0),\qquad\mathbf v_2=(0{,}5,\,0{,}5),\qquad\mathbf v_3=(-1,\,1). \]
+Les couplages valent $J_{12}=\langle\mathbf v_1,\mathbf v_2\rangle=0{,}5$, $J_{13}=-1$, $J_{23}=-0{,}5+0{,}5=0$. Le QUBO est donc
+\[ Q=\begin{pmatrix}-1&0{,}5&-1\\0&0{,}5&0\\0&0&-2\end{pmatrix},\qquad c=1. \]
+Pour la chaîne $101$ : $\hat y=1-1-2+J_{13}=-3$. On l'obtient aussi par $\mathbf b^\top Q\mathbf b+c=Q_{11}+Q_{33}+Q_{13}+c=-1-2-1+1=-3$.
+
+\paragraph{Le calcul rapide de la somme des couplages.} Calculer $\sum_{i<j}\langle\mathbf v_i,\mathbf v_j\rangle b_ib_j$ directement coûte $O(n^2k)$. Comme $b_i^2=b_i$ :
+\[ \sum_{i<j}\langle\mathbf v_i,\mathbf v_j\rangle b_ib_j=\frac12\sum_{f=1}^k\Big[\Big(\sum_iv_{if}b_i\Big)^2-\sum_iv_{if}^2\,b_i\Big], \]
+en $O(nk)$. Pour $101$ : composante $f=1$, $\sum_iv_{i1}b_i=1-1=0$ et $\sum_iv_{i1}^2b_i=1+1=2$, soit $\frac12(0-2)=-1$ ; composante $f=2$, $\sum v_{i2}b_i=0+1=1$ et $\sum v_{i2}^2b_i=0+1=1$, soit $0$. Total $-1=J_{13}$ : on retrouve le couplage.
+
+\section{L'apprentissage}
+On ajuste les paramètres en minimisant l'erreur quadratique moyenne sur les $N$ profils simulés, avec une pénalité $L_2$ (comme la régularisation ridge, cours de calcul quantique, chapitre~8) :
+\[ \mathcal L=\frac1N\sum_{n=1}^N\big(\hat y(\mathbf b_n)-y_n\big)^2+\lambda\big(\|\mathbf w\|^2+\|V\|^2\big),\qquad\lambda=10^{-3}. \]
+Contrairement au modèle quadratique en $z$, ce problème n'est \textbf{pas} un problème de moindres carrés linéaire : $\hat y$ dépend des $\mathbf v_i$ par des produits $v_{if}v_{jf}$. Il n'y a pas de formule fermée, on descend le gradient. En notant $r_n=\hat y(\mathbf b_n)-y_n$ et $s_{nf}=\sum_iv_{if}b_{ni}$ :
+\[ \frac{\partial\mathcal L}{\partial w_i}=\frac2N\sum_nr_nb_{ni}+2\lambda w_i,\qquad \frac{\partial\mathcal L}{\partial v_{if}}=\frac2N\sum_nr_n\,b_{ni}\big(s_{nf}-v_{if}\big)+2\lambda v_{if}. \]
+(La dérivée de $\frac12[s_f^2-\sum_iv_{if}^2b_i]$ par rapport à $v_{if}$ vaut $b_is_f-v_{if}b_i$.) On utilise l'algorithme Adam, 1\,500 itérations, sur la sortie centrée réduite.
+
+\paragraph{Plusieurs départs, une moyenne.} Le problème n'étant pas convexe, le résultat dépend du tirage initial des $\mathbf v_i$. Le code ajuste 3 machines avec des graines différentes et prend la \emph{moyenne} de leurs QUBO. La moyenne de QUBO est un QUBO : la propriété est conservée.
+
+\begin{codebox}[ : \code{ia\_qubo/modeles.py}, classe \code{FactorizationMachine}]
+\begin{lstlisting}
+BV = B @ V                                          # s_nf, (N, k)
+pred = w0 + B @ w + 0.5 * ((BV ** 2).sum(1) - (B @ (V ** 2)).sum(1))
+r = pred - y
+gw = 2 * B.T @ r / N + 2 * l2 * w
+gV = 2 * (B.T @ (r[:, None] * BV) - (B.T @ r)[:, None] * V) / N + 2 * l2 * V
+...
+def to_qubo(self):                                  # Q_ii = w_i, Q_ij = <v_i, v_j>
+    G = V @ V.T
+    Q[np.diag_indices(n)] = w ; Q[iu, ju] = G[iu, ju]
+\end{lstlisting}
+\end{codebox}
+
+\section{Ce que la machine de factorisation voit, et ce qu'elle ne voit pas}
+\paragraph{Plus souple par variable.} Sur les 3 bits d'une variable à 8 niveaux, un modèle quadratique en bits a 1 constante, 3 poids et 3 couplages : 7 degrés de liberté pour 8 niveaux. Il peut suivre presque n'importe quelle courbe en fonction de l'indice. Le modèle en $z$, lui, impose une parabole (3 coefficients). Si la traînée dépendait de la cambrure de façon non parabolique, seul le modèle en bits pourrait le représenter.
+
+\begin{piege}[ : les bits ne connaissent pas l'ordre des niveaux]
+En binaire, $x=3$ s'écrit $110$ et $x=4$ s'écrit $001$ (poids faible à gauche) : les deux niveaux voisins n'ont \emph{aucun} bit allumé en commun. Pour le modèle en bits, 3 et 4 ne sont pas plus proches que 0 et 7. Il ne sait pas que la traînée varie continûment avec la cambrure : il doit l'\emph{apprendre} à partir des données. Le modèle en $z$, au contraire, a la continuité dans sa forme même : $z$ est proportionnel à l'indice. Avec peu de données, cette connaissance a priori vaut beaucoup (chapitre~\ref{ch:precision}).
+\end{piege}
+
+\begin{resultat}
+\begin{itemize}
+\item La machine de factorisation est un modèle quadratique en bits dont les couplages sont $\langle\mathbf v_i,\mathbf v_j\rangle$ : c'est un QUBO, sans traduction.
+\item Elle a $1+n+nk$ paramètres, entre le modèle en $z$ (le plus contraint) et le quadratique complet en bits (le plus libre).
+\item Elle s'ajuste par descente de gradient (problème non convexe) ; on moyenne plusieurs ajustements.
+\item Elle peut représenter des effets non paraboliques, mais elle ignore que les niveaux sont ordonnés : il lui faut plus de données.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:fm-main}
+Avec la machine de l'exemple, calculer $\hat y$ pour les 8 chaînes de 3 bits, par la formule du QUBO. Quelle chaîne est le minimum ? Vérifier une valeur avec la formule rapide en $O(nk)$.
+\end{exercice}
+\begin{exercice}\label{ex:fm-rang}
+(a) Montrer qu'aucune machine de rang $k=1$ ne peut donner $J_{12}=J_{13}=J_{23}=-1$. (Indice : calculer le produit $J_{12}J_{13}J_{23}$.) (b) Trouver trois vecteurs de dimension $k=2$ qui donnent ces trois couplages. (Indice : trois vecteurs de même norme à $120^\circ$ les uns des autres.) (c) Qu'en conclure sur le choix de $k$ ?
+\end{exercice}
+\begin{exercice}\label{ex:fm-ordre}
+Sur une variable à 8 niveaux codée en binaire sur 3 bits, combien de bits diffèrent entre les niveaux 3 et 4 ? Entre 0 et 7 ? Entre 6 et 7 ? Pourquoi un modèle en bits entraîné sans aucun profil au niveau 4 peut-il prédire n'importe quoi à ce niveau, alors que le modèle en $z$ l'interpole ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Encoder les niveaux en \og thermomètre\fg{} (unaire : $x=\sum_jb_j$) plutôt qu'en binaire : deux niveaux voisins diffèrent alors d'un seul bit, et le modèle en bits retrouve une notion d'ordre, au prix de 7 bits par variable à 8 niveaux au lieu de 3.
+\item Régler le rang $k$ et la pénalité $\lambda$ par validation croisée à chaque itération, plutôt que de les fixer.
+\end{itemize}
+\end{pistes}

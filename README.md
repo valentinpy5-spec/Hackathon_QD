@@ -29,6 +29,7 @@ la fiche projet et dans tous les cours.
    | [`Cours/3_Optimisation_BiObjectif/`](Cours/3_Optimisation_BiObjectif/Cours_Optimisation_BiObjectif.pdf) | front de Pareto exact, NSGA-II, boucle QUBO bi-objectif, comparaisons |
    | [`Cours/4_Calcul_Quantique/`](Cours/4_Calcul_Quantique/Cours_Calcul_Quantique.pdf) | calcul quantique depuis zéro : qubit, circuits, QUBO, recuit, QAOA, montée en taille |
    | [`Cours/5_Optimisation_Bayesienne/`](Cours/5_Optimisation_Bayesienne/Cours_Optimisation_Bayesienne.pdf) | V3, lot L1 : krigeage, amélioration espérée, contraintes ; la boucle QUBO face à l'optimisation bayésienne (hypothèse H1) |
+   | [`Cours/6_IA_QUBO/`](Cours/6_IA_QUBO/Cours_IA_QUBO.pdf) | V3, lot L6 : apprendre le QUBO (machines de factorisation, BOCS, réseau de neurones témoin), sur V2 et sur un problème CST de 30 bits |
 
    Chaque chapitre porte le bandeau de l'itération qui l'a écrit ; un ajout ultérieur
    apparaît dans un encadré « Évolution » de la couleur de l'itération. Exercices corrigés
@@ -44,9 +45,9 @@ la fiche projet et dans tous les cours.
 README.md                  ce fichier
 METHODE_DE_TRAVAIL.md      itérations, git, cours : comment contribuer
 Fiche_Projet/              journal des itérations (PDF + sources LaTeX)
-Cours/                     cinq cours (PDF + sources LaTeX + scripts de figures)
+Cours/                     six cours (PDF + sources LaTeX + scripts de figures)
 Code/                      code actif (dernière itération close : V2)
-  aero/  ser/  optim/  quantique/   modules
+  aero/  ser/  optim/  quantique/  ia_qubo/   modules
   resultats/               tables et résultats de toutes les itérations
   archives/                V0, V1, V2 figées
 Documents/                 note d'intention du projet

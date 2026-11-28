@@ -1,0 +1,112 @@
+\chapter{Résultats sur le problème V2}\label{ch:resultats-v2}
+\iterbanner{V3}
+
+\section{Le protocole}
+Huit méthodes (4 modèles $\times$ 2 traitements de la contrainte), deux scénarios radar (S1, S2), 20 graines chacune, avec le protocole du lot L1 : mêmes 10 profils initiaux pour une graine donnée, 5 poids par itération, budget de 250 simulations, SER par méthode des moments, QUBO résolus exactement par énumération. La campagne a pris 46 minutes sur 11 processus (\code{python3 -m ia\_qubo.experiences\_v2\_ia}). La méthode \code{quadz\_modele} redonne exactement les chiffres de la V2 (75 et 142,5) : c'est attendu, puisque la boucle générique la reproduit à l'identique.
+
+\section{Le front exact : qui le retrouve, et en combien de simulations}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{3}{c}{S1 (front de 4 profils)} & \multicolumn{3}{c}{S2 (front de 10 profils)} \\
+Méthode & médiane & quartiles & réussite & médiane & quartiles & réussite \\
+\midrule
+\textbf{quadratique en $z$ (actuel)} & \textbf{75} & 60 -- 96 & 100~\% & \textbf{142,5} & 116 -- 191 & 100~\% \\
+machine de factorisation & 95 & 75 -- 132 & 100~\% & 152,5 & 130 -- 211 & 95~\% \\
+bayésien sur les bits & 100 & 90 -- 115 & 100~\% & 187,5 & 159 -- 245 & 80~\% \\
+réseau de neurones & --- & & 5~\% & --- & & 5~\% \\
+\midrule
+hybride (réseau + contrainte affine) & 102,5 & 75 -- 135 & 100~\% & \textbf{90} & 84 -- 100 & 100~\% \\
+\midrule
+les quatre, en boîte noire & --- & & 0~\% & --- & & 0~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+(Nombre de simulations pour retrouver tout le front exact ; « --- » : la médiane n'est pas atteinte dans le budget de 250, faute de réussite dans au moins la moitié des graines.)
+
+Comparaisons appariées avec l'approche actuelle, graine par graine (test de Wilcoxon) :
+\begin{itemize}
+\item \textbf{machine de factorisation} : 22,5 (S1) et 17,5 (S2) simulations de plus en médiane, mais elle fait mieux sur 7 et 6 graines sur 20. L'écart est à la limite de la significativité ($p=0{,}052$ et $0{,}057$) ;
+\item \textbf{modèle bayésien sur les bits} : significativement moins bon ($p=0{,}007$ et $0{,}015$) ;
+\item \textbf{réseau de neurones} : très nettement moins bon ($p=10^{-4}$), alors qu'il est le plus précis (chapitre~\ref{ch:precision}).
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/v2_front_S2}
+\caption{Scénario S2 : part du front exact retrouvée en fonction du nombre de profils simulés (médiane sur 20 graines). En trait plein, contrainte modélisée ; en tirets, contrainte en boîte noire.}\label{fig:v2-s2}
+\end{figure}
+
+\section{Ce qui s'est passé}
+\paragraph{1. Parmi les modèles qui sont des QUBO, le plus contraint gagne.} Pour les trois modèles quadratiques, le classement suit le nombre de paramètres : 15 (en $z$), 51 (factorisation), 56 (bayésien). Les modèles en bits ne rejoignent la précision du modèle en $z$ qu'au-delà de 80 à 120 profils (chapitre~\ref{ch:precision}) ; or la boucle trouve le front de S1 en 75 simulations, dont une partie infaisable. Le modèle en $z$ apporte une information que les données ne donnent pas : la continuité des niveaux (chapitre~\ref{ch:fm}, piège). Le réseau de neurones fait exception : il est le plus précis, même avec peu de données, et pourtant il échoue. La raison est ailleurs.
+
+\paragraph{2. Le réseau de neurones échoue à cause de la contrainte, pas de l'objectif.} En fin de boucle, il trouve 90~\% du front de S2 et la moitié de celui de S1, mais il manque toujours les mêmes profils : des profils à nez fin ($I=2$) et d'épaisseur 10 à 14~\%. On a d'abord pensé à des points non supportés (aucune somme pondérée ne les désigne), et l'on a vérifié (\code{ia\_qubo/diagnostic\_v2\_ia.py}) : l'hypothèse est \emph{fausse}, le réseau manque aussi des points supportés. Ce qu'il prédit pour ces profils, après 250 simulations :
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{lccc}
+\toprule
+Profil du front de S2 & $C_{L,\max}$ vrai & prédit par le réseau & prédit par le modèle affine (V2) \\
+\midrule
+(5~\%, 0,45, 10~\%, $I=2$) & 1,34 & \textbf{0,89} & 1,30 \\
+(4~\%, 0,55, 12~\%, $I=2$) & 1,20 & \textbf{0,96} & 1,24 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Le réseau les croit nettement infaisables, et ne les simule donc jamais. Pourquoi ? Autour d'eux, les profils voisins à nez fin ont des $C_{L,\max}$ de 0,9 à 1,1, ou font échouer XFOIL sur la rampe de manœuvre : la grandeur est très irrégulière dans ce coin de la grille. Le réseau, précis et souple, suit fidèlement ces voisins. Le modèle affine, trop grossier pour les suivre, fait une moyenne indulgente qui laisse passer les bons profils. C'est exactement la conclusion du lot L1 : \textbf{le front est au bord de la contrainte, et un modèle de contrainte plus fidèle est plus sévère, donc il l'exclut}.
+
+\paragraph{3. La boîte noire échoue pour la même raison, en pire.} Les variantes en boîte noire ne retrouvent jamais tout le front : au mieux 60~\% de celui de S2 (modèle bayésien, médiane), souvent beaucoup moins. Le front est collé à la frontière de faisabilité ; or c'est là que les données sautent de la vraie valeur à la valeur dégradée des infaisables, et un modèle lisse étale ce saut sur les deux côtés. Les profils du front, voisins d'infaisables, sont jugés mauvais. L'hypervolume atteint pourtant 0,91 à 0,98 de celui du front exact en fin de budget : la boîte noire trouve de bons compromis, mais pas les meilleurs, qui sont au bord.
+
+\section{Le témoin hybride : ce que coûte la forme quadratique}
+Le diagnostic précédent se teste directement. La méthode \code{hybride\_modele} garde les réseaux de neurones pour la traînée et la SER, mais reprend le modèle \emph{affine} en $z$ de la V2 pour $C_{L,\max}$, avec la même pénalité $75\max(0,\,1{,}2-\widehat{C_{L,\max}})^2$. Seul le modèle de contrainte change par rapport à \code{mlp\_modele}.
+\begin{codebox}[ : \code{ia\_qubo/boucle.py}, le score de la méthode hybride]
+\begin{lstlisting}
+def score(Ic, w=w):
+    Bc = encode(Ic, bits)
+    f = w * m_cd.predict(Bc) / s_cd + (1 - w) * m_ser.predict(Bc) / s_ser   # reseaux
+    pred = predict_z(cl_aff, np.asarray(Ic), levels)                         # affine en z (V2)
+    return f + 75.0 * np.maximum(0.0, cl_min - pred) ** 2
+\end{lstlisting}
+\end{codebox}
+Résultat (20 graines, \code{python3 -m ia\_qubo.experiences\_v2\_ia hybride\_modele}, 2 minutes) : le réseau, qui ne trouvait le front que dans 5~\% des graines, le trouve maintenant \textbf{dans toutes}. Le diagnostic est confirmé : c'était bien le modèle de contrainte.
+
+Comparé à l'approche actuelle, graine par graine :
+\begin{itemize}
+\item \textbf{S2} : l'hybride est meilleur sur 17 graines sur 20, avec 50 simulations de moins en médiane (90 contre 142,5 ; $p=2\cdot10^{-4}$) ;
+\item \textbf{S1} : il est moins bon, avec 22,5 simulations de plus en médiane (102,5 contre 75 ; meilleur sur 4 graines seulement, $p=0{,}003$).
+\end{itemize}
+Sur S2, un modèle qui n'est pas quadratique décrit mieux les objectifs, et cela se voit dans la boucle : la forme quadratique coûte environ un tiers des simulations. Sur S1, dont le front n'a que 4 profils, l'a priori de continuité du modèle en $z$ gagne. Une explication plausible, que l'on n'a pas vérifiée : la SER du secteur S2 (balayage de $-60^\circ$ à $0^\circ$) dépend de la forme de façon moins quadratique que celle de S1.
+
+\begin{piege}[ : pourquoi un témoin qui n'est pas quantique]
+L'hybride n'est pas un QUBO : aucune machine quantique ne peut le minimiser. On ne l'étudie pas comme candidat, mais comme \textbf{témoin}, pour mesurer ce que coûte la condition « le modèle doit être quadratique en bits ». Si le témoin ne faisait pas mieux, la forme QUBO ne coûterait rien. Ici, elle coûte sur S2. Ce n'est pas un argument contre le quantique, mais pour des QUBO plus riches, par exemple une machine de factorisation ajustée sur les prédictions du réseau (distillation, chapitre~\ref{ch:mlp}, pistes).
+\end{piege}
+
+\section{Le temps de calcul}
+Par graine, en moyenne : 1 à 3 secondes pour le modèle en $z$ et le modèle bayésien, 18 à 31 secondes pour la machine de factorisation, 3 minutes pour le réseau de neurones (contrainte modélisée), 30 secondes pour l'hybride (deux réseaux au lieu de trois, et la boucle s'arrête plus tôt) et 6 à 7 minutes en boîte noire (un réseau par poids). Comparé à 250 simulations XFOIL et MoM, tout cela reste négligeable : ce n'est pas le coût d'apprentissage qui départage les méthodes.
+
+\begin{resultat}
+\begin{itemize}
+\item Sur le problème V2, l'approche actuelle reste la meilleure. La machine de factorisation est proche (écart non significatif à 5~\%), le modèle bayésien sur les bits et surtout le réseau de neurones sont moins bons.
+\item Parmi les modèles QUBO, les modèles en bits ont besoin de 80 à 120 profils pour rejoindre le modèle en $z$ : à ce budget, la continuité des niveaux imposée par le modèle en $z$ vaut plus que la souplesse.
+\item Le modèle le plus précis échoue parce qu'il modélise trop fidèlement une contrainte irrégulière, et exclut le front, qui est à son bord.
+\item La contrainte en boîte noire ne retrouve jamais tout le front, pour la même raison.
+\item Le témoin hybride (réseaux pour les objectifs, contrainte affine) le confirme : il retrouve le front dans toutes les graines, et fait mieux que l'approche actuelle sur S2 (90 simulations contre 142,5), moins bien sur S1 (102,5 contre 75).
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:v2-lecture}
+D'après le tableau, combien de simulations la machine de factorisation coûte-t-elle de plus que l'approche actuelle dans S1, en médiane ? Pourquoi la comparaison graine par graine (test apparié) est-elle plus pertinente que la comparaison des deux médianes ?
+\end{exercice}
+\begin{exercice}\label{ex:v2-contrainte}
+Un profil a un $C_{L,\max}$ vrai de 1,34. Le réseau prédit 0,89. Quelle pénalité lui ajoute la boucle ($75\max(0,1{,}2-\widehat{C_{L,\max}})^2$) ? Comparer à l'étendue de l'objectif normalisé (environ 1). Que faudrait-il pour que ce profil soit quand même proposé ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item \emph{(Fait : témoin hybride, ci-dessus.)} Revenir à un QUBO en distillant le réseau dans une machine de factorisation, pour garder son gain sur S2.
+\item Utiliser l'écart entre les membres de l'ensemble (incertitude) pour relâcher la contrainte là où le réseau doute, comme la probabilité de faisabilité du lot L1.
+\end{itemize}
+\end{pistes}

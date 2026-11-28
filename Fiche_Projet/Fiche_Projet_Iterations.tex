@@ -186,7 +186,7 @@ Clore la V2 (6 novembre 2026, code et résultats figés dans \path{Code/archives
 
 % =====================================================================
 \iterchapter{V3}{Visée : un concurrent équitable, un problème plus grand}\label{ch:v3}
-\paragraph{Statut.} Ouverte le 6 novembre 2026. Au 15 novembre, le lot L1 est traité (section~\ref{sec:v3-l1}) ; L2 à L5 ne sont pas commencés. Ce chapitre fixe la visée et sera complété au fil de l'itération (résultats, enseignements et décision, comme pour les itérations précédentes).
+\paragraph{Statut.} Ouverte le 6 novembre 2026. Au 15 novembre, le lot L1 est traité (section~\ref{sec:v3-l1}). Au 28 novembre, le lot L6, ajouté en cours d'itération, est traité (section~\ref{sec:v3-l6}) ; L2 à L5 ne sont pas commencés. Ce chapitre fixe la visée et sera complété au fil de l'itération (résultats, enseignements et décision, comme pour les itérations précédentes).
 
 \paragraph{Fait.} Point de départ commun de l'équipe : chaque cours se termine par un chapitre « Le code actuel » \iterbadge{V3}, qui décrit le code de fin de V2, ce que la partie utilise, reçoit et fournit, avec le même schéma de la chaîne (\path{Fiche_Projet/chaine_code.tex}, à tenir à jour si la chaîne change).
 
@@ -218,6 +218,7 @@ L1 & Concurrent bayésien \newline(priorité 1) & Optimisation bayésienne multi
 L2 & Problème agrandi & Grille de 14 bits : $m$ (8) $\times$ $p$ (8) $\times$ $t$ (16) $\times$ $I$ (8) $=16\,384$ profils, environ 1,6~h de XFOIL sur 10 cœurs ; front exact toujours calculable. QUBO d'environ 18 à 20 qubits, encore simulable par vecteur d'état. Comparaison L1 refaite dessus. & \path{optim/problem_v3.py}, \path{resultats/base_V3.csv}, réponse à H2 \\
 L3 & Robustesse physique & (a) $C_{L,\max}$ comme maximum de $C_L(\alpha)$ sur une rampe fine, avec détection du décrochage, au lieu de la non-convergence ; vérifier le profil à 319~counts. (b) SER en polarisation TE (méthode des moments, validée sur la série de Mie TE). (c) Front pour une exigence de manœuvre de 1,1 à 1,4. & \path{aero/xfoil_runner.py} étendu, \path{ser/mom2d.py} TE, figure « front selon $C_{L,\max}$ », réponse à H3 \\
 L4 & Quantique réaliste & QAOA avec bruit (Qiskit Aer, modèle de bruit d'un processeur réel), transpilation sur une topologie réelle : CNOT et profondeur en fonction du nombre de qubits ; à partir de quelle taille le bruit détruit-il la qualité des candidats ? & \path{quantique/bruit.py}, courbe qualité / taille avec et sans bruit \\
+L6 & Apprendre le QUBO \newline(ajouté le 20 nov.) & Remplacer le modèle quadratique en $z$ par des modèles appris (machine de factorisation FMQA, modèle bayésien sur les bits BOCS, réseau de neurones en témoin non quantique), sur le problème V2 puis sur un problème CST de 30 bits, avec XFOIL et la SER en boîtes noires. & \path{ia_qubo/}, cours \emph{IA et QUBO} \\
 L5 & Interface avec le groupe SER & Fonction d'interface unique \texttt{evaluer\_ser(contour, attitude, secteur)} pour brancher le solveur de l'autre groupe à la place de \path{ser/} ; contrôle sur quelques profils contre la méthode des moments. & \path{ser/interface.py}, note de comparaison \\
 \bottomrule
 \end{tabularx}
@@ -241,6 +242,7 @@ Lot & Ce qui a été fait & Résultat & Statut \\
 \midrule
 L1 & boucle bayésienne, comparaison sur 20 graines, diagnostics ; cours \emph{Optimisation bayésienne} & H1 non confirmée ; le traitement de la contrainte de manœuvre décide du succès (section~\ref{sec:v3-l1}) & fait \newline(15 nov.) \\
 L2 & --- & --- & à faire \\
+L6 & modèles appris dans la boucle, V2 (20 graines) et problème CST de 30 bits (8 graines, deux campagnes) ; cours \emph{IA et QUBO} & sur V2, le modèle en $z$ reste le meilleur ; à 30 bits, les trois QUBO se valent et battent NSGA-II ; la forme QUBO ne coûte rien de mesurable (section~\ref{sec:v3-l6}) & fait \newline(28 nov.) \\
 L3 & --- & --- & à faire \\
 L4 & --- & --- & à faire \\
 L5 & --- & --- & à faire \\
@@ -280,6 +282,41 @@ krigeage + EI, contrainte en dur & \VtroisSunDur & \VtroisSunDurSucces~\% & \Vtr
 \paragraph{Conséquences pour la V3.} L3 devient prioritaire : $C_{L,\max}$ est la grandeur dont tout dépend, et la moins bien prédite. L2 doit reprendre l'ablation et vérifier d'abord que le poids de pénalité reste dans la bonne zone sur la grande grille.
 
 \paragraph{Où trouver.} Code : \path{Code/optim/bayes.py}, \path{Code/optim/experiences_l1.py}, \path{Code/optim/diagnostic_l1.py} ; résultats : \path{Code/resultats/pipeline_L1_V3.json}, \path{Code/resultats/diagnostic_L1_V3.json}. Cours : \path{Cours/5_Optimisation_Bayesienne/} (bandeaux \iterbadge{V3}) et encadré « Évolution V3 » du chapitre V2 du cours d'optimisation bi-objectif.
+
+\section{Lot L6 : apprendre le QUBO}\label{sec:v3-l6}
+\paragraph{Pourquoi ce lot.} La littérature (FMQA, BOCS) apprend directement un QUBO sur les bits, sans connaître la physique, pour traiter des problèmes plus grands et plus « boîtes noires ». La question était de savoir si ces modèles remplacent avec profit notre modèle quadratique en $z$, et ce qu'ils deviennent quand le problème ne s'énumère plus.
+
+\paragraph{Ce qui a été fait.} Une boucle générique (\path{ia_qubo/boucle.py}) où l'on choisit le modèle (en $z$, machine de factorisation, bayésien sur les bits, réseau de neurones), le traitement de la contrainte (modélisée ou en boîte noire) et le solveur (énumération ou recuit). Avec le modèle en $z$, elle redonne exactement la boucle V2. Deux problèmes : la grille V2 (20 graines, front exact connu), et un problème CST de 10 coefficients sur 8 niveaux (30 bits, $10^9$ profils), avec XFOIL et l'optique physique appelés à la demande (8 graines, 300 simulations, hypervolume relatif à un front de référence).
+
+\paragraph{Résultats.}
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{V2 : simulations pour le front exact} & \multicolumn{2}{c}{CST : hypervolume relatif} \\
+& S1 & S2 & à 100 & à 300 \\
+\midrule
+modèle en $z$ (actuel) & 75 & 142,5 & 0,767 & 0,882 \\
+machine de factorisation & 95 & 152,5 & 0,832 & 0,895 \\
+bayésien sur les bits & 100 & 187,5 & 0,829 & 0,897 \\
+témoin hybride (non QUBO) & 102,5 & 90 & 0,812 & 0,913 \\
+NSGA-II & --- & --- & 0,717 & 0,812 \\
+hasard & --- & --- & 0,682 & 0,771 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Ce qu'on a appris.}
+\begin{enumerate}
+\item \textbf{Sur la V2, le modèle en $z$ reste le meilleur.} L'ordre des niveaux est une information que les modèles en bits n'ont pas ; ils ne rattrapent sa précision qu'au-delà de 80 à 120 profils.
+\item \textbf{À 30 bits, les trois QUBO se valent et battent NSGA-II} (8 graines sur 8 à 100 simulations, $p=0{,}008$). La machine de factorisation est en avance en début de budget, sans que ce soit significatif avec 8 graines : le modèle en $z$ a 66 coefficients et manque de données.
+\item \textbf{La forme QUBO ne coûte rien de mesurable à 30 bits.} Le témoin non quantique (réseaux pour les objectifs, contrainte affine) ne bat pas significativement les QUBO ($p=0{,}11$). Sur S2 de la V2, en revanche, il gagne nettement.
+\item \textbf{Les contraintes décident encore.} Le réseau seul échoue sur la V2 parce que son modèle de $C_{L,\max}$ est trop fidèle (même mécanisme que L1). Une première campagne CST sans contrôle géométrique a donné un avantage spectaculaire mais faux aux modèles de la littérature : l'approche actuelle y perdait 73~\% de son budget en géométries invalides. Elle est gardée dans le cours comme leçon.
+\end{enumerate}
+
+\paragraph{Conséquences.} Le message défendable s'enrichit : sur un problème qu'on ne peut plus énumérer, la boucle QUBO bat un algorithme génétique, et sa forme quadratique ne coûte pas de qualité. Il manque un concurrent classique adapté aux petits budgets en grande dimension (TuRBO, SAASBO) sur le problème CST, qui rejoint la question de L2.
+
+\paragraph{Où trouver.} Code : \path{Code/ia_qubo/} (voir son README) ; résultats : \path{Code/resultats/ia_qubo_*.json}, \path{cache_cst.jsonl}. Cours : \path{Cours/6_IA_QUBO/}.
 
 \appendix
 \chapter{Tenir la fiche à jour}

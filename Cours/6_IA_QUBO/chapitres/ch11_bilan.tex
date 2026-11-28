@@ -1,0 +1,89 @@
+\chapter{Bilan}\label{ch:bilan}
+\iterbanner{V3}
+
+\section{La réponse à la question du chapitre~\ref{ch:question}}
+La question était : des modèles appris (machine de factorisation, modèle bayésien sur les bits, réseau de neurones) peuvent-ils remplacer le modèle quadratique en $z$, et nous rapprocher de problèmes plus grands et plus « boîtes noires » ? Les deux problèmes donnent des réponses différentes, et c'est la différence qui est instructive.
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+& Problème V2 (4 variables, 10 bits) & Problème CST (10 variables, 30 bits) \\
+\midrule
+modèle en $z$ (actuel) & le meilleur & à égalité avec les autres QUBO \\
+machine de factorisation & proche, non significatif & en avance en début de budget, non significatif \\
+modèle bayésien sur les bits & moins bon & à égalité ; trouve les extrémités du front \\
+réseau seul & échoue (modèle de contrainte trop fidèle) & non testé \\
+témoin hybride (non QUBO) & mieux sur S2, moins bien sur S1 & pas significativement mieux \\
+contrainte en boîte noire & ne retrouve jamais le front & moins bonne que la contrainte modélisée \\
+boucle QUBO contre NSGA-II & meilleure (V2) & \textbf{meilleure}, $p=0{,}008$ à 100 simulations \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{itemize}
+\item \textbf{À petite dimension}, la connaissance de l'ordre des niveaux (le modèle en $z$) vaut plus que la souplesse : les modèles en bits n'apportent rien.
+\item \textbf{À l'échelle}, les trois modèles quadratiques se valent, et tous battent les méthodes sans modèle. Le modèle en $z$ perd son avance parce que ses 66 coefficients demandent autant de données que le budget en fournit.
+\item \textbf{Le traitement des contraintes décide plus que le modèle d'objectif}, aux deux échelles : un modèle de contrainte trop sévère exclut le front (réseau seul, V2) ; une contrainte oubliée détourne l'optimisation (première campagne CST) ; une contrainte en boîte noire rend la méthode trop prudente.
+\end{itemize}
+
+\section{Pourquoi nos résultats et la littérature divergent, puis se rejoignent}
+Les articles sur FMQA et BOCS montrent des gains nets. Sur le problème V2, on n'en voit aucun ; sur le problème CST, on commence à les voir. Les différences expliquent les deux constats :
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.9cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+& Littérature FMQA / BOCS & Notre V2 & Notre CST \\
+\midrule
+variables & binaires par nature (matériaux, graphes) & 4 niveaux ordonnés : l'ordre est une information que le modèle en $z$ exploite & 10 niveaux ordonnés, mais 66 coefficients à apprendre \\
+dimension & 30 à 100 bits et plus & 10 bits : tout s'énumère & 30 bits : ni le problème ni le QUBO ne s'énumèrent \\
+données par coefficient & souvent moins d'une & environ 5 & environ 1 à 2 \\
+front & souvent loin des contraintes & au bord de la contrainte de manœuvre & au bord de plusieurs contraintes \\
+mesure & meilleure valeur trouvée & front exact retrouvé (très strict) & hypervolume relatif \\
+référence & souvent hasard ou recuit seul & une boucle QUBO déjà bien réglée & la même \\
+\bottomrule
+\end{tabularx}
+\end{center}
+La ligne décisive est celle des \textbf{données par coefficient}. Les modèles en bits régularisés sont conçus pour le régime où l'on a moins de données que de coefficients. La V2 n'est pas dans ce régime ; le problème CST s'en approche, et c'est là qu'ils commencent à servir. Un vrai problème de conception (dizaines de paramètres, simulations de plusieurs heures, quelques centaines de calculs au plus) y est entièrement.
+
+Il y a aussi une raison propre à la recherche : le matériel quantique ne sait résoudre que des QUBO. Les travaux cherchent donc d'abord le meilleur modèle \emph{quadratique} ; ils comparent rarement à un modèle libre ou à une méthode classique bien réglée. C'est ce que fait le témoin hybride, et la conclusion de ce cours en dépend.
+
+\section{Ce que cela dit pour le quantique}
+\begin{enumerate}
+\item \textbf{À l'échelle, la forme QUBO ne coûte rien de mesurable.} Le témoin non quantique ne fait pas significativement mieux que les modèles quadratiques. Écrire le problème comme un QUBO, condition pour le confier à une machine quantique, n'a pas fait perdre de qualité.
+\item \textbf{Les QUBO deviennent assez grands pour qu'un solveur matériel ait un sens.} Avec 33 qubits, on ne peut plus énumérer dans la boucle, et l'on résout par recuit simulé. C'est exactement la place d'un recuit quantique. Ce cours \emph{ne montre pas} qu'il ferait mieux : il montre que la question devient légitime.
+\item \textbf{Le goulot reste la simulation.} Le choix du modèle change le résultat de quelques points d'hypervolume ; un QUBO mieux résolu, beaucoup moins, puisque le recuit réglé trouve déjà l'optimum de deux tiers des QUBO de la V2 (chapitre~\ref{ch:echelle}), et qu'un candidat proche de l'optimum du modèle est presque aussi bon à simuler. L'apport principal de l'IA est en amont : simulateurs appris, multi-fidélité, espaces latents sans pénalités (chapitre~\ref{ch:ia-autres}).
+\end{enumerate}
+
+\section{Comment le présenter}
+Pour un public non spécialiste, en trois phrases :
+\begin{quote}
+« Chaque simulation d'un profil coûte cher ; on apprend donc, à partir des profils déjà simulés, un modèle mathématique qui prédit la traînée et la signature radar, puis on demande au modèle quel profil essayer ensuite. Ce modèle s'écrit sous la forme qu'une machine quantique sait résoudre ; sur un problème de 30 bits, cela fonctionne aussi bien qu'un modèle sans cette contrainte, et mieux qu'un algorithme génétique. Le point délicat n'est pas le calcul quantique, mais les contraintes : une contrainte mal décrite détourne toute l'optimisation. »
+\end{quote}
+Et une précaution : ne pas présenter les résultats de la première campagne CST, qui donnaient un avantage spectaculaire aux méthodes de la littérature. Cet avantage venait d'un défaut du protocole.
+
+\begin{resultat}
+\begin{itemize}
+\item Les modèles appris n'apportent rien sur le problème V2 ; sur le problème CST de 30 bits, ils font jeu égal avec le modèle en $z$, et la machine de factorisation est en avance en début de budget.
+\item Aux deux échelles, la boucle QUBO bat NSGA-II, et le traitement des contraintes compte plus que le modèle d'objectif.
+\item À l'échelle, la forme QUBO ne coûte rien de mesurable par rapport à un modèle libre : c'est l'argument le plus solide de ce cours pour une résolution quantique.
+\item La littérature et nos résultats divergent surtout par le nombre de données par coefficient ; notre problème CST se rapproche du régime des articles, et les résultats s'en rapprochent aussi.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:bilan-feynman}
+Expliquer à quelqu'un qui connaît la régression linéaire, mais pas le QUBO, pourquoi le modèle en $z$ est le meilleur sur la V2 et ne l'est plus à 30 bits. On doit pouvoir le faire en cinq phrases, sans le mot « qubit ».
+\end{exercice}
+\begin{exercice}\label{ex:bilan-defense}
+Un ingénieur objecte : « Votre boucle bat NSGA-II, mais NSGA-II n'est pas fait pour 300 simulations. » Que répondre ? Quelle méthode classique faudrait-il ajouter à la comparaison pour que l'argument tienne (voir le chapitre~\ref{ch:ia-autres}) ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Ajouter un concurrent classique adapté aux petits budgets en grande dimension (TuRBO ou SAASBO, chapitre~\ref{ch:ia-autres}) au problème CST : c'est la comparaison qui manque pour défendre la boucle.
+\item 20 graines sur le problème CST, pour trancher entre la machine de factorisation et le modèle en $z$.
+\item Un troisième niveau (CST de degré 9, 60 bits), où le modèle en $z$ aurait 231 coefficients et devrait être distancé par les modèles en bits.
+\item Résoudre les QUBO de 33 qubits sur un recuit quantique réel, et comparer au recuit simulé à budget égal.
+\end{itemize}
+\end{pistes}
