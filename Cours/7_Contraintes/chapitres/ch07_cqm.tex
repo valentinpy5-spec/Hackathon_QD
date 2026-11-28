@@ -1,0 +1,62 @@
+\chapter{L'interface des solveurs industriels}\label{ch:cqm}
+\iterbanner{V3}
+
+\section{Garder les contraintes séparées}
+Jusqu'ici, la boucle livrait à son solveur une seule matrice $Q$ où pénalités et objectif sont mélangés. Les solveurs industriels attendent autre chose : un \textbf{modèle quadratique contraint} (en anglais \emph{constrained quadratic model}, CQM),
+\[ \min_{\mathbf b\in\{0,1\}^n}\ \mathbf b^\top Q\,\mathbf b+c\quad\text{sous}\quad\mathbf b^\top H_k\mathbf b+h_{0,k}\ \ge\ 0,\quad k=1,\dots,K. \]
+C'est ce que reçoivent les solveurs classiques en variables binaires (CPLEX, Gurobi, SCIP) et le solveur hybride contraint de D-Wave, qui accepte directement contraintes d'égalité et d'inégalité. C'est \emph{lui} qui choisit comment traiter les contraintes : pénalités réglées automatiquement, décomposition, prétraitement classique qui réduit le problème avant la partie quantique. Les retours d'expérience industriels (planification de la production de véhicules d'essai, par exemple) soulignent l'avantage principal : on n'a plus à régler soi-même les poids de pénalité, réglage qui devient très difficile quand le modèle grossit.
+
+\section{Notre export}
+\code{contraintes/export\_cqm.py} écrit le problème d'une itération au \textbf{format LP}, un format texte lu par tous ces outils (côté D-Wave, par \code{dimod.lp.load}), et en JSON. L'exemple fourni est une itération réelle de la seconde campagne CST (graine 0, 150 profils simulés, $w=0{,}5$) :
+\begin{itemize}
+\item 30 variables binaires, nommées \code{a0\_b0} à \code{a9\_b2} (coefficient, bit) ;
+\item l'objectif pondéré normalisé, quadratique ;
+\item 8 contraintes : $\hat C_{L,\max}\ge1{,}2$ (linéaire), non-croisement aux 6 points de contrôle (linéaires), convergence d'XFOIL $p\ge0{,}1$ (quadratique).
+\end{itemize}
+
+\begin{codebox}[ : début de \code{Code/resultats/cqm\_exemple.lp}]
+\begin{lstlisting}[language={}]
+\ Boucle QUBO, problème CST 30 bits, graine 0, 150 profils simulés, w = 0,5 (lot L7)
+Minimize
+ obj: - 0.0927 a0_b0 - 0.148 a0_b1 ... + [ + 0.148 a0_b0 * a0_b1 + ... ] / 2
+Subject To
+ c0_CLmax_min: ... >= ...
+ c1_croisement_x_0_02: + 0.0454 a0_b0 + 0.0907 a0_b1 + ... >= ...
+ ...
+ c7_convergence_xfoil: ... + [ ... ] >= ...
+Binary
+ a0_b0 a0_b1 a0_b2 a1_b0 ...
+End
+\end{lstlisting}
+\end{codebox}
+\paragraph{Validation.} Relu par \code{dimod} 0.12 (installé seulement pour ce contrôle, ce n'est pas une dépendance du projet), le fichier redonne 30 variables et 8 contraintes ; sur 200 chaînes tirées au hasard, l'objectif et les 8 contraintes coïncident avec ceux de la boucle à $10^{-9}$ près.
+
+\begin{piege}[ : les conventions du format LP]
+Dans l'objectif, la partie quadratique entre crochets est \emph{divisée par 2} : il faut y écrire $2Q_{ij}$. Dans les contraintes, elle ne l'est pas. La constante de l'objectif n'est pas écrite (certains lecteurs la refusent) ; elle ne change pas l'optimum et figure en commentaire. Une erreur de facteur 2 sur les couplages donnerait un fichier lisible mais faux : d'où la vérification sur des chaînes tirées au hasard.
+\end{piege}
+
+\section{Ce que cela change pour l'équipe}
+\begin{itemize}
+\item Le problème d'une itération devient un \emph{fichier} que l'on peut confier à n'importe quel solveur, quantique, hybride ou classique, et comparer à budget égal, sans toucher à la boucle.
+\item La comparaison la plus utile pour le jury : résoudre le même CQM par le recuit simulé de la boucle, par un solveur exact classique, et par un solveur hybride quantique. Si les trois rendent le même candidat, le choix du solveur n'est pas le goulot ; s'ils diffèrent, on sait où chercher.
+\item Pour un industriel, c'est le format attendu : on ne lui livre pas une matrice pré-pénalisée dont il ne peut pas relire les contraintes.
+\end{itemize}
+
+\begin{resultat}
+\begin{itemize}
+\item Les solveurs industriels reçoivent objectif et contraintes séparés et règlent eux-mêmes le traitement des contraintes.
+\item L'export LP de la boucle est validé avec \code{dimod} ; il rend la chaîne compatible avec les solveurs classiques et hybrides sans modifier la boucle.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:cqm-ecrire}
+Écrire au format LP le problème : minimiser $b_0-2b_1+3b_0b_1$ sous $b_0+b_1\ge1$ et $b_0b_1-0{,}5\,b_0\ge-0{,}2$, $b_0,b_1$ binaires. Résoudre à la main et vérifier.
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Résoudre le CQM exemple avec un solveur exact (SCIP, libre) pour connaître l'optimum contraint du modèle à 30 bits, et mesurer l'écart du recuit simulé vérifié.
+\item Le soumettre au solveur hybride contraint de D-Wave si l'équipe obtient un accès (programme académique), et comparer les candidats.
+\end{itemize}
+\end{pistes}

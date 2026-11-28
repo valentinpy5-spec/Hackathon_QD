@@ -1,0 +1,19 @@
+% figure générée par tools/make_figures.py
+\begin{tikzpicture}
+\begin{axis}[width=0.92\linewidth,height=7cm,xmin=0,xmax=300,ymin=0.3,ymax=1,xlabel={simulations},
+  ylabel={$HV/HV_{\rm ref}$ (médiane sur 8 graines)},grid=major,grid style={cmuted!20},legend pos=south east,
+  legend cell align=left,legend style={font=\footnotesize}]
+\addplot[cmuted,thick,dashed,mark size=1.4pt] coordinates {(20,0.61544) (40,0.64622) (60,0.65565) (80,0.66783) (100,0.68305) (120,0.6884) (140,0.72706) (160,0.72737) (180,0.72737) (200,0.72913) (220,0.76737) (240,0.77032) (260,0.77032) (280,0.77082) (300,0.77155)};
+\addlegendentry{hasard}
+\addplot[cink,thick,dotted,mark size=1.4pt] coordinates {(20,0.61096) (40,0.62004) (60,0.6257) (80,0.65257) (100,0.71827) (120,0.72088) (140,0.74279) (160,0.76578) (180,0.77044) (200,0.77275) (220,0.78817) (240,0.78883) (260,0.789) (280,0.81253) (300,0.81278)};
+\addlegendentry{NSGA-II}
+\addplot[cblue,very thick,mark=*,mark size=1.4pt] coordinates {(20,0.61204) (40,0.69689) (60,0.72471) (80,0.76812) (100,0.76812) (120,0.76812) (140,0.79083) (160,0.80248) (180,0.82308) (200,0.82499) (220,0.82879) (240,0.84877) (260,0.85732) (280,0.86329) (300,0.88181)};
+\addlegendentry{bits d'écart (actuel)}
+\addplot[corange,thick,mark=square*,mark size=1.4pt] coordinates {(20,0.63019) (40,0.6879) (60,0.76189) (80,0.8174) (100,0.83258) (120,0.85689) (140,0.86559) (160,0.86807) (180,0.87256) (200,0.87577) (220,0.87915) (240,0.8796) (260,0.88328) (280,0.89162) (300,0.89483)};
+\addlegendentry{machine de factorisation (bits d'écart)}
+\addplot[cgreen,very thick,mark=triangle*,mark size=1.4pt] coordinates {(20,0.58278) (40,0.62809) (60,0.708) (80,0.75695) (100,0.7682) (120,0.79466) (140,0.79466) (160,0.79466) (180,0.79466) (200,0.79986) (220,0.83212) (240,0.83255) (260,0.83795) (280,0.83895) (300,0.83944)};
+\addlegendentry{lagrangien vérifié}
+\addplot[cviolet,very thick,mark=diamond*,mark size=1.4pt] coordinates {(20,0.58278) (40,0.69995) (60,0.75154) (80,0.80242) (100,0.81519) (120,0.82286) (140,0.82286) (160,0.82286) (180,0.82286) (200,0.82286) (220,0.82644) (240,0.82822) (260,0.836) (280,0.83936) (300,0.83991)};
+\addlegendentry{lagrangien + classifieur}
+\end{axis}
+\end{tikzpicture}

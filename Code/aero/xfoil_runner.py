@@ -41,12 +41,16 @@ def xfoil_available(exe="xfoil"):
 
 
 def xfoil_env():
-    """Environnement d'exécution avec un écran X (réel si présent, sinon Xvfb local)."""
+    """Environnement d'exécution avec un écran X. Par défaut un écran virtuel Xvfb (système ou copie
+    locale), pour qu'aucune fenêtre d'XFOIL ne s'affiche ; l'écran réel si XFOIL_FENETRES=1, ou si Xvfb
+    est introuvable."""
     env = dict(os.environ)
     # V3 : sous Windows, xfoil.exe (build Win32) n'utilise pas X11 : aucun écran à fournir.
-    if os.name == "nt" or env.get("DISPLAY"):
+    if os.name == "nt":
         return env
     xvfb = shutil.which("Xvfb") or (LOCAL_XVFB if os.path.exists(LOCAL_XVFB) else None)
+    if env.get("DISPLAY") and (env.get("XFOIL_FENETRES") == "1" or xvfb is None):
+        return env
     if xvfb is None:
         raise RuntimeError("ni écran X ni Xvfb : XFOIL ne peut pas tourner en visqueux")
     sock = f"/tmp/.X11-unix/X{XVFB_DISPLAY[1:]}"

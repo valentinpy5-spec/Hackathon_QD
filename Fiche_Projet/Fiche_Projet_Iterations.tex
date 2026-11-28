@@ -186,7 +186,7 @@ Clore la V2 (6 novembre 2026, code et résultats figés dans \path{Code/archives
 
 % =====================================================================
 \iterchapter{V3}{Visée : un concurrent équitable, un problème plus grand}\label{ch:v3}
-\paragraph{Statut.} Ouverte le 6 novembre 2026. Au 15 novembre, le lot L1 est traité (section~\ref{sec:v3-l1}). Au 28 novembre, le lot L6, ajouté en cours d'itération, est traité (section~\ref{sec:v3-l6}) ; L2 à L5 ne sont pas commencés. Ce chapitre fixe la visée et sera complété au fil de l'itération (résultats, enseignements et décision, comme pour les itérations précédentes).
+\paragraph{Statut.} Ouverte le 6 novembre 2026. Au 15 novembre, le lot L1 est traité (section~\ref{sec:v3-l1}). Au 28 novembre, les lots L6 et L7, ajoutés en cours d'itération, sont traités (sections~\ref{sec:v3-l6} et \ref{sec:v3-l7}) ; L2 à L5 ne sont pas commencés. Ce chapitre fixe la visée et sera complété au fil de l'itération (résultats, enseignements et décision, comme pour les itérations précédentes).
 
 \paragraph{Fait.} Point de départ commun de l'équipe : chaque cours se termine par un chapitre « Le code actuel » \iterbadge{V3}, qui décrit le code de fin de V2, ce que la partie utilise, reçoit et fournit, avec le même schéma de la chaîne (\path{Fiche_Projet/chaine_code.tex}, à tenir à jour si la chaîne change).
 
@@ -219,6 +219,7 @@ L2 & Problème agrandi & Grille de 14 bits : $m$ (8) $\times$ $p$ (8) $\times$ $
 L3 & Robustesse physique & (a) $C_{L,\max}$ comme maximum de $C_L(\alpha)$ sur une rampe fine, avec détection du décrochage, au lieu de la non-convergence ; vérifier le profil à 319~counts. (b) SER en polarisation TE (méthode des moments, validée sur la série de Mie TE). (c) Front pour une exigence de manœuvre de 1,1 à 1,4. & \path{aero/xfoil_runner.py} étendu, \path{ser/mom2d.py} TE, figure « front selon $C_{L,\max}$ », réponse à H3 \\
 L4 & Quantique réaliste & QAOA avec bruit (Qiskit Aer, modèle de bruit d'un processeur réel), transpilation sur une topologie réelle : CNOT et profondeur en fonction du nombre de qubits ; à partir de quelle taille le bruit détruit-il la qualité des candidats ? & \path{quantique/bruit.py}, courbe qualité / taille avec et sans bruit \\
 L6 & Apprendre le QUBO \newline(ajouté le 20 nov.) & Remplacer le modèle quadratique en $z$ par des modèles appris (machine de factorisation FMQA, modèle bayésien sur les bits BOCS, réseau de neurones en témoin non quantique), sur le problème V2 puis sur un problème CST de 30 bits, avec XFOIL et la SER en boîtes noires. & \path{ia_qubo/}, cours \emph{IA et QUBO} \\
+L7 & Contraintes et pénalités \newline(ajouté le 28 nov.) & Classer les contraintes (a priori, simulées, cachées) ; remplacer la pénalité à bits d'écart par un lagrangien dont les échantillons sont vérifiés en classique ; classifieur de convergence d'XFOIL ; export du problème contraint au format des solveurs industriels (LP). & \path{contraintes/}, cours \emph{Contraintes et pénalités} \\
 L5 & Interface avec le groupe SER & Fonction d'interface unique \texttt{evaluer\_ser(contour, attitude, secteur)} pour brancher le solveur de l'autre groupe à la place de \path{ser/} ; contrôle sur quelques profils contre la méthode des moments. & \path{ser/interface.py}, note de comparaison \\
 \bottomrule
 \end{tabularx}
@@ -243,6 +244,7 @@ Lot & Ce qui a été fait & Résultat & Statut \\
 L1 & boucle bayésienne, comparaison sur 20 graines, diagnostics ; cours \emph{Optimisation bayésienne} & H1 non confirmée ; le traitement de la contrainte de manœuvre décide du succès (section~\ref{sec:v3-l1}) & fait \newline(15 nov.) \\
 L2 & --- & --- & à faire \\
 L6 & modèles appris dans la boucle, V2 (20 graines) et problème CST de 30 bits (8 graines, deux campagnes) ; cours \emph{IA et QUBO} & sur V2, le modèle en $z$ reste le meilleur ; à 30 bits, les trois QUBO se valent et battent NSGA-II ; la forme QUBO ne coûte rien de mesurable (section~\ref{sec:v3-l6}) & fait \newline(28 nov.) \\
+L7 & lagrangien vérifié, classifieur, export LP ; V2 (20 graines), rejeu CST, QAOA, campagne CST (8 graines) ; cours \emph{Contraintes et pénalités} & meilleur sur V2 (front S2 en 102 simulations au lieu de 142) ; sur CST, pas mieux que les bits d'écart : il pousse le modèle en $z$ dans ses coins (section~\ref{sec:v3-l7}) & fait \newline(28 nov.) \\
 L3 & --- & --- & à faire \\
 L4 & --- & --- & à faire \\
 L5 & --- & --- & à faire \\
@@ -317,6 +319,38 @@ hasard & --- & --- & 0,682 & 0,771 \\
 \paragraph{Conséquences.} Le message défendable s'enrichit : sur un problème qu'on ne peut plus énumérer, la boucle QUBO bat un algorithme génétique, et sa forme quadratique ne coûte pas de qualité. Il manque un concurrent classique adapté aux petits budgets en grande dimension (TuRBO, SAASBO) sur le problème CST, qui rejoint la question de L2.
 
 \paragraph{Où trouver.} Code : \path{Code/ia_qubo/} (voir son README) ; résultats : \path{Code/resultats/ia_qubo_*.json}, \path{cache_cst.jsonl}. Cours : \path{Cours/6_IA_QUBO/}.
+
+\section{Lot L7 : contraintes et pénalités}\label{sec:v3-l7}
+\paragraph{Pourquoi ce lot.} Les lots L1 et L6 ont montré que les contraintes décident plus que le modèle : la boucle dépense plus de la moitié de son budget en profils infaisables, et les pénalités occupent 98 à 99~\% du spectre du QUBO. La question était de traiter chaque contrainte comme le fait la pratique industrielle, et de mesurer ce que cela change.
+
+\paragraph{Ce qui a été fait.} Classement des contraintes (taxonomie de Le Digabel et Wild) : géométrie a priori (filtre), $C_{L,\max}$ simulée et quantifiable (modèle), convergence d'XFOIL cachée (classifieur). Trois formulations sans bit d'écart dans \path{contraintes/} : pénalité déséquilibrée, lagrangien dont les multiplicateurs sont ajustés en quelques résolutions et dont les lectures sont vérifiées en classique, et le même avec un classifieur logistique quadratique en $z$. Les contraintes de non-croisement des faces sont exactement affines en $z$ et orientent le solveur. Export du problème contraint au format LP, validé avec \texttt{dimod}. Études sans XFOIL (V2, rejeu de la campagne CST, QAOA), puis campagne CST (8 graines, 58 minutes).
+
+\paragraph{Résultats.}
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+& V2, S2 : simulations pour le front & CST : HV relatif à 300 & CST : faisables \\
+\midrule
+bits d'écart (actuel) & 142,5 & 0,882 & 43~\% \\
+lagrangien vérifié & \textbf{102,5} (17 graines sur 20) & 0,839 & 37~\% \\
+lagrangien + classifieur & --- (seuil 0,5) & 0,840 & 41~\% \\
+pénalité déséquilibrée & jamais & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Ce qu'on a appris.}
+\begin{enumerate}
+\item \textbf{La pénalité à bits d'écart laisse passer les petites violations} : sur CST, le candidat viole la contrainte de son propre modèle 4 fois sur 10. Sur V2, la retirer fait gagner 40 simulations en S2 ; c'est la cause, jusque-là inexpliquée, de l'écart entre la boucle et le « contrôle sans QUBO » du lot L1.
+\item \textbf{Côté solveur, le lagrangien vérifié est la bonne formulation} : 30 qubits au lieu de 33, l'objectif retrouve tout le spectre, les contraintes quadratiques deviennent possibles, et QAOA trouve l'optimum contraint 7 fois plus souvent (petites instances).
+\item \textbf{Sur le problème CST, il ne bat pas l'approche actuelle} (non significatif). Il fait baisser les $C_{L,\max}$ trop faibles (29 à 22~\%) mais monter les échecs d'XFOIL (28 à 40~\%) : en rendant le spectre à l'objectif, il pousse le modèle en $z$, non régularisé, dans les coins de la grille (66~\% des coefficients à un niveau extrême, contre 56~\%). La pénalité régularisait par accident.
+\item \textbf{Le front est au bord du domaine d'XFOIL} : 3 des 10 profils du front ont une probabilité de convergence prédite inférieure à 0,2. Un classifieur doit orienter, pas exclure ; c'est aussi un argument pour L3.
+\end{enumerate}
+
+\paragraph{Conséquences.} Le traitement des contraintes et la confiance accordée au modèle se règlent ensemble. Prochaine étape : le lagrangien avec la machine de factorisation (régularisée), ou avec une région de confiance en distance de Hamming, qui est une contrainte linéaire. La chaîne livre désormais un problème contraint lisible par un solveur industriel.
+
+\paragraph{Où trouver.} Code : \path{Code/contraintes/} (voir son README) ; résultats : \path{Code/resultats/contraintes_*.json}, \path{cqm_exemple.lp}. Cours : \path{Cours/7_Contraintes/}.
 
 \appendix
 \chapter{Tenir la fiche à jour}

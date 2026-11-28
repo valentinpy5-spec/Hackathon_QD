@@ -1,0 +1,48 @@
+\documentclass[11pt,a4paper]{report}
+% Compilation : tectonic Cours_Contraintes.tex
+% Figures à données : python3 tools/make_figures.py (lit Code/resultats/contraintes_*.json,
+% produits par les scripts de Code/contraintes/, voir Code/contraintes/README.md)
+\input{preambule}
+
+\input{../../Fiche_Projet/iterations}
+
+\title{\textbf{Contraintes et pénalités}\\[0.4em]\large Comment une boucle QUBO doit traiter les contraintes :\\ pénalités, lagrangien vérifié, classifieur de convergence,\\ et l'interface des solveurs industriels (lot L7 de la V3)}
+\author{Notes de travail, projet \emph{HackathonQuantique}}
+\date{Version du 28 novembre 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\pagenumbering{roman}
+
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\paragraph{Objet.} Les lots précédents ont montré, chacun à sa manière, que les contraintes coûtent plus cher à la boucle QUBO que le choix du modèle : une contrainte oubliée a détourné une campagne entière, et même corrigée, la boucle dépense plus de la moitié de son budget sur des profils infaisables. Ce cours reprend la question de zéro : quelles sont nos contraintes, comment la pratique industrielle et la recherche les traitent, et ce que cela donne dans notre boucle.
+
+\paragraph{Ce qu'on suppose connu.} Le QUBO et ses pénalités (cours de calcul quantique, chapitres~8 et 15), la boucle et le problème CST à 30 bits (cours IA et QUBO, chapitres~6, 8 et 9). Le lagrangien, la régression logistique et le format des solveurs contraints sont posés depuis le début.
+
+\paragraph{Fil conducteur.} Le constat (ch.~\ref{ch:constat}) $\to$ classer les contraintes avant de les traiter (ch.~\ref{ch:taxonomie}) $\to$ ce que valent les pénalités (ch.~\ref{ch:penalites}) $\to$ le lagrangien vérifié et la géométrie exactement affine (ch.~\ref{ch:lagrangien}) $\to$ le classifieur de convergence d'XFOIL (ch.~\ref{ch:classifieur}) $\to$ les résultats obtenus sans XFOIL (ch.~\ref{ch:hors-ligne}) $\to$ l'interface des solveurs industriels (ch.~\ref{ch:cqm}) $\to$ la campagne avec XFOIL (ch.~\ref{ch:campagne}) $\to$ bilan (ch.~\ref{ch:bilan}).
+
+\paragraph{Code et chiffres.} Tout le code est dans \code{Code/contraintes/} ; la boucle de \code{Code/ia\_qubo/} reçoit seulement de nouveaux modes, l'approche actuelle reste identique (vérifié). Les figures sont produites par \code{tools/make\_figures.py} à partir des fichiers \code{Code/resultats/contraintes\_*.json}. Chaque chapitre se termine par des exercices (corrigés en annexe~\ref{annexe:corriges}) et des pistes d'amélioration.
+
+\paragraph{Itérations du projet.} Tout ce cours appartient à l'itération V3 (lot L7).
+\legendeiterations
+
+\tableofcontents
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapitres/ch01_constat}
+\input{chapitres/ch02_taxonomie}
+\input{chapitres/ch03_penalites}
+\input{chapitres/ch04_lagrangien}
+\input{chapitres/ch05_classifieur}
+\input{chapitres/ch06_hors_ligne}
+\input{chapitres/ch07_cqm}
+\input{chapitres/ch08_campagne}
+\input{chapitres/ch09_bilan}
+
+\appendix
+\input{chapitres/annexe_corriges}
+
+\end{document}

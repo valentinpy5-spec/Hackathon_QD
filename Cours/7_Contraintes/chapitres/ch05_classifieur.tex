@@ -1,0 +1,71 @@
+\chapter{Le classifieur de convergence d'XFOIL}\label{ch:classifieur}
+\iterbanner{V3}
+
+\section{Une probabilité de succès, écrite comme un QUBO}
+La convergence d'XFOIL est une contrainte cachée : on sait seulement si le calcul a abouti. La pratique de l'optimisation bayésienne contrainte est d'apprendre la probabilité de succès $p(\mathbf x)$. On choisit ici une \textbf{régression logistique} sur les mêmes 66 monômes que le modèle en $z$ :
+\[ p(\mathbf z)=\sigma\big(\boldsymbol\phi(\mathbf z)^\top\boldsymbol\theta\big),\qquad\sigma(u)=\frac1{1+e^{-u}},\qquad\boldsymbol\phi(\mathbf z)=(1,z_i,z_iz_j). \]
+Le \emph{log-odds} $\ln\frac p{1-p}=\boldsymbol\phi^\top\boldsymbol\theta$ est un polynôme quadratique en $z$, donc un QUBO après substitution $z=a_0+A\mathbf b$. La contrainte « $p\ge p_{\min}$ » s'écrit
+\[ h_{\rm conv}(\mathbf b)=\boldsymbol\phi(\mathbf z)^\top\boldsymbol\theta-\ln\frac{p_{\min}}{1-p_{\min}}\ \ge\ 0, \]
+une contrainte \emph{quadratique}. Une pénalité au carré la porterait au degré 4 ; le lagrangien la garde au degré 2. C'est la raison pour laquelle ce classifieur n'est utilisable qu'avec le lagrangien.
+
+\paragraph{Ajustement.} On maximise la vraisemblance pénalisée $\sum_n\big[y_n\ln p_n+(1-y_n)\ln(1-p_n)\big]-\tfrac{\rho}2\|\boldsymbol\theta_{\rm sans\ constante}\|^2$, $\rho=1$, par la méthode de Newton (moindres carrés repondérés, une dizaine d'itérations). La pénalité ridge est indispensable : avec 66 coefficients et quelques dizaines d'échecs, des données séparables feraient diverger les coefficients.
+
+\section{Ce qu'il vaut}
+On rejoue les 8 exécutions de l'approche actuelle de la seconde campagne CST : pour chacun des 2\,205 profils proposés, on réapprend le classifieur sur les profils simulés \emph{avant} lui, et l'on compare sa prédiction au résultat d'XFOIL (31~\% d'échecs).
+\begin{itemize}
+\item \textbf{Aire sous la courbe ROC} : 0,83 (0,79 sur les 100 premières simulations, 0,85 après 200). Appris sur les 22\,860 profils admissibles du cache, il atteint 0,93 sur un jeu de test séparé : la convergence d'XFOIL est assez régulière en $z$ pour qu'un modèle quadratique la capte.
+\item \textbf{Le compromis du seuil} (figure~\ref{fig:seuils}, à gauche) :
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+seuil $p_{\min}$ & échecs évités & succès sacrifiés & propositions rejetées \\
+\midrule
+0,1 & 31~\% & 3~\% & 12~\% \\
+0,2 & 43~\% & 6~\% & 18~\% \\
+0,3 & 50~\% & 8~\% & 21~\% \\
+0,5 & 62~\% & 14~\% & 29~\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/seuils}
+\caption{Le seuil du classifieur. À gauche, sur le rejeu de la campagne CST : part des échecs d'XFOIL évités et des succès sacrifiés ; les traits verticaux (en haut) sont les probabilités de succès que donne le classifieur appris sur tout le cache aux 10 profils du front de référence. À droite, sur le problème V2 (S2) : part des graines qui retrouvent le front exact, et part des profils simulés faisables.}\label{fig:seuils}
+\end{figure}
+
+\section{Le front est au bord du domaine d'XFOIL}
+Le chiffre qui compte est ailleurs. Le classifieur appris sur \emph{tout} le cache donne aux 10 profils du front de référence des probabilités de succès de 0,11 ; 0,15 ; 0,18 ; 0,36 ; 0,42 ; 0,62 ; 0,65 ; 0,72 ; 0,83 et 0,87. Trois sont sous 0,2. Sur le problème V2, le profil extrême du front S2, $(7,0,2,0)$, a 4 voisins sur 5 en échec, et le classifieur lui donne 0,2. Les profils du front sont minces et peu épais au bord d'attaque : c'est là que la traînée et la SER sont faibles, et aussi là qu'XFOIL décroche.
+
+Conséquence directe sur le problème V2 (figure~\ref{fig:seuils}, à droite) : avec $p_{\min}=0{,}5$, la boucle propose 76~\% de faisables au lieu de 60~\%, et atteint 99~\% de l'hypervolume plus tôt (62,5 simulations au lieu de 75), mais elle ne retrouve le front exact que pour 15~\% des graines. Avec $p_{\min}=0{,}05$, elle se comporte comme le lagrangien seul.
+
+\begin{piege}[ : un classifieur de contrainte cachée n'est pas une barrière]
+Un seuil élevé rend la boucle plus économe et plus aveugle : il exclut les profils voisins des échecs, et le front y est. C'est la même leçon que le réseau de neurones de la V2, sous une autre forme. La pratique industrielle (critère multiplié par la probabilité de faisabilité) n'exclut jamais : elle \emph{pondère}. Pour un classifieur utilisé comme contrainte, le seuil doit rester bas ($p_{\min}=0{,}1$ dans la campagne du chapitre~\ref{ch:campagne}).
+\end{piege}
+
+\begin{projet}
+Que le front soit au bord du domaine de validité d'XFOIL est un résultat physique, pas seulement numérique. Un profil voisin d'échecs de convergence est proche du décollement, et sa traînée calculée est moins fiable. C'est un argument pour le lot L3 (robustesse physique) : vérifier les profils du front par un calcul plus fidèle, ou les pénaliser par leur distance au domaine d'échec.
+\end{projet}
+
+\begin{resultat}
+\begin{itemize}
+\item Une régression logistique quadratique en $z$ donne une contrainte de convergence quadratique, utilisable avec le lagrangien seulement. Elle prédit bien les échecs (AUC 0,83 en cours de boucle).
+\item Le front est collé au domaine où XFOIL échoue : un seuil élevé exclut ses extrémités. Le classifieur doit orienter (seuil bas), pas exclure.
+\end{itemize}
+\end{resultat}
+
+\exercices
+\begin{exercice}\label{ex:clf-budget}
+Rejeu CST : sur 300 propositions, 31~\% échouent. (a) Avec $p_{\min}=0{,}2$, combien d'échecs évite-t-on et combien de succès sacrifie-t-on ? (b) Bilan en profils faisables, si chaque proposition rejetée est remplacée par une proposition au même taux de succès que les autres ? (c) Quel risque ce bilan ne compte-t-il pas ?
+\end{exercice}
+\begin{exercice}\label{ex:clf-seuil}
+$\ln\frac{p}{1-p}$ pour $p_{\min}=0{,}1$ ; $0{,}2$ ; $0{,}5$. Un profil a un log-odds prédit de $-1{,}8$ : pour quels seuils est-il accepté ? Que vaut sa probabilité de succès prédite ?
+\end{exercice}
+
+\begin{pistes}
+\begin{itemize}
+\item Pondérer au lieu d'exclure : choisir parmi les lectures vérifiées en maximisant (amélioration prédite) $\times\ p$, comme en optimisation bayésienne contrainte.
+\item Apprendre le classifieur avec les échecs de \emph{toutes} les exécutions (le cache) : la convergence d'XFOIL ne dépend pas de la méthode d'optimisation, et l'AUC passe de 0,83 à 0,93.
+\end{itemize}
+\end{pistes}
