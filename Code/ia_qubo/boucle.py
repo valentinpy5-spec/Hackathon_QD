@@ -7,6 +7,8 @@ un profil par poids et par itération, jamais deux fois le même. On choisit sé
                 "bocs" (quadratique bayésien sur les bits, tirage de Thompson), "mlp" (réseau de neurones),
                 "hybride" (réseaux de neurones pour C_D et la SER, modèle affine en z pour C_L,max)
     contrainte  "modele" : C_L,max modélisé (affine en z) et pénalisé avec variables d'écart, comme en V2
+                "lagrange", "lagrange_clf", "desequilibree" : formulations du lot L7 (contraintes/formulations.py),
+                sans bit d'écart ; "lagrange_clf" ajoute le classifieur de convergence d'XFOIL
                 "boite_noire" : aucun modèle de contrainte ; les profils infaisables entrent dans les
                 données avec une valeur dégradée (pratique de FMQA), le modèle apprend seul à les éviter
     solveur     "exact" (énumération, jusqu'à 22 qubits) ou "recuit" (recuit simulé vectorisé)
@@ -21,9 +23,13 @@ import numpy as np
 from optim.qubo_loop import (fit_linear, grow, penalty_index_nonzero, penalty_linear_geq, lin_bits,
                              predict as predict_z, z_of)
 from quantique.qubo import all_bitstrings, qubo_energy
+from contraintes.formulations import Contrainte, penalite_desequilibree, resout_lagrange
+from contraintes.classifieur import LogistiqueQuadZ
 from .modeles import QuadZ, FactorizationMachine, BayesQuadBits, MLPEnsemble, encode, decode_bits
 
 WEIGHTS = (0.0, 0.25, 0.5, 0.75, 1.0)
+L7 = ("lagrange", "lagrange_clf", "desequilibree")
+P_MIN = 0.5                    # lagrange_clf : probabilité de convergence d'XFOIL exigée (prédite)
 PENALITE_INFAISABLE = 0.2      # mode boîte noire : un infaisable vaut max(faisables) + 0,2 x étendue
 
 
@@ -158,6 +164,7 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
     for idx in init:
         problem(idx)
     it = 0
+    lam = {}                       # multiplicateurs de Lagrange, par poids (repris d'une itération à l'autre)
     while problem.n_sims < budget:
         it += 1
         rows = [problem.table[i] for i in problem.seen]
@@ -179,8 +186,18 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
             s_cd, s_ser = max(np.ptp(cd[ok]), 1e-6), max(np.ptp(ser[ok]), 1e-6)
             vl = val & np.isfinite(cl)
             coef_cl = fit_linear(I[vl], cl[vl], levels=levels) if vl.sum() >= 2 else None
-            modele_cl = contrainte == "modele" and coef_cl is not None
-            if contrainte == "modele":
+            modele_cl = contrainte != "boite_noire" and coef_cl is not None
+            ctrs = []
+            if contrainte in L7 and coef_cl is not None:
+                ctrs.append(Contrainte.depuis_z("CLmax", coef_cl, bits, levels, seuil=cl_min,
+                                                s=max(np.ptp(cl[vl]), 1e-3)))
+            if contrainte in ("lagrange", "lagrange_clf"):
+                ctrs += [Contrainte.depuis_z(nom, cz, bits, levels, seuil=sz, s=e, verifiee=False)
+                         for nom, cz, sz, e in spec.get("geometrie_z", ())]
+            if contrainte == "lagrange_clf" and (~val).sum() >= 3 and val.sum() >= 3:
+                clf = LogistiqueQuadZ(levels).fit(I, val)
+                ctrs.append(Contrainte.depuis_z("convergence", clf.contrainte(spec.get("p_min", P_MIN)), bits, levels, s=4.0))
+            if contrainte != "boite_noire":
                 m_cd = fabrique(modele, spec, seed + 7919 * it).fit(B[ok], cd[ok])
                 m_ser = fabrique(modele, spec, seed + 7919 * it + 1).fit(B[ok], ser[ok])
                 if modele == "mlp":
@@ -189,7 +206,7 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
                     m_cl = None
                     cl_aff = coef_cl
             for w in weights:
-                if contrainte == "modele":
+                if contrainte != "boite_noire":
                     if direct:
                         def score(Ic, w=w):
                             Bc = encode(Ic, bits)
@@ -230,8 +247,28 @@ def boucle_ia(problem, spec, modele="fm", contrainte="modele", solveur="exact", 
                     ranked = recherche_directe(score, spec, rng, problem._set)
                 else:
                     T_obj = float(np.abs(Q).max())
-                    Q, c = ajoute_contraintes(Q, c, coef_cl, spec, cl_min, modele_cl=(contrainte == "modele" and modele_cl))
-                    states = classer(Q, c, solveur, rng, nd, T_obj=T_obj)
+                    if contrainte in L7 and ctrs:
+                        Q, c = ajoute_contraintes(Q, c, None, spec, cl_min, modele_cl=False)   # épaisseur V2 seule
+                        if contrainte == "desequilibree":
+                            Q, c = penalite_desequilibree(Q, c, ctrs[0])
+                            states = classer(Q, c, solveur, rng, nd, T_obj=T_obj)
+                        else:
+                            def solve(Qx, cx):
+                                if solveur == "exact":
+                                    S = classer(Qx, cx, "exact", rng, Qx.shape[0])
+                                    return S, qubo_energy(Qx, cx, S)
+                                return recuit(Qx, cx, n_sweeps=200, n_reads=128, T0=2.0 * T_obj,
+                                              T1=0.01 * T_obj, seed=int(rng.integers(1 << 30)))
+                            filtre_b = None
+                            if spec.get("filtre") is not None:
+                                def filtre_b(S, f=spec["filtre"]):
+                                    return np.array([f(tuple(int(v) for v in x)) for x in decode_bits(S[:, :nd], bits)])
+                            S, lam[w], _ = resout_lagrange(Q, c, ctrs, solve, lam0=lam.get(w), filtre=filtre_b)
+                            # (ordre des contraintes : C_L,max, géométrie, puis convergence quand elle apparaît)
+                            states = S[:, :nd]
+                    else:
+                        Q, c = ajoute_contraintes(Q, c, coef_cl, spec, cl_min, modele_cl=(contrainte != "boite_noire" and modele_cl))
+                        states = classer(Q, c, solveur, rng, nd, T_obj=T_obj)
                     ranked = [tuple(int(v) for v in x) for x in decode_bits(states, bits)]
                 filtre = spec.get("filtre")
                 for idx in ranked:

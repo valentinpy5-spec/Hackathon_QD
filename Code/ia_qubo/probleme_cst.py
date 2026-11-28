@@ -124,7 +124,37 @@ def init_aleatoire(rng, n):
     return out
 
 
+def contraintes_geometriques(x_croisement=(0.02, 0.1, 0.25, 0.5, 0.75, 0.95), x_epaisseur=None):
+    """Lot L7 : les contraintes géométriques sont EXACTEMENT affines en z, car
+        epaisseur(x) = C(x) sum_i B_i(x) (A_ext,i - A_int,i),  A = LO + (HI - LO) (z + 1) / 2.
+    Renvoie [(nom, coefficients en z au format de quadratic_features, seuil, échelle)] :
+      - faces sans croisement aux points x_croisement : sum_i B_i(x) (A_ext,i - A_int,i) >= 0 ;
+      - en option, épaisseur en x_epaisseur >= T_MIN : condition SUFFISANTE de t_max >= T_MIN, mais pas
+        nécessaire, et trop sévère ici (7 des 10 profils du front de référence la violent en x = 0,3 :
+        ils sont minces, épaisseur maximale ailleurs). Désactivée par défaut.
+    Ces contraintes ORIENTENT le solveur (terme lagrangien) ; le filtre exact admissible() reste le juge."""
+    d = N_VAR
+    nq = d * (d + 1) // 2
+    out = []
+
+    def affine(x, facteur):
+        b = bernstein_matrix(np.array([x]))[0]
+        coef = np.zeros(1 + d + nq)
+        for i in range(N_BERN + 1):
+            for j, sgn in ((i, 1.0), (i + N_BERN + 1, -1.0)):
+                pente = (HI[j] - LO[j]) / 2
+                coef[0] += facteur * sgn * b[i] * (LO[j] + pente)
+                coef[1 + j] += facteur * sgn * b[i] * pente
+        return coef
+    for x in x_croisement:
+        out.append((f"croisement x={x}", affine(x, 1.0), 0.0, 0.1))
+    if x_epaisseur is not None:
+        out.append((f"epaisseur x={x_epaisseur}", affine(x_epaisseur, float(classe(np.array([x_epaisseur]))[0])), T_MIN, 0.02))
+    return out
+
+
 SPEC["init"] = init_aleatoire
+SPEC["geometrie_z"] = contraintes_geometriques()
 SPEC["filtre"] = admissible if FILTRE else None
 
 
